@@ -21,7 +21,7 @@ class TerminusNotifierApp:
         return None
 
     def create_routes(self) -> None:
-        @self.app.post("/v2/notify/{method}")
+        @self.app.post("/notify/{method}")
         async def notify(
             request: NotificationRequest,
             method: str = "call",

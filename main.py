@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 
 from integrations.twilio import TwilioCaller
-from request import NotificationRequest
-from response import NotificationResponse
+from models import NotificationRequest, NotificationResponse
 
 
 def clean_to_number(to_number: str) -> list[str] | str:
@@ -28,24 +27,32 @@ class TerminusNotifierApp:
         ) -> NotificationResponse:
             """Send a notification to phone numbers using Twilio."""
             caller = TwilioCaller()
-            valid_methods = caller.valid_methods
-            if method not in valid_methods:
-                return NotificationResponse(
-                    to_number=request.to_number,
-                    message=request.message,
-                    method=method,
-                    success=False,
-                )
+            to_number = clean_to_number(request.to_number)
+            message = request.message
 
-            await caller.send_message(
-                to_number=request.to_number,
-                msg=request.message,
-                method=method,
-            )
+            if method in caller.valid_methods:
+                if isinstance(to_number, list):
+                    await caller.batch_message(
+                        to_number=to_number,
+                        message=message,
+                        method=method,
+                    )
+
+                else:
+                    await caller.send_message(
+                        to_number=to_number,
+                        message=message,
+                        method=method,
+                    )
+                success = True
+
+            else:
+                message = f"Invalid method: {method}"
+                success = False
 
             return NotificationResponse(
-                to_number=request.to_number,
-                message=request.message,
+                to_number=to_number,
+                message=message,
                 method=method,
-                success=True,
+                success=success,
             )

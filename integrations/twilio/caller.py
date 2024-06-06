@@ -9,7 +9,7 @@ class TwilioCaller:
         self._token = env.get("TWILIO_TOKEN")
         self._sid = env.get("TWILIO_SID")
         self.client = Client(self._sid, self._token)
-        self.valid_methods = ["call", "sms"]
+        self.valid_methods = ["call", "sms", "echo"]
 
         return None
 
@@ -31,6 +31,9 @@ class TwilioCaller:
                     from_="+18447682706",
                     body=message,
                 )
+            case "echo":
+                print(f"Sending 'message' to stdout")
+                print(message)
             case _:
                 print(f"Invalid method '{method}'")
 

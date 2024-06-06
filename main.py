@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from integrations.twilio import TwilioCaller
 from models import NotificationRequest, NotificationResponse
@@ -18,6 +18,13 @@ class TerminusNotifierApp:
         self.create_routes()
 
         return None
+
+    async def log_post_data(self, request: Request):
+        if request.method == "POST":
+            body = await request.json()
+            print(f"POST data: {body}")
+
+        return request
 
     def create_routes(self) -> None:
         @self.app.post("/notify/{method}")

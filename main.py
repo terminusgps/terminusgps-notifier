@@ -1,11 +1,9 @@
 import logging
-from json.decoder import JSONDecodeError
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Form, Request
 
 from integrations.twilio import TwilioCaller
-from models import NotificationRequest, NotificationResponse
+from models import NotificationResponse
 
 logger = logging.getLogger(__name__)
 
@@ -30,17 +28,17 @@ class TerminusNotifierApp:
         async def notify(
             request: Request,
             method: str = "call",
+            to_number: str = Form(...),
+            message: str = Form(...),
         ) -> NotificationResponse:
             """Send a notification to phone numbers using Twilio."""
-            content_type = request.headers.get("content-type")
-            if content_type == "application/x-www-form-urlencoded":
-                form = await request.form()
-                data = dict(form)
-            else:
-                data = await request.json()
 
+            data = {
+                "to_number": to_number,
+                "message": message,
+            }
             to_number = clean_to_number(data.get("to_number"))
-            message = data.get("message")
+            message = data.get("message", "")
 
             caller = TwilioCaller()
             if method in caller.valid_methods:

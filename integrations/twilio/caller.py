@@ -25,8 +25,7 @@ class TwilioCaller:
                     twiml=f"<Response><Say>{msg}</Say></Response>",
                 )
             case "sms":
-                print(f"Sending '{msg}' to '{to_number}' via SMS")
-                self.client.messages.create(
+                print(f"Sending '{msg}' to '{to_number}' via SMS") self.client.messages.create(
                     to=to_number,
                     from_="+18447682706",
                     body=msg,
@@ -52,19 +51,17 @@ if __name__ == "__main__":
         caller = TwilioCaller()
 
         # Call one number
-        call = caller.send_message(
+        await caller.send_message(
             to_number="+17133049421",
             msg="Hello! This is a test message from TerminusGPS",
             method="call",  # Default is "call"
         )
-        await call
 
         # Send SMS to multiple numbers
-        sms = caller.batch_message(
+        await caller.batch_message(
             to_number=["+17133049421", "+18324518302"],
             msg="Hello! This is a test message from TerminusGPS",
             method="sms",
         )
-        await sms
 
     asyncio.run(main())

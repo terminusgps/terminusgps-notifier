@@ -1,8 +1,6 @@
 import logging
 
-import phonenumbers
 from fastapi import FastAPI, Form, Request
-from phonenumbers import is_valid_number
 
 from integrations.twilio import TwilioCaller
 from models import NotificationResponse

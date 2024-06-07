@@ -1,6 +1,8 @@
 import logging
 
+import phonenumbers
 from fastapi import FastAPI, Form, Request
+from phonenumbers import is_valid_number
 
 from integrations.twilio import TwilioCaller
 from models import NotificationResponse
@@ -10,10 +12,11 @@ logger = logging.getLogger(__name__)
 
 def clean_to_number(to_number: str) -> list[str] | str:
     if "," in to_number:
-        clean_num = to_number.split(",")
+        nums = to_number.split(",")
     else:
-        clean_num = to_number
-    return clean_num
+        nums = to_number
+
+    return nums
 
 
 class TerminusNotifierApp:
@@ -32,13 +35,12 @@ class TerminusNotifierApp:
             message: str = Form(...),
         ) -> NotificationResponse:
             """Send a notification to phone numbers using Twilio."""
-
             data = {
                 "to_number": to_number,
                 "message": message,
             }
-            to_number = clean_to_number(data.get("to_number"))
             message = data.get("message", "")
+            to_number = clean_to_number(data.get("to_number"))
 
             caller = TwilioCaller()
             if method in caller.valid_methods:

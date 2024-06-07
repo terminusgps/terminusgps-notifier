@@ -9,7 +9,7 @@ class TwilioCaller:
         self._token = env.get("TWILIO_TOKEN")
         self._sid = env.get("TWILIO_SID")
         self.client = Client(self._sid, self._token)
-        self.valid_methods = ["call", "sms", "echo"]
+        self.valid_methods = ["call", "sms", "echo", "phone"]
 
         return None
 
@@ -17,7 +17,7 @@ class TwilioCaller:
         self, to_number: str, message: str, *, method: str = "call"
     ) -> None:
         match method:
-            case "call":
+            case "call" | "phone":  # "phone" is an alias for "call" from v1
                 print(f"Sending '{message}' to '{to_number}' via Voice")
                 self.client.calls.create(
                     to=to_number,

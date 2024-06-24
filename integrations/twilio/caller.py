@@ -14,9 +14,7 @@ class TwilioCaller:
 
         return None
 
-    async def send_message(
-        self, to_number: str, message: str, *, method: str = "call"
-    ) -> None:
+    async def send_message(self, to_number: str, message: str, *, method: str) -> None:
         match method:
             case "call" | "phone":  # "phone" is an alias for "call" from v1
                 print(f"Sending '{message}' to '{to_number}' via Voice")

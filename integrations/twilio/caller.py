@@ -57,7 +57,7 @@ if __name__ == "__main__":
         await caller.send_message(
             to_number="+17133049421",
             message="Hello! This is a test message from TerminusGPS Notifier.",
-            method="call",  # Default is "call"
+            method="call",
         )
 
         # Send SMS to multiple numbers

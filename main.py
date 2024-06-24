@@ -4,17 +4,17 @@ from fastapi import FastAPI, Form, Request
 
 from integrations.twilio import TwilioCaller
 from models import NotificationResponse
+from models.responses import NotificationErrorResponse
+from validators import ValidationError, validate_to_number
 
 logger = logging.getLogger(__name__)
 
 
 def clean_to_number(to_number: str) -> list[str] | str:
     if "," in to_number:
-        nums = to_number.split(",")
+        return to_number.strip().split(",")
     else:
-        nums = to_number
-
-    return nums
+        return to_number.strip()
 
 
 class TerminusNotifierApp:
@@ -31,39 +31,46 @@ class TerminusNotifierApp:
             method: str = "call",
             to_number: str = Form(...),
             message: str = Form(...),
-        ) -> NotificationResponse:
+        ) -> NotificationResponse | NotificationErrorResponse:
             """Send a notification to phone numbers using Twilio."""
-            data = {
-                "to_number": to_number,
-                "message": message,
-            }
-            message = data.get("message", "")
-            to_number = clean_to_number(data.get("to_number"))
+            try:
+                validate_to_number(to_number)
+            except ValidationError:
+                return NotificationErrorResponse(
+                    to_number=to_number,
+                    message=message,
+                    method=method,
+                    error="Invalid to_number",
+                    error_desc=f"Invalid to_number '{to_number}'.",
+                )
+            else:
+                to_number: str | list[str] = clean_to_number(to_number)
 
             caller = TwilioCaller()
-            if method in caller.valid_methods:
-                if isinstance(to_number, list):
-                    await caller.batch_message(
-                        to_number=to_number,
-                        message=message,
-                        method=method,
-                    )
+            if not method in caller.valid_methods:
+                return NotificationErrorResponse(
+                    to_number=to_number,
+                    message=message,
+                    method=method,
+                    error="Invalid method",
+                    error_desc=f"Invalid method '{method}'.",
+                )
 
-                else:
-                    await caller.send_message(
-                        to_number=to_number,
-                        message=message,
-                        method=method,
-                    )
-                success = True
-
+            if isinstance(to_number, list):
+                await caller.batch_message(
+                    to_number=to_number,
+                    message=message,
+                    method=method,
+                )
             else:
-                message = f"Invalid method: {method}"
-                success = False
+                await caller.send_message(
+                    to_number=to_number,
+                    message=message,
+                    method=method,
+                )
 
             return NotificationResponse(
                 to_number=to_number,
                 message=message,
                 method=method,
-                success=success,
             )

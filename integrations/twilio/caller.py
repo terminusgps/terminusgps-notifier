@@ -6,8 +6,9 @@ from twilio.rest import Client
 
 class TwilioCaller:
     def __init__(self) -> None:
-        self._token = env.get("TWILIO_TOKEN")
-        self._sid = env.get("TWILIO_SID")
+        self._token = env.get("TWILIO_TOKEN", "")
+        self._sid = env.get("TWILIO_SID", "")
+        self.from_ = env.get("TWILIO_FROM_NUMBER", "")
         self.client = Client(self._sid, self._token)
         self.valid_methods = ["call", "sms", "echo", "phone"]
 
@@ -21,14 +22,14 @@ class TwilioCaller:
                 print(f"Sending '{message}' to '{to_number}' via Voice")
                 self.client.calls.create(
                     to=to_number,
-                    from_="+18447682706",
+                    from_=self.from_,
                     twiml=f"<Response><Say>{message}</Say></Response>",
                 )
             case "sms":
                 print(f"Sending '{message}' to '{to_number}' via SMS")
                 self.client.messages.create(
                     to=to_number,
-                    from_="+18447682706",
+                    from_=self.from_,
                     body=message,
                 )
             case "echo":
@@ -57,14 +58,14 @@ if __name__ == "__main__":
         # Call one number
         await caller.send_message(
             to_number="+17133049421",
-            message="Hello! This is a test message from TerminusGPS",
+            message="Hello! This is a test message from TerminusGPS Notifier.",
             method="call",  # Default is "call"
         )
 
         # Send SMS to multiple numbers
         await caller.batch_message(
             to_number=["+17133049421", "+18324518302"],
-            message="Hello! This is a test message from TerminusGPS",
+            message="Hello! This is a test message from TerminusGPS Notifier.",
             method="sms",
         )
 

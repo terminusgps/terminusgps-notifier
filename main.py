@@ -42,15 +42,6 @@ class TerminusNotifierApp:
                 to_number: str | list[str] = clean_to_number(to_number)
 
             caller = TwilioCaller()
-            if not method in caller.valid_methods:
-                return NotificationErrorResponse(
-                    to_number=to_number,
-                    message=message,
-                    method=method,
-                    error="Invalid method",
-                    error_desc=f"Invalid method '{method}'.",
-                )
-
             if isinstance(to_number, list):
                 await caller.batch_message(
                     to_number=to_number,

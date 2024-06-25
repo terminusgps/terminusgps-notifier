@@ -1,13 +1,8 @@
-import logging
-
 from fastapi import FastAPI, Form, Request
 
 from integrations.twilio import TwilioCaller
-from models import NotificationResponse
-from models.responses import NotificationErrorResponse
+from models import NotificationErrorResponse, NotificationResponse
 from validators import ValidationError, validate_to_number
-
-logger = logging.getLogger(__name__)
 
 
 def clean_to_number(to_number: str) -> list[str] | str:

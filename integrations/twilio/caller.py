@@ -6,10 +6,10 @@ from twilio.rest import Client
 
 class TwilioCaller:
     def __init__(self) -> None:
-        self._token = env.get("TWILIO_TOKEN", "")
-        self._sid = env.get("TWILIO_SID", "")
+        token = env.get("TWILIO_TOKEN", "")
+        sid = env.get("TWILIO_SID", "")
+        self.client = Client(sid, token)
         self.from_ = env.get("TWILIO_FROM_NUMBER", "")
-        self.client = Client(self._sid, self._token)
         self.valid_methods = ["call", "sms", "echo", "phone"]
 
         return None

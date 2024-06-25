@@ -40,8 +40,9 @@ class TerminusNotifierApp:
                 )
             else:
                 to_number: str | list[str] = clean_to_number(to_number)
+            finally:
+                caller = TwilioCaller()
 
-            caller = TwilioCaller()
             if isinstance(to_number, list):
                 await caller.batch_message(
                     to_number=to_number,

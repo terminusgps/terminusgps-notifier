@@ -15,26 +15,25 @@ class TwilioCaller:
         return None
 
     async def send_message(self, to_number: str, message: str, *, method: str) -> None:
-        match method:
-            case "call" | "phone":  # "phone" is an alias for "call" from v1
-                print(f"Sending '{message}' to '{to_number}' via Voice")
-                self.client.calls.create(
-                    to=to_number,
-                    from_=self.from_,
-                    twiml=f"<Response><Say>{message}</Say></Response>",
-                )
-            case "sms":
-                print(f"Sending '{message}' to '{to_number}' via SMS")
-                self.client.messages.create(
-                    to=to_number,
-                    from_=self.from_,
-                    body=message,
-                )
-            case "echo":
-                print(f"Sending 'message' to stdout")
-                print(message)
-            case _:
-                print(f"Invalid method '{method}'")
+        if method == "call" or "phone":
+            print(f"Sending '{message}' to '{to_number}' via Voice")
+            self.client.calls.create(
+                to=to_number,
+                from_=self.from_,
+                twiml=f"<Response><Say>{message}</Say></Response>",
+            )
+        elif method == "sms":
+            print(f"Sending '{message}' to '{to_number}' via SMS")
+            self.client.messages.create(
+                to=to_number,
+                from_=self.from_,
+                body=message,
+            )
+        elif method == "echo":
+            print(f"Sending 'message' to stdout")
+            print(message)
+        else:
+            print(f"Invalid method '{method}'")
 
         return None
 

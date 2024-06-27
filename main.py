@@ -23,7 +23,7 @@ class TerminusNotifierApp:
         @self.app.post("/notify/{method}")
         async def notify(
             request: Request,
-            method: str = "call",
+            method: str,
             to_number: str = Form(...),
             message: str = Form(...),
         ) -> NotificationResponse | NotificationErrorResponse:

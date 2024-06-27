@@ -54,14 +54,14 @@ if __name__ == "__main__":
 
         # Call one number
         await caller.send_message(
-            to_number="+17133049421",
+            to_number="+15555555555",
             message="Hello! This is a test message from TerminusGPS Notifier.",
             method="call",
         )
 
         # Send SMS to multiple numbers
         await caller.batch_message(
-            to_number=["+17133049421", "+18324518302"],
+            to_number=["+15555555555", "+15555555555"],
             message="Hello! This is a test message from TerminusGPS Notifier.",
             method="sms",
         )

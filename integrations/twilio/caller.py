@@ -38,7 +38,7 @@ class TwilioCaller:
         return None
 
     async def batch_message(
-        self, to_number: list[str], message: str, *, method: str = "call"
+        self, to_number: list[str], message: str, *, method: str
     ) -> None:
         tasks = [
             asyncio.create_task(self.send_message(number, message, method=method))

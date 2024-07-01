@@ -7,7 +7,7 @@ class ValidationError(Exception):
 
 
 def validate_phone_number(value: str) -> None:
-    """Validate the a phone number."""
+    """Pattern match a phone number."""
     pattern = re.compile(r"\+1\d\d\d\d\d\d\d\d\d\d", re.IGNORECASE)
     if not pattern.match(value):
         raise ValidationError("Invalid phone number.")

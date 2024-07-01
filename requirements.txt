@@ -23,6 +23,7 @@ MarkupSafe==2.1.5
 mdurl==0.1.2
 multidict==6.0.5
 orjson==3.10.3
+phonenumbers==8.13.38
 pydantic==2.7.3
 pydantic_core==2.18.4
 Pygments==2.18.0

@@ -7,14 +7,14 @@ class ValidationError(Exception):
 
 
 def validate_phone_number(value: str) -> None:
-    """Pattern match a phone number."""
+    """Returns value if it's a valid phone number, otherwise raises `ValidationError`."""
     pattern = re.compile(r"\+1\d\d\d\d\d\d\d\d\d\d", re.IGNORECASE)
     if not pattern.match(value):
         raise ValidationError("Invalid phone number.")
 
 
 def validate_to_number(value: str) -> None:
-    """Validate the 'to_number' parameter."""
+    """Validates the 'to_number' parameter."""
     if "," in value:
         for number in value.split(","):
             validate_phone_number(number)

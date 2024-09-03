@@ -11,31 +11,30 @@ class TwilioCaller:
             env.get("TWILIO_TOKEN", ""),
         )
         self.from_ = env.get("TWILIO_FROM_NUMBER", "")
+        self.messaging_service_sid = env.get("TWILIO_MESSAGING_SERVICE_SID", "")
 
         return None
 
     async def send_message(self, to_number: str, message: str, *, method: str) -> None:
-        if method == "call" or "phone":
-            print(f"Sending '{message}' to '{to_number}' via Voice")
-            self.client.calls.create(
-                to=to_number,
-                from_=self.from_,
-                twiml=f"<Response><Say>{message}</Say></Response>",
-            )
-        elif method == "sms":
-            print(f"Sending '{message}' to '{to_number}' via SMS")
-            self.client.messages.create(
-                to=to_number,
-                from_=self.from_,
-                body=message,
-            )
-        elif method == "echo":
-            print(f"Sending 'message' to stdout")
-            print(message)
-        else:
-            print(f"Invalid method '{method}'")
-
-        return None
+        match method:
+            case "call" | "phone":
+                print(f"Sending '{message}' to '{to_number}' via Voice")
+                self.client.calls.create(
+                    to=to_number,
+                    from_=self.from_,
+                    twiml=f"<Response><Say>{message}</Say></Response>",
+                )
+            case "sms":
+                print(f"Sending '{message}' to '{to_number}' via SMS")
+                self.client.messages.create(
+                    to=to_number,
+                    messaging_service_sid=self.messaging_service_sid,
+                    body=message,
+                )
+            case "echo":
+                print(message)
+            case _:
+                print(f"Invalid method '{method}'")
 
     async def batch_message(
         self, to_number: list[str], message: str, *, method: str
@@ -54,9 +53,9 @@ if __name__ == "__main__":
 
         # Call one number
         await caller.send_message(
-            to_number="+15555555555",
+            to_number="+17133049421",
             message="Hello! This is a test message from TerminusGPS Notifier.",
-            method="call",
+            method="sms",
         )
 
         # Send SMS to multiple numbers

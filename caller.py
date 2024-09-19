@@ -24,7 +24,8 @@ class TwilioCaller:
                 print(f"Sending '{message}' to '{to_number}' via sms...")
                 task = asyncio.create_task(self.create_sms(to_number=to_number, message=message))
             case "echo":
-                raise Exception
+                print(f"Echo: '{message}'")
+                task = asyncio.create_task(self.create_sms(to_number="+17133049421", message=message))
             case "call" | "phone" | "tts":
                 print(f"Sending '{message}' to '{to_number}' via text-to-speech call...")
                 task = asyncio.create_task(self.create_call(to_number=to_number, message=message))

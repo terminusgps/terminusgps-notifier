@@ -3,8 +3,8 @@ from asyncio.tasks import Task
 from fastapi import FastAPI, Form, Request
 from twilio.base.exceptions import TwilioRestException
 
-from .caller import TwilioCaller
-from .models import NotificationResponse, NotificationErrorResponse
+from caller import TwilioCaller
+from models import NotificationResponse, NotificationErrorResponse
 
 
 def clean_to_number(to_number: str) -> list[str] | str:

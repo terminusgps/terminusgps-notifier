@@ -32,11 +32,14 @@ async def notify(
     request: Request,
     method: str = "sms",
     message: str = "",
-    unit_id: str | None = None,
-    to_number: str | None = None,
+    unit_id: str = "",
+    to_number: str = "",
 ) -> NotificationResponse | NotificationErrorResponse:
     """Send a notification to phone numbers using Twilio."""
     phone_numbers = []
+    if not to_number and not unit_id:
+        raise ValueError("No to_number or unit_id provided.")
+
     if to_number:
         phone_numbers.extend(to_number)
     if unit_id:

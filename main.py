@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 from asyncio.tasks import Task
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Request
 from twilio.base.exceptions import TwilioRestException
 from wialon.api import WialonError
 
@@ -30,13 +30,15 @@ def create_tasks(
 @app.post("/notify/{method}")
 async def notify(
     request: Request,
-    method: str,
-    unit_id: str = Form(...),
-    to_number: str = Form(...),
-    message: str = Form(...),
+    method: str = "sms",
+    message: str = "",
+    unit_id: str | None = None,
+    to_number: str | None = None,
 ) -> NotificationResponse | NotificationErrorResponse:
     """Send a notification to phone numbers using Twilio."""
-    phone_numbers = clean_phone_numbers([to_number])
+    phone_numbers = []
+    if to_number:
+        phone_numbers.extend(to_number)
     if unit_id:
         try:
             with WialonSession() as session:

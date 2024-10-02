@@ -77,7 +77,7 @@ class WialonSession:
         elif getenv("WIALON_API_TOKEN") is not None:
             self.token: str = getenv("WIALON_API_TOKEN", "")
         else:
-            raise WialonTokenNotFoundError(token=self.token, wialon_error=None)
+            raise WialonTokenNotFoundError(token=token, wialon_error=None)
 
         try:
             login_response: dict = self.wialon_api.token_login(

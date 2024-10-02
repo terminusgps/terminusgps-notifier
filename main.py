@@ -29,11 +29,10 @@ def create_tasks(
 
 @app.post("/notify/{method}")
 async def notify(
-    request: Request,
-    method: str = "sms",
+    method: str,
     message: str = "",
-    unit_id: str = "",
-    to_number: str = "",
+    unit_id: int | None = None,
+    to_number: str | None = None,
 ) -> NotificationResponse | NotificationErrorResponse:
     """Send a notification to phone numbers using Twilio."""
     phone_numbers = []
@@ -41,15 +40,15 @@ async def notify(
         raise ValueError("No to_number or unit_id provided.")
 
     if to_number:
-        phone_numbers.extend(to_number)
+        phone_numbers.extend(clean_phone_numbers([to_number]))
     if unit_id:
         try:
             with WialonSession() as session:
-                unit = WialonUnit(id=unit_id, session=session)
+                unit = WialonUnit(id=str(unit_id), session=session)
         except WialonError as e:
             return NotificationErrorResponse(
                 phones=[],
-                unit_id=unit_id,
+                unit_id=str(unit_id),
                 message=message,
                 method=method,
                 error=str(e),

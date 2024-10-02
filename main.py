@@ -1,58 +1,68 @@
 import asyncio
+from typing import Any
 from asyncio.tasks import Task
 from fastapi import FastAPI, Form, Request
 from twilio.base.exceptions import TwilioRestException
+from wialon.api import WialonError
 
 from caller import TwilioCaller
 from models import NotificationResponse, NotificationErrorResponse
+from wialonapi import WialonSession, WialonUnit
+from wialonapi.items.unit import clean_phone_numbers
 
 app = FastAPI()
 
-def clean_to_number(to_number: str) -> list[str] | str:
-    if "," in to_number:
-        return to_number.strip().split(",")
-    else:
-        return to_number.strip()
 
-
-def create_tasks(to_number: str | list[str], message: str, method: str) -> list[Task]:
+def create_tasks(
+    phone_numbers: list[str], message: str, method: str
+) -> list[Task[Any]]:
     caller = TwilioCaller()
     tasks = []
-    if isinstance(to_number, str):
-        tasks.append(caller.create_notification(
-            to_number=to_number,
-            message=message,
-            method=method,
-        ))
-    elif isinstance(to_number, list):
-        for num in to_number:
-            tasks.append(caller.create_notification(
-                to_number=num,
-                message=message,
-                method=method,
-            ))
-
+    for to_number in phone_numbers:
+        tasks.append(
+            caller.create_notification(
+                to_number=to_number, message=message, method=method
+            )
+        )
     return tasks
-    
+
 
 @app.post("/notify/{method}")
 async def notify(
     request: Request,
     method: str,
+    unit_id: str = Form(...),
     to_number: str = Form(...),
     message: str = Form(...),
 ) -> NotificationResponse | NotificationErrorResponse:
     """Send a notification to phone numbers using Twilio."""
-    phone: str | list[str] = clean_to_number(to_number)
+    phone_numbers = clean_phone_numbers([to_number])
+    if unit_id:
+        try:
+            with WialonSession() as session:
+                unit = WialonUnit(id=unit_id, session=session)
+        except WialonError as e:
+            return NotificationErrorResponse(
+                phones=[],
+                unit_id=unit_id,
+                message=message,
+                method=method,
+                error=str(e),
+                error_desc="Something went wrong with Wialon.",
+            )
+        else:
+            phone_numbers.extend(unit.get_phone_numbers())
+
     try:
-        tasks: list[Task] = create_tasks(
-            to_number=phone,
+        tasks: list[Task[Any]] = create_tasks(
+            phone_numbers=phone_numbers,
             message=message,
             method=method,
         )
     except TwilioRestException as e:
         return NotificationErrorResponse(
-            to_number=phone,
+            phones=phone_numbers,
+            unit_id=unit_id,
             message=message,
             method=method,
             error=str(e),
@@ -61,7 +71,8 @@ async def notify(
     else:
         asyncio.gather(*tasks)
         return NotificationResponse(
-            to_number=phone,
+            phones=phone_numbers,
+            unit_id=unit_id,
             message=message,
             method=method,
         )

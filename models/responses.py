@@ -2,13 +2,15 @@ from pydantic import BaseModel
 
 
 class NotificationResponse(BaseModel):
-    to_number: list[str] | str
+    unit_id: str
+    phones: list[str]
     message: str
     method: str
 
 
 class NotificationErrorResponse(BaseModel):
-    to_number: list[str] | str
+    phones: list[str]
+    unit_id: str
     message: str
     method: str
     error: str

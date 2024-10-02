@@ -2,5 +2,5 @@ from pydantic import BaseModel
 
 
 class NotificationRequest(BaseModel):
-    to_number: str
+    unit_id: str
     message: str

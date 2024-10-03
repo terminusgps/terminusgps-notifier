@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 from asyncio.tasks import Task
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from twilio.base.exceptions import TwilioRestException
 from wialon.api import WialonError
 
@@ -14,9 +14,8 @@ app = FastAPI()
 
 
 def create_tasks(
-    phone_numbers: list[str], message: str, method: str
+    phone_numbers: list[str], message: str, method: str, caller: TwilioCaller
 ) -> list[Task[Any]]:
-    caller = TwilioCaller()
     tasks = []
     for to_number in phone_numbers:
         tasks.append(
@@ -45,6 +44,7 @@ async def notify(
         try:
             with WialonSession() as session:
                 unit = WialonUnit(id=str(unit_id), session=session)
+                phone_numbers.extend(unit.get_phone_numbers())
         except WialonError as e:
             return NotificationErrorResponse(
                 phones=[],
@@ -54,29 +54,29 @@ async def notify(
                 error=str(e),
                 error_desc="Something went wrong with Wialon.",
             )
-        else:
-            phone_numbers.extend(unit.get_phone_numbers())
 
     try:
-        tasks: list[Task[Any]] = create_tasks(
-            phone_numbers=phone_numbers,
-            message=message,
-            method=method,
-        )
+        with TwilioCaller() as caller:
+            tasks: list[Task[Any]] = create_tasks(
+                phone_numbers=phone_numbers,
+                message=message,
+                method=method,
+                caller=caller,
+            )
+            asyncio.gather(*tasks)
     except TwilioRestException as e:
         return NotificationErrorResponse(
             phones=phone_numbers,
-            unit_id=unit_id,
+            unit_id=str(unit_id),
             message=message,
             method=method,
             error=str(e),
             error_desc="Something went wrong with Twilio.",
         )
     else:
-        asyncio.gather(*tasks)
         return NotificationResponse(
             phones=phone_numbers,
-            unit_id=unit_id,
+            unit_id=str(unit_id),
             message=message,
             method=method,
         )

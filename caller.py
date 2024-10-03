@@ -9,13 +9,19 @@ from twilio.http.async_http_client import AsyncTwilioHttpClient
 
 class TwilioCaller:
     def __init__(self) -> None:
+        self.from_number = getenv("TWILIO_FROM_NUMBER", "")
+        self.messaging_service_sid = getenv("TWILIO_MESSAGING_SID", "")
+
+    def __enter__(self) -> "TwilioCaller":
         self.client = Client(
             getenv("TWILIO_SID", ""),
             getenv("TWILIO_TOKEN", ""),
             http_client=AsyncTwilioHttpClient(),
         )
-        self.from_number = getenv("TWILIO_FROM_NUMBER", "")
-        self.messaging_service_sid = getenv("TWILIO_MESSAGING_SID", "")
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb) -> None:
+        return None
 
     async def create_notification(
         self, to_number: str, message: str, method: str = "sms"
@@ -31,7 +37,7 @@ class TwilioCaller:
                 task = asyncio.create_task(
                     self.create_sms(to_number="+17133049421", message=message)
                 )
-            case "call" | "phone" | "tts":
+            case "call" | "phone":
                 print(
                     f"Sending '{message}' to '{to_number}' via text-to-speech call..."
                 )

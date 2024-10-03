@@ -50,7 +50,8 @@ async def notify(
         try:
             with WialonSession() as session:
                 unit = WialonUnit(id=str(notification.unit_id), session=session)
-                phone_numbers.extend(unit.get_phone_numbers())
+                unit_phones = clean_phone_numbers(unit.get_phone_numbers())
+                phone_numbers.extend(unit_phones)
         except WialonError as e:
             return NotificationErrorResponse(
                 phones=phone_numbers,

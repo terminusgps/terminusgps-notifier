@@ -7,8 +7,9 @@ from wialon.api import WialonError
 
 from caller import TwilioCaller
 from models import NotificationResponse, NotificationErrorResponse
-from wialonapi import WialonSession, WialonUnit
-from wialonapi.items.unit import clean_phone_numbers
+from wialonapi.utils import clean_phone_numbers
+from wialonapi.session import WialonSession
+from wialonapi.items import WialonUnit
 
 app = FastAPI()
 
@@ -26,6 +27,22 @@ def create_tasks(
     return tasks
 
 
+def get_phone_numbers(
+    to_number: Optional[str] = None, unit_id: Optional[int] = None
+) -> list[str]:
+    if to_number is None and unit_id is None:
+        raise ValueError("Must provide at least one 'to_number' or 'unit_id'.")
+
+    phone_numbers = []
+    if to_number:
+        phone_numbers.extend(clean_phone_numbers([to_number]))
+    if unit_id:
+        with WialonSession() as session:
+            unit = WialonUnit(id=str(unit_id), session=session)
+            phone_numbers.extend(unit.get_phone_numbers())
+    return phone_numbers
+
+
 @app.post("/notify/{method}")
 async def notify(
     method: str,
@@ -34,34 +51,28 @@ async def notify(
     unit_id: Annotated[Optional[int], Form()] = None,
 ) -> NotificationResponse | NotificationErrorResponse:
     """Send a notification to phone numbers using Twilio."""
-    phone_numbers = []
-    if not to_number and not unit_id:
+    try:
+        phone_numbers: list[str] = get_phone_numbers(
+            to_number=to_number, unit_id=unit_id
+        )
+    except ValueError as e:
         return NotificationErrorResponse(
-            phones=phone_numbers,
+            phones=[to_number] if to_number else [],
             unit_id=str(unit_id),
             message=message,
             method=method,
-            error="",
-            error_desc="No unit_id or to_number provided.",
+            error=str(e),
+            error_desc="Invalid 'to_number' or 'unit_id'.",
         )
-
-    if to_number:
-        phone_numbers.extend(clean_phone_numbers([to_number]))
-    if unit_id:
-        try:
-            with WialonSession() as session:
-                unit = WialonUnit(id=str(unit_id), session=session)
-                unit_phones = clean_phone_numbers(unit.get_phone_numbers())
-                phone_numbers.extend(unit_phones)
-        except WialonError as e:
-            return NotificationErrorResponse(
-                phones=phone_numbers,
-                unit_id=str(unit_id),
-                message=message,
-                method=method,
-                error=str(e),
-                error_desc="Something went wrong with Wialon.",
-            )
+    except WialonError as e:
+        return NotificationErrorResponse(
+            phones=[to_number] if to_number else [],
+            unit_id=str(unit_id),
+            message=message,
+            method=method,
+            error=str(e),
+            error_desc="Something went wrong with Wialon.",
+        )
 
     try:
         with TwilioCaller() as caller:

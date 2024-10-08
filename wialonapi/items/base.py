@@ -101,13 +101,3 @@ class WialonBase:
                 "v": field[1],
             }
         )
-
-    def add_cproperty(self, field: tuple[str, str]) -> None:
-        self.session.wialon_api.item_update_custom_property(
-            **{"itemId": self.id, "name": field[0], "value": field[1]}
-        )
-
-    def add_profile_field(self, field: tuple[str, str]) -> None:
-        self.session.wialon_api.item_update_profile_field(
-            **{"itemId": self.id, "n": field[0], "v": field[1]}
-        )

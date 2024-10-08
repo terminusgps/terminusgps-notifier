@@ -2,15 +2,7 @@ from urllib.parse import quote_plus
 
 import wialonapi.flags as flag
 from wialonapi.items.base import WialonBase
-
-
-def clean_phone_numbers(phone_numbers: list[str]) -> list[str]:
-    for old_phone in phone_numbers:
-        if "," in old_phone:
-            new_phone = old_phone.split(",")
-            phone_numbers.remove(old_phone)
-            phone_numbers.extend(new_phone)
-    return phone_numbers
+from wialonapi.utils import clean_phone_numbers
 
 
 class WialonUnit(WialonBase):

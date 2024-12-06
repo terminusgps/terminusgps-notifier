@@ -1,4 +1,6 @@
+from typing import Any
 from urllib.parse import quote_plus
+from wialon import WialonError
 
 import wialonapi.flags as flag
 from wialonapi.items.base import WialonBase
@@ -7,11 +9,11 @@ from wialonapi.utils import clean_phone_numbers
 
 class WialonUnit(WialonBase):
     def create(self, **kwargs) -> None:
-        if kwargs.get("creator_id", None) is None:
+        if kwargs.get("creator_id") is None:
             raise ValueError("Tried to create unit but creator id was none.")
-        if kwargs.get("name", None) is None:
+        if kwargs.get("name") is None:
             raise ValueError("Tried to create unit but name was none.")
-        if kwargs.get("hw_type", None) is None:
+        if kwargs.get("hw_type") is None:
             raise ValueError("Tried to create unit but hw_type was none.")
 
         response = self.session.wialon_api.core_create_unit(
@@ -53,23 +55,35 @@ class WialonUnit(WialonBase):
             **{"itemId": self.id, "phoneNumber": quote_plus(phone)}
         )
 
+    def _get_fields(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        try:
+            item = self.session.wialon_api.core_search_item(
+                **{
+                    "id": self.id,
+                    "flags": sum(
+                        [
+                            flag.DATAFLAG_UNIT_CUSTOM_FIELDS,
+                            flag.DATAFLAG_UNIT_ADMIN_FIELDS,
+                        ]
+                    ),
+                }
+            ).get("item")
+        except WialonError as e:
+            raise e
+        else:
+            return item.get("aflds").values(), item.get("flds").values()
+
     def get_phone_numbers(self) -> list[str]:
-        phone_numbers = []
-        item = self.session.wialon_api.core_search_item(
-            id=self.id,
-            flags=sum(
-                [
-                    flag.DATAFLAG_UNIT_CUSTOM_FIELDS,
-                    flag.DATAFLAG_UNIT_ADMIN_FIELDS,
-                ]
-            ),
-        ).get("item")
-        admin_fields: list[dict] = item.get("aflds").values()
-        custom_fields: list[dict] = item.get("flds").values()
-        for field in admin_fields:
-            if field.get("n") == "to_number":
-                phone_numbers.append(field.get("v"))
-        for field in custom_fields:
-            if field.get("n") == "to_number":
-                phone_numbers.append(field.get("v"))
-        return clean_phone_numbers(phone_numbers)
+        try:
+            admin_fields, custom_fields = self._get_fields()
+        except WialonError as e:
+            raise e
+        else:
+            phone_numbers = []
+            for field in admin_fields:
+                if field.get("n") == "to_number":
+                    phone_numbers.append(field.get("v"))
+            for field in custom_fields:
+                if field.get("n") == "to_number":
+                    phone_numbers.append(field.get("v"))
+            return clean_phone_numbers(phone_numbers)

@@ -6,7 +6,7 @@ from twilio.base.exceptions import TwilioRestException
 from wialon.api import WialonError
 
 from caller import TwilioCaller
-from models import NotificationResponse, NotificationErrorResponse
+from models.responses import NotificationResponse, NotificationErrorResponse
 from wialonapi.utils import clean_phone_numbers
 from wialonapi.session import WialonSession
 from wialonapi.items import WialonUnit
@@ -47,8 +47,8 @@ def get_phone_numbers(
 async def notify(
     method: str,
     message: Annotated[str, Form()],
-    to_number: Annotated[Optional[str], Form()] = None,
     unit_id: Annotated[Optional[int], Form()] = None,
+    to_number: Annotated[Optional[str], Form()] = None,
 ) -> NotificationResponse | NotificationErrorResponse:
     """Send a notification to phone numbers using Twilio."""
     try:
@@ -62,7 +62,7 @@ async def notify(
             message=message,
             method=method,
             error=str(e),
-            error_desc="Invalid 'to_number' or 'unit_id'.",
+            error_desc=f"Got to_number: '{to_number}' and unit_id: '{unit_id}'.",
         )
     except WialonError as e:
         return NotificationErrorResponse(
@@ -94,8 +94,28 @@ async def notify(
         )
     else:
         return NotificationResponse(
-            phones=phone_numbers,
-            unit_id=str(unit_id),
-            message=message,
-            method=method,
+            phones=phone_numbers, unit_id=str(unit_id), message=message, method=method
         )
+
+
+def main() -> None:
+    import requests
+
+    url = "http://localhost:8000/notify/sms"
+    data = {
+        "to_number": "+17133049421",
+        "message": "Hello, this is a test message from Terminus GPS!",
+    }
+    requests.post(url, data=data)
+
+    url = "http://localhost:8000/notify/sms"
+    data = {
+        "unit_id": "28121664",
+        "message": "Hello, this is a test message from Terminus GPS!",
+    }
+    requests.post(url, data=data)
+    return
+
+
+if __name__ == "__main__":
+    main()

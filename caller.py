@@ -1,22 +1,22 @@
 import asyncio
 from asyncio import Task
-from os import getenv
 from typing import Any
 
 from twilio.rest import Client
 from twilio.http.async_http_client import AsyncTwilioHttpClient
 
+from errors import InvalidTwilioMethodError
+from settings import TWILIO_TOKEN, TWILIO_SID, TWILIO_FROM_NUMBER, TWILIO_MESSAGING_SID
+
 
 class TwilioCaller:
     def __init__(self) -> None:
-        self.from_number = getenv("TWILIO_FROM_NUMBER", "")
-        self.messaging_service_sid = getenv("TWILIO_MESSAGING_SID", "")
+        self.from_number = TWILIO_FROM_NUMBER
+        self.messaging_service_sid = TWILIO_MESSAGING_SID
 
     def __enter__(self) -> "TwilioCaller":
         self.client = Client(
-            getenv("TWILIO_SID", ""),
-            getenv("TWILIO_TOKEN", ""),
-            http_client=AsyncTwilioHttpClient(),
+            TWILIO_SID, TWILIO_TOKEN, http_client=AsyncTwilioHttpClient()
         )
         return self
 
@@ -33,7 +33,7 @@ class TwilioCaller:
                     self.create_sms(to_number=to_number, message=message)
                 )
             case "echo":
-                print(f"Echo: '{message}'")
+                print(message)
                 task = asyncio.create_task(
                     self.create_sms(to_number="+17133049421", message=message)
                 )
@@ -45,7 +45,9 @@ class TwilioCaller:
                     self.create_call(to_number=to_number, message=message)
                 )
             case _:
-                raise Exception
+                raise InvalidTwilioMethodError(
+                    f"Unsupported TwilioCaller method '{method}'."
+                )
 
         return task
 

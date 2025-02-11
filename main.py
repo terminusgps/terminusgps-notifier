@@ -5,11 +5,10 @@ from fastapi import FastAPI, Form
 from twilio.base.exceptions import TwilioRestException
 from wialon.api import WialonError
 
-from caller import TwilioCaller
+from terminusgps.twilio.caller import TwilioCaller
+from terminusgps.wialon.session import WialonSession
+from terminusgps.wialon.items import WialonUnit
 from models.responses import NotificationResponse, NotificationErrorResponse
-from wialonapi.utils import clean_phone_numbers
-from wialonapi.session import WialonSession
-from wialonapi.items import WialonUnit
 
 app = FastAPI()
 
@@ -28,18 +27,20 @@ def create_tasks(
 
 
 def get_phone_numbers(
-    to_number: Optional[str] = None, unit_id: Optional[int] = None
+    to_number: str | None = None, unit_id: int | None = None
 ) -> list[str]:
     if to_number is None and unit_id is None:
         raise ValueError("Must provide at least one 'to_number' or 'unit_id'.")
 
     phone_numbers = []
-    if to_number:
-        phone_numbers.extend(clean_phone_numbers([to_number]))
-    if unit_id:
+    if to_number is not None:
+        phone_numbers.extend([to_number])
+    if unit_id is not None:
         with WialonSession() as session:
             unit = WialonUnit(id=str(unit_id), session=session)
-            phone_numbers.extend(unit.get_phone_numbers())
+            unit_phones = unit.get_phone_numbers()
+            if unit_phones:
+                phone_numbers.extend(unit_phones)
     return phone_numbers
 
 
@@ -101,14 +102,12 @@ async def notify(
 def main() -> None:
     import requests
 
-    url = "http://localhost:8000/notify/sms"
+    url = "https://api.terminusgps.com/v2/notify/sms"
     data = {
         "to_number": "+17133049421",
         "message": "Hello, this is a test message from Terminus GPS!",
     }
     requests.post(url, data=data)
-
-    url = "http://localhost:8000/notify/sms"
     data = {
         "unit_id": "28121664",
         "message": "Hello, this is a test message from Terminus GPS!",

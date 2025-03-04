@@ -13,6 +13,12 @@ from models.responses import NotificationResponse, NotificationErrorResponse
 app = FastAPI()
 
 
+def clean_to_number(to_number: str) -> list[str]:
+    if "," in to_number:
+        return to_number.split(",")
+    return [to_number]
+
+
 def create_tasks(
     phone_numbers: list[str], message: str, method: str, caller: TwilioCaller
 ) -> list[Task[Any]]:
@@ -34,7 +40,8 @@ def get_phone_numbers(
 
     phone_numbers = []
     if to_number is not None:
-        phone_numbers.extend([to_number])
+        phones = clean_to_number(to_number)
+        phone_numbers.extend(phones)
     if unit_id is not None:
         with WialonSession() as session:
             unit = WialonUnit(id=str(unit_id), session=session)

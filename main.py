@@ -5,7 +5,6 @@ from typing import Annotated, Any, Optional
 
 from fastapi import FastAPI, Form
 from terminusgps.twilio.caller import TwilioCaller
-from terminusgps.twilio.logger import TwilioLogger
 from terminusgps.wialon.items import WialonUnit
 from terminusgps.wialon.session import WialonSession
 from twilio.base.exceptions import TwilioRestException
@@ -14,8 +13,6 @@ from wialon.api import WialonError
 from models.responses import NotificationErrorResponse, NotificationResponse
 
 app = FastAPI()
-
-logger = TwilioLogger(logging.getLogger(__name__), level=logging.DEBUG).get_logger()
 
 
 def clean_to_number(to_number: str) -> list[str]:
@@ -64,8 +61,6 @@ async def notify(
     to_number: Annotated[Optional[str], Form()] = None,
 ) -> NotificationResponse | NotificationErrorResponse:
     """Send a notification to phone numbers using Twilio."""
-    logger.debug(f"to_number recieved: '{to_number}'...")
-    logger.debug(f"unit_id recieved: '{unit_id}'...")
     try:
         phone_numbers: list[str] = get_phone_numbers(
             to_number=to_number, unit_id=unit_id
@@ -121,12 +116,18 @@ def main() -> None:
         "to_number": "+17133049421",
         "message": "Hello, this is a test message from Terminus GPS!",
     }
-    requests.post(url, data=data)
+    print(f"{url = }")
+    print(f"{data = }")
+    response = requests.post(url, data=data)
+    print(f"{response.status_code = }")
     data = {
         "unit_id": "28121664",
         "message": "Hello, this is a test message from Terminus GPS!",
     }
-    requests.post(url, data=data)
+    print(f"{url = }")
+    print(f"{data = }")
+    response = requests.post(url, data=data)
+    print(f"{response.status_code = }")
     return
 
 

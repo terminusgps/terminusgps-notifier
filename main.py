@@ -85,7 +85,7 @@ async def notify(
         )
 
     try:
-        with TwilioCaller(logging.DEBUG) as caller:
+        with TwilioCaller() as caller:
             tasks: list[Task[Any]] = create_tasks(
                 phone_numbers=phone_numbers,
                 message=message,
@@ -109,12 +109,14 @@ async def notify(
 
 
 def main() -> None:
+    from datetime import datetime
+
     import requests
 
     url = "https://api.terminusgps.com/v2/notify/sms"
     data = {
         "to_number": "+17133049421",
-        "message": "Hello, this is a test message from Terminus GPS!",
+        "message": f"{datetime.now():%Y-%m-%d %H:%M:%S}: Hello, this is a test message from Terminus GPS!",
     }
     print(f"{url = }")
     print(f"{data = }")
@@ -122,7 +124,7 @@ def main() -> None:
     print(f"{response.status_code = }")
     data = {
         "unit_id": "28121664",
-        "message": "Hello, this is a test message from Terminus GPS!",
+        "message": f"{datetime.now():%Y-%m-%d %H:%M:%S}: Hello, this is a test message from Terminus GPS!",
     }
     print(f"{url = }")
     print(f"{data = }")

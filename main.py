@@ -5,6 +5,7 @@ from typing import Annotated, Any, Optional
 
 from fastapi import FastAPI, Form
 from terminusgps.twilio.caller import TwilioCaller
+from terminusgps.twilio.logger import TwilioLogger
 from terminusgps.wialon.items import WialonUnit
 from terminusgps.wialon.session import WialonSession
 from twilio.base.exceptions import TwilioRestException
@@ -13,6 +14,8 @@ from wialon.api import WialonError
 from models.responses import NotificationErrorResponse, NotificationResponse
 
 app = FastAPI()
+
+logger = TwilioLogger(logging.getLogger(__name__), level=logging.DEBUG).get_logger()
 
 
 def clean_to_number(to_number: str) -> list[str]:
@@ -46,7 +49,6 @@ def get_phone_numbers(
         phone_numbers.extend(phones)
     if unit_id is not None:
         with WialonSession(log_level=logging.DEBUG) as session:
-            session.logger.debug(f"Notifying '{unit_id}'...")
             unit = WialonUnit(id=str(unit_id), session=session)
             unit_phones = unit.get_phone_numbers()
             if unit_phones:
@@ -62,6 +64,8 @@ async def notify(
     to_number: Annotated[Optional[str], Form()] = None,
 ) -> NotificationResponse | NotificationErrorResponse:
     """Send a notification to phone numbers using Twilio."""
+    logger.debug(f"to_number recieved: '{to_number}'...")
+    logger.debug(f"unit_id recieved: '{unit_id}'...")
     try:
         phone_numbers: list[str] = get_phone_numbers(
             to_number=to_number, unit_id=unit_id

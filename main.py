@@ -10,7 +10,12 @@ from terminusgps.wialon.session import WialonSession
 from twilio.base.exceptions import TwilioRestException
 from wialon.api import WialonError
 
-from models.responses import NotificationErrorResponse, NotificationResponse
+from models.responses import (
+    HeartbeatErrorResponse,
+    HeartbeatResponse,
+    NotificationErrorResponse,
+    NotificationResponse,
+)
 
 app = FastAPI()
 
@@ -19,6 +24,12 @@ def clean_to_number(to_number: str) -> list[str]:
     if "," in to_number:
         return to_number.split(",")
     return [to_number]
+
+
+def get_uptime() -> float:
+    with open("/proc/uptime", "r") as f:
+        uptime_seconds = float(f.readline().split()[0])
+    return uptime_seconds
 
 
 def create_tasks(
@@ -51,6 +62,15 @@ def get_phone_numbers(
             if unit_phones:
                 phone_numbers.extend(unit_phones)
     return phone_numbers
+
+
+@app.get("/heartbeat")
+async def heartbeat() -> HeartbeatResponse | HeartbeatErrorResponse:
+    try:
+        uptime = get_uptime()
+        return HeartbeatResponse(uptime=str(uptime))
+    except Exception as e:
+        return HeartbeatErrorResponse(error=e, error_desc=str(e))
 
 
 @app.post("/notify/{method}")

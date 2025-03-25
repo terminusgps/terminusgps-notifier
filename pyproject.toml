@@ -67,7 +67,7 @@ dependencies = [
     "watchfiles==1.0.4",
     "websockets==12.0",
     "yarl==1.18.3",
-    "python-terminusgps==22.0.1",
+    "python-terminusgps==24.4.0",
 ]
 
 [tool.ruff]

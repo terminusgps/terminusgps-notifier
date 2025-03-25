@@ -1,14 +1,16 @@
 import asyncio
-from typing import Annotated, Any, Optional
+import logging
 from asyncio.tasks import Task
+from typing import Annotated, Any, Optional
+
 from fastapi import FastAPI, Form
+from terminusgps.twilio.caller import TwilioCaller
+from terminusgps.wialon.items import WialonUnit
+from terminusgps.wialon.session import WialonSession
 from twilio.base.exceptions import TwilioRestException
 from wialon.api import WialonError
 
-from terminusgps.twilio.caller import TwilioCaller
-from terminusgps.wialon.session import WialonSession
-from terminusgps.wialon.items import WialonUnit
-from models.responses import NotificationResponse, NotificationErrorResponse
+from models.responses import NotificationErrorResponse, NotificationResponse
 
 app = FastAPI()
 
@@ -44,6 +46,7 @@ def get_phone_numbers(
         phone_numbers.extend(phones)
     if unit_id is not None:
         with WialonSession() as session:
+            session.logger.debug(f"Notifying '{unit_id}'...")
             unit = WialonUnit(id=str(unit_id), session=session)
             unit_phones = unit.get_phone_numbers()
             if unit_phones:
@@ -83,7 +86,7 @@ async def notify(
         )
 
     try:
-        with TwilioCaller() as caller:
+        with TwilioCaller(logging.WARNING) as caller:
             tasks: list[Task[Any]] = create_tasks(
                 phone_numbers=phone_numbers,
                 message=message,

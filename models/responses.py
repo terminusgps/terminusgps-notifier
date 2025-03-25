@@ -15,12 +15,3 @@ class NotificationErrorResponse(BaseModel):
     method: str
     error: str
     error_desc: str
-
-
-class HeartbeatResponse(BaseModel):
-    uptime: str
-
-
-class HeartbeatErrorResponse(BaseModel):
-    error: Exception
-    error_desc: str

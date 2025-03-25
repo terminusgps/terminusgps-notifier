@@ -45,7 +45,7 @@ def get_phone_numbers(
         phones = clean_to_number(to_number)
         phone_numbers.extend(phones)
     if unit_id is not None:
-        with WialonSession() as session:
+        with WialonSession(log_level=logging.DEBUG) as session:
             session.logger.debug(f"Notifying '{unit_id}'...")
             unit = WialonUnit(id=str(unit_id), session=session)
             unit_phones = unit.get_phone_numbers()
@@ -86,7 +86,7 @@ async def notify(
         )
 
     try:
-        with TwilioCaller(logging.WARNING) as caller:
+        with TwilioCaller(logging.DEBUG) as caller:
             tasks: list[Task[Any]] = create_tasks(
                 phone_numbers=phone_numbers,
                 message=message,

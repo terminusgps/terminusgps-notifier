@@ -3,8 +3,10 @@ import logging
 from asyncio.tasks import Task
 from typing import Annotated, Any, Optional
 
+from django.core.exceptions import ValidationError
 from fastapi import FastAPI, Form
 from terminusgps.twilio.caller import TwilioCaller
+from terminusgps.twilio.validators import validate_phone_number
 from terminusgps.wialon.items import WialonUnit
 from terminusgps.wialon.session import WialonSession
 from twilio.base.exceptions import TwilioRestException
@@ -26,11 +28,15 @@ def create_tasks(
 ) -> list[Task[Any]]:
     tasks = []
     for to_number in phone_numbers:
-        tasks.append(
-            caller.create_notification(
-                to_number=to_number, message=message, method=method
+        try:
+            validate_phone_number(to_number)
+            tasks.append(
+                caller.create_notification(
+                    to_number=to_number, message=message, method=method
+                )
             )
-        )
+        except ValidationError:
+            continue
     return tasks
 
 
@@ -113,7 +119,7 @@ def main() -> None:
 
     import requests
 
-    url = "https://api.terminusgps.com/v2/notify/sms"
+    url = "http://127.0.0.1:8000/notify/sms"
     data = {
         "to_number": "+17133049421",
         "message": f"{datetime.now():%Y-%m-%d %H:%M:%S}: Hello, this is a test message from Terminus GPS!",

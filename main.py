@@ -1,12 +1,9 @@
 import asyncio
-import logging
 from asyncio.tasks import Task
 from typing import Annotated, Any, Optional
 
-from django.core.exceptions import ValidationError
 from fastapi import FastAPI, Form
 from terminusgps.twilio.caller import TwilioCaller
-from terminusgps.twilio.validators import validate_phone_number
 from terminusgps.wialon.items import WialonUnit
 from terminusgps.wialon.session import WialonSession
 from twilio.base.exceptions import TwilioRestException
@@ -26,18 +23,10 @@ def clean_to_number(to_number: str) -> list[str]:
 def create_tasks(
     phone_numbers: list[str], message: str, method: str, caller: TwilioCaller
 ) -> list[Task[Any]]:
-    tasks = []
-    for to_number in phone_numbers:
-        try:
-            validate_phone_number(to_number)
-            tasks.append(
-                caller.create_notification(
-                    to_number=to_number, message=message, method=method
-                )
-            )
-        except ValidationError:
-            continue
-    return tasks
+    return [
+        caller.create_notification(to_number=phone, message=message, method=method)
+        for phone in phone_numbers
+    ]
 
 
 def get_phone_numbers(
@@ -47,15 +36,12 @@ def get_phone_numbers(
         raise ValueError("Must provide at least one 'to_number' or 'unit_id'.")
 
     phone_numbers = []
-    if to_number is not None:
-        phones = clean_to_number(to_number)
-        phone_numbers.extend(phones)
-    if unit_id is not None:
-        with WialonSession(log_level=logging.DEBUG) as session:
+    if to_number:
+        phone_numbers.extend(clean_to_number(to_number))
+    if unit_id:
+        with WialonSession() as session:
             unit = WialonUnit(id=str(unit_id), session=session)
-            unit_phones = unit.get_phone_numbers()
-            if unit_phones:
-                phone_numbers.extend(unit_phones)
+            phone_numbers.extend(unit.get_phone_numbers())
     return phone_numbers
 
 
@@ -98,7 +84,7 @@ async def notify(
                 method=method,
                 caller=caller,
             )
-            asyncio.gather(*tasks)
+            await asyncio.gather(*tasks)
     except TwilioRestException as e:
         return NotificationErrorResponse(
             phones=phone_numbers,
@@ -108,10 +94,9 @@ async def notify(
             error=str(e),
             error_desc="Something went wrong with Twilio.",
         )
-    else:
-        return NotificationResponse(
-            phones=phone_numbers, unit_id=str(unit_id), message=message, method=method
-        )
+    return NotificationResponse(
+        phones=phone_numbers, unit_id=str(unit_id), message=message, method=method
+    )
 
 
 def main() -> None:

@@ -1,17 +1,10 @@
 from django import forms
-from django.core.exceptions import ValidationError
-from django.utils.translation import gettext_lazy as _
 
-
-def validate_is_digit(value: str) -> None:
-    if not value.isdigit():
-        raise ValidationError(
-            _("Value must be a digit, got '%(value)s'."),
-            code="invalid",
-            params={"value": value},
-        )
+from terminusgps_notifier.validators import validate_is_digit
 
 
 class WialonUnitNotificationForm(forms.Form):
-    unit_id = forms.CharField(max_length=8, validators=[validate_is_digit])
+    unit_id = forms.CharField(
+        min_length=8, max_length=8, validators=[validate_is_digit]
+    )
     message = forms.CharField(max_length=2048)

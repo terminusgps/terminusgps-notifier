@@ -12,7 +12,7 @@ from .forms import WialonUnitNotificationForm
 
 class DispatchNotificationView(View):
     content_type = "application/x-www-form-urlencoded"
-    http_method_names = ["post"]
+    http_method_names = ["get"]
 
     def setup(self, request: HttpRequest, *args, **kwargs) -> None:
         self.twilio_client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
@@ -23,7 +23,7 @@ class DispatchNotificationView(View):
         }
         return super().setup(request, *args, **kwargs)
 
-    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         try:
             method = str(self.kwargs["method"])
             notify = self.get_notification_func(method)
@@ -31,7 +31,7 @@ class DispatchNotificationView(View):
             error_msg = bytes(str(e), encoding="utf-8")
             return HttpResponse(error_msg, status=406)
 
-        form = WialonUnitNotificationForm(request.POST)
+        form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
             error_msg = bytes(form.errors.as_json(escape_html=True), encoding="utf-8")
             return HttpResponse(error_msg, status=406)

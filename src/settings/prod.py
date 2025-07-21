@@ -5,11 +5,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 ALLOWED_HOSTS = [".terminusgps.com"]
 ASGI_APPLICATION = "src.asgi.application"
+CSRF_COOKIE_SECURE = True
 DEBUG = False
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LANGUAGE_CODE = "en-us"
 ROOT_URLCONF = "src.urls"
 SECRET_KEY = os.getenv("SECRET_KEY")
+SESSION_COOKIE_SECURE = True
 TIME_ZONE = "America/Chicago"
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
 TWILIO_MESSAGING_SID = os.getenv("TWILIO_MESSAGING_SID")
@@ -20,18 +22,43 @@ USE_TZ = True
 WIALON_TOKEN = os.getenv("WIALON_TOKEN")
 WSGI_APPLICATION = "src.wsgi.application"
 
-INSTALLED_APPS = ["terminusgps_notifier.apps.TerminusgpsNotifierConfig"]
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.messages",
+    "django.contrib.sessions",
+    # "django.contrib.staticfiles",
+    "django.forms",
+    "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
+]
 
 DATABASES = {
     "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
 }
 
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ]
+        },
+    }
+]
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    # "django.middleware.csrf.CsrfViewMiddleware",
-    # "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     # "django.contrib.messages.middleware.MessageMiddleware",
-    # "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

@@ -10,7 +10,8 @@ authors = [
 ]
 dependencies = [
     "django>=5.2.4",
-    "python-terminusgps>=38.0.0",
+    "python-terminusgps>=38.0.2",
+    "twilio>=9.6.5",
 ]
 
 [tool.ruff]

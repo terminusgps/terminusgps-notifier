@@ -37,14 +37,11 @@ def get_phone_numbers(
 
     phone_numbers = []
     if to_number:
-        print("'to_number' detected...")
         phone_numbers.extend(clean_to_number(to_number))
     if unit_id:
-        print("'unit_id' detected...")
         with WialonSession() as session:
             unit = WialonUnit(id=str(unit_id), session=session)
             phone_numbers.extend(unit.get_phone_numbers())
-    print(f"{phone_numbers = }")
     return phone_numbers
 
 
@@ -57,7 +54,6 @@ async def notify(
 ) -> NotificationResponse | NotificationErrorResponse:
     """Send a notification to phone numbers using Twilio."""
     try:
-        print("Getting phone numbers...")
         phone_numbers: list[str] = get_phone_numbers(
             to_number=to_number, unit_id=unit_id
         )
@@ -89,7 +85,6 @@ async def notify(
                 method=method,
                 caller=caller,
             )
-            print("Gathering tasks...")
             await asyncio.gather(*tasks)
     except TwilioRestException as e:
         return NotificationErrorResponse(

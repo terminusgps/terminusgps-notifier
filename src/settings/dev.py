@@ -12,6 +12,7 @@ LANGUAGE_CODE = "en-us"
 ROOT_URLCONF = "src.urls"
 SECRET_KEY = "k_il7ce@&k-=n9zo+7_^^b4kb+k$7##aa&z#=3(s7jkc_w5j9l"
 SESSION_COOKIE_SECURE = False
+STATIC_URL = "static/"
 TIME_ZONE = "America/Chicago"
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
 TWILIO_MESSAGING_SID = os.getenv("TWILIO_MESSAGING_SID")
@@ -28,13 +29,23 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.messages",
     "django.contrib.sessions",
-    # "django.contrib.staticfiles",
+    "django.contrib.staticfiles",
     "django.forms",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "DEBUG"},
+}
+
 DATABASES = {
-    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 
 TEMPLATES = [

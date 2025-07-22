@@ -16,6 +16,7 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_REFERRER_POLICY = "same-origin"
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
+STATIC_URL = "static/"
 TIME_ZONE = "America/Chicago"
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
 TWILIO_MESSAGING_SID = os.getenv("TWILIO_MESSAGING_SID")
@@ -37,6 +38,13 @@ INSTALLED_APPS = [
     "django.forms",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
+}
 
 DATABASES = {
     "default": {

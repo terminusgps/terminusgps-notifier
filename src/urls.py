@@ -17,4 +17,9 @@ Including another URLconf
 
 from django.urls import include, path
 
-urlpatterns = [path("v3/", include("terminusgps_notifier.urls"))]
+from . import views
+
+urlpatterns = [
+    path("health/", views.CheckHealthView.as_view(), name="check health"),
+    path("v3/", include("terminusgps_notifier.urls")),
+]

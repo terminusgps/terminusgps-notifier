@@ -12,11 +12,9 @@ LANGUAGE_CODE = "en-us"
 ROOT_URLCONF = "src.urls"
 SECRET_KEY = os.getenv("SECRET_KEY")
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_SECONDS = 3600
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_REFERRER_POLICY = "same-origin"
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
 TIME_ZONE = "America/Chicago"
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
@@ -40,7 +38,10 @@ INSTALLED_APPS = [
 ]
 
 DATABASES = {
-    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 
 TEMPLATES = [

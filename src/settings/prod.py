@@ -23,6 +23,7 @@ TWILIO_SID = os.getenv("TWILIO_SID")
 TWILIO_TOKEN = os.getenv("TWILIO_TOKEN")
 USE_I18N = True
 USE_TZ = True
+USE_X_FORWARDED_HOST = True
 WIALON_TOKEN = os.getenv("WIALON_TOKEN")
 WSGI_APPLICATION = "src.wsgi.application"
 

@@ -22,11 +22,15 @@ class DispatchNotificationView(View):
         self.twilio_client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
         return super().setup(request, *args, **kwargs)
 
-    def send_notification(self, to_number: str, message: str, method: str) -> None:
+    def send_notification(
+        self, to_number: str, message: str, method: str
+    ) -> None:
         match method:
             case "sms":
                 self.twilio_client.messages.create(
-                    to=to_number, from_=settings.TWILIO_FROM_NUMBER, body=message
+                    to=to_number,
+                    from_=settings.TWILIO_FROM_NUMBER,
+                    body=message,
                 )
             case "call" | "phone":
                 self.twilio_client.calls.create(
@@ -40,29 +44,26 @@ class DispatchNotificationView(View):
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            error_msg = bytes(form.errors.as_json(escape_html=True), encoding="utf-8")
-            return HttpResponse(error_msg, status=406)
+            msg = form.errors.as_json(escape_html=True)
+            return HttpResponse(bytes(msg, encoding="utf-8"), status=406)
         else:
             unit_id = str(form.cleaned_data["unit_id"])
             message = str(form.cleaned_data["message"])
+            target_phones: list[str] = get_wialon_phone_numbers(
+                unit_id, settings.WIALON_TOKEN
+            )
 
-            target_phones = get_wialon_phone_numbers(unit_id, settings.WIALON_TOKEN)
             if not target_phones:
-                error_msg = bytes(f"No phones for unit #{unit_id}", encoding="utf-8")
-                return HttpResponse(error_msg, status=406)
+                msg = bytes(f"No phones for unit #{unit_id}", encoding="utf-8")
+                return HttpResponse(msg, status=406)
 
             try:
                 method = str(self.kwargs["method"])
                 for phone in target_phones:
                     self.send_notification(phone, message, method)
 
-                return HttpResponse(
-                    bytes(
-                        f"Sent '{message}' to: {target_phones} via {method}",
-                        encoding="utf-8",
-                    ),
-                    status=200,
-                )
+                msg = f"Sent '{message}' to: {target_phones} via {method}"
+                return HttpResponse(bytes(msg, encoding="utf-8"), status=200)
             except ValueError as e:
-                error_msg = bytes(str(e), encoding="utf-8")
-                return HttpResponse(error_msg, status=200)
+                msg = str(e)
+                return HttpResponse(bytes(msg, encoding="utf-8"), status=406)

@@ -1012,24 +1012,18 @@ version = "3.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "django" },
+    { name = "gunicorn" },
     { name = "python-terminusgps" },
     { name = "twilio" },
-]
-
-[package.dev-dependencies]
-deploy = [
-    { name = "gunicorn" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "django", specifier = ">=5.2.4" },
+    { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "python-terminusgps", specifier = ">=38.0.2" },
     { name = "twilio", specifier = ">=9.6.5" },
 ]
-
-[package.metadata.requires-dev]
-deploy = [{ name = "gunicorn", specifier = ">=23.0.0" }]
 
 [[package]]
 name = "twilio"

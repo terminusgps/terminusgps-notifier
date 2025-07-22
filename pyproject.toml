@@ -15,6 +15,7 @@ classifiers = [
 requires-python = ">=3.12"
 dependencies = [
     "django>=5.2.4",
+    "gunicorn>=23.0.0",
     "python-terminusgps>=38.0.2",
     "twilio>=9.6.5",
 ]
@@ -71,8 +72,3 @@ indent-style = "space"
 line-ending = "auto"
 docstring-code-format = false
 skip-magic-trailing-comma = true
-
-[dependency-groups]
-deploy = [
-    "gunicorn>=23.0.0",
-]

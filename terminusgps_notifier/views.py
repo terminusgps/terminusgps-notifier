@@ -15,31 +15,12 @@ def get_wialon_phone_numbers(unit_id: str, wialon_api_token: str) -> list[str]:
 
 
 class DispatchNotificationView(View):
-    content_type = "application/x-www-form-urlencoded"
+    content_type = "text/plain"
     http_method_names = ["get"]
 
     def setup(self, request: HttpRequest, *args, **kwargs) -> None:
         self.twilio_client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
         return super().setup(request, *args, **kwargs)
-
-    def send_notification(
-        self, to_number: str, message: str, method: str
-    ) -> None:
-        match method:
-            case "sms":
-                self.twilio_client.messages.create(
-                    to=to_number,
-                    from_=settings.TWILIO_FROM_NUMBER,
-                    body=message,
-                )
-            case "call" | "phone":
-                self.twilio_client.calls.create(
-                    to=to_number,
-                    from_=settings.TWILIO_FROM_NUMBER,
-                    twiml=f"<Response><Say>{message}</Say></Response>",
-                )
-            case _:
-                raise ValueError(f"Invalid method: '{method}'")
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         form = WialonUnitNotificationForm(request.GET)
@@ -67,3 +48,22 @@ class DispatchNotificationView(View):
             except ValueError as e:
                 msg = str(e)
                 return HttpResponse(bytes(msg, encoding="utf-8"), status=406)
+
+    def send_notification(
+        self, to_number: str, message: str, method: str
+    ) -> None:
+        match method:
+            case "sms":
+                self.twilio_client.messages.create(
+                    to=to_number,
+                    from_=settings.TWILIO_FROM_NUMBER,
+                    body=message,
+                )
+            case "call" | "phone":
+                self.twilio_client.calls.create(
+                    to=to_number,
+                    from_=settings.TWILIO_FROM_NUMBER,
+                    twiml=f"<Response><Say>{message}</Say></Response>",
+                )
+            case _:
+                raise ValueError(f"Invalid method: '{method}'")

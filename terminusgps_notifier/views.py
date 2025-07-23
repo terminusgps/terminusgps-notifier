@@ -107,12 +107,12 @@ class DispatchNotificationView(View):
         match method:
             case "sms":
                 logger.debug(
-                    f"Sending '{message}' to '{to_number}' via sms..."
+                    f"Sending '{message}' to '{to_number}' via {method}..."
                 )
                 self._send_sms_notification(to_number, message)
-            case "call" | "phone":
+            case "call" | "phone" | "voice":
                 logger.debug(
-                    f"Sending '{message}' to '{to_number}' via voice..."
+                    f"Sending '{message}' to '{to_number}' via {method}..."
                 )
                 self._send_voice_notification(to_number, message)
             case _:

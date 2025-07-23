@@ -16,7 +16,7 @@ requires-python = ">=3.12"
 dependencies = [
     "django>=5.2.4",
     "gunicorn>=23.0.0",
-    "python-terminusgps>=38.0.2",
+    "python-terminusgps>=38.2.0",
     "twilio>=9.6.5",
 ]
 

@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
+from socket import gethostbyname, gethostname
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS.append(gethostbyname(gethostname()))
 ASGI_APPLICATION = "src.asgi.application"
 CSRF_COOKIE_SECURE = False
 DEBUG = True

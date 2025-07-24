@@ -41,7 +41,7 @@ class DispatchNotificationView(View):
         """
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            msg = form.errors.as_json(escape_html=True)
+            msg = form.errors.as_json(escape_html=True) + "\n"
             return HttpResponse(str(msg).encode("utf-8"), status=406)
 
         unit_id = str(form.cleaned_data["unit_id"])
@@ -51,7 +51,7 @@ class DispatchNotificationView(View):
         )
 
         if not target_phones:
-            msg = f"No phones for unit #{unit_id}"
+            msg = f"No phones for unit #{unit_id}\n"
             logger.warning(msg)
             return HttpResponse(msg.encode("utf-8"), status=406)
 
@@ -60,7 +60,7 @@ class DispatchNotificationView(View):
             for phone in target_phones:
                 self.send_notification(phone, message, method)
 
-            msg = f"Sent '{message}' to: {target_phones} via {method}"
+            msg = f"Sent '{message}' to: {target_phones} via {method}\n"
             logger.debug(msg)
             return HttpResponse(msg.encode("utf-8"), status=200)
         except ValueError as e:

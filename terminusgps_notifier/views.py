@@ -18,7 +18,7 @@ class HealthCheckView(View):
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """Responds with status code 200."""
-        return HttpResponse(b"I'm alive", status=200)
+        return HttpResponse(b"I'm alive\n", status=200)
 
 
 class DispatchNotificationView(View):

@@ -4,7 +4,12 @@ from socket import gethostbyname, gethostname
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    ".terminusgps.com",
+    ".terminusgpsapp.com",
+]
 ALLOWED_HOSTS.append(gethostbyname(gethostname()))
 ASGI_APPLICATION = "src.asgi.application"
 CSRF_COOKIE_SECURE = False
@@ -39,7 +44,7 @@ INSTALLED_APPS = [
 
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": True,
+    "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": "DEBUG"},
 }

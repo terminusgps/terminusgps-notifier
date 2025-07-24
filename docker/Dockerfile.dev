@@ -19,6 +19,6 @@ ENV PATH="/usr/local/terminusgps-site/.venv/bin:$PATH"
 
 ENTRYPOINT []
 
-CMD ["uv", "run", "manage.py", "runserver", "0.0.0.0:8000", "--noreload"]
+CMD ["uv", "run", "gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "src.wsgi"]
 
 EXPOSE 8000

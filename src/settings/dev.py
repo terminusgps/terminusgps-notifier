@@ -6,7 +6,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 ALLOWED_HOSTS.append(gethostbyname(gethostname()))
-print(f"{ALLOWED_HOSTS = }")
 ASGI_APPLICATION = "src.asgi.application"
 CSRF_COOKIE_SECURE = False
 DEBUG = True

@@ -26,7 +26,7 @@ class DispatchNotificationView(View):
     http_method_names = ["get"]
 
     def setup(self, request: HttpRequest, *args, **kwargs) -> None:
-        """Adds ``twilio_client`` to the view for notification dispatching."""
+        """Adds ``twilio_client`` to the view."""
         self.twilio_client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
         return super().setup(request, *args, **kwargs)
 
@@ -107,12 +107,12 @@ class DispatchNotificationView(View):
         match method:
             case "sms":
                 logger.debug(
-                    f"Sending '{message}' to '{to_number}' via {method}..."
+                    f"Sending '{message}' to '{to_number}' via sms..."
                 )
                 self._send_sms_notification(to_number, message)
             case "call" | "phone" | "voice":
                 logger.debug(
-                    f"Sending '{message}' to '{to_number}' via {method}..."
+                    f"Sending '{message}' to '{to_number}' via voice..."
                 )
                 self._send_voice_notification(to_number, message)
             case _:

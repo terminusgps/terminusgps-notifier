@@ -16,7 +16,7 @@ class HealthCheckViewTestCase(TestCase):
         self.client = Client()
 
     def test_health_check(self) -> None:
-        """Fails if the health check endpoint doesn't respond with status code 200."""
+        """Fails if the health check endpoint doesn't return status code 200."""
         response = self.client.get("/health/")
         self.assertEqual(response.status_code, 200)
 
@@ -24,6 +24,12 @@ class HealthCheckViewTestCase(TestCase):
 class DispatchNotificationViewTestCase(TestCase):
     def setUp(self) -> None:
         self.client = Client()
+
+    def test_http_post(self) -> None:
+        """Fails if an http POST to the notification dispatch view doesn't return status code 405."""
+        data = {"unit_id": "12345678", "message": "test"}
+        response = self.client.post("/v3/notify/sms/", data=data)
+        self.assertEqual(response.status_code, 405)
 
     def test_invalid_method(self) -> None:
         """Fails if an invalid method doesn't return status code 406."""

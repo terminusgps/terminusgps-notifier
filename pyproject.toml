@@ -22,7 +22,7 @@ dependencies = [
 
 [project.urls]
 Documentation = "https://docs.terminusgps.com"
-Repository = "https://github.com/darthnall/terminusgps-notifier"
+Repository = "https://github.com/terminusgps/terminusgps-notifier"
 
 [build-system]
 requires = ["hatchling"]

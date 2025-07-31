@@ -28,24 +28,24 @@ class DispatchNotificationViewTestCase(TestCase):
     def test_http_post(self) -> None:
         """Fails if an http POST to the notification dispatch view doesn't return status code 405."""
         data = {"unit_id": "12345678", "message": "test"}
-        response = self.client.post("/v3/notify/sms/", data=data)
+        response = self.client.post("/notify/sms/", data=data)
         self.assertEqual(response.status_code, 405)
 
     def test_invalid_method(self) -> None:
         """Fails if an invalid method doesn't return status code 406."""
-        response = self.client.get("/v3/notify/not_a_method/")
+        response = self.client.get("/notify/not_a_method/")
         self.assertEqual(response.status_code, 406)
 
     def test_non_digit_unit_id(self) -> None:
         """Fails if a non-digit unit id doesn't return status code 406."""
         data = {"unit_id": "", "message": "test"}
-        response = self.client.get("/v3/notify/sms/", data=data)
+        response = self.client.get("/notify/sms/", data=data)
         self.assertEqual(response.status_code, 406)
 
     def test_message_too_long(self) -> None:
         """Fails if a message longer than 2048 characters doesn't return status code 406."""
         data = {"unit_id": "12345678", "message": "test" * 513}
-        response = self.client.get("/v3/notify/sms/", data=data)
+        response = self.client.get("/notify/sms/", data=data)
         self.assertEqual(response.status_code, 406)
 
     @override_settings(DEBUG=True)
@@ -62,7 +62,7 @@ class DispatchNotificationViewTestCase(TestCase):
             test_unit.update_cfield("to_number", "+17135555555,+12815555555")
 
             data = {"unit_id": test_unit.id, "message": "test"}
-            response = self.client.get("/v3/notify/sms/", data=data)
+            response = self.client.get("/notify/sms/", data=data)
 
             test_unit.delete()
             self.assertEqual(response.status_code, 200)
@@ -91,7 +91,7 @@ class DispatchNotificationViewTestCase(TestCase):
             test_resource.bind_unit_driver(test_unit.id, driver_id)
 
             data = {"unit_id": test_unit.id, "message": "test"}
-            response = self.client.get("/v3/notify/sms/", data=data)
+            response = self.client.get("/notify/sms/", data=data)
 
             test_unit.delete()
             test_resource.delete()
@@ -110,7 +110,7 @@ class DispatchNotificationViewTestCase(TestCase):
             )
 
             data = {"unit_id": test_unit.id, "message": "test"}
-            response = self.client.get("/v3/notify/sms/", data=data)
+            response = self.client.get("/notify/sms/", data=data)
 
             test_unit.delete()
             self.assertEqual(response.status_code, 406)

@@ -1,11 +1,11 @@
 import logging
 
+import boto3
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import View
 from terminusgps.wialon.items import WialonUnit
 from terminusgps.wialon.session import WialonSession
-from twilio.rest import Client
 
 from .forms import WialonUnitNotificationForm
 
@@ -26,8 +26,8 @@ class DispatchNotificationView(View):
     http_method_names = ["get"]
 
     def setup(self, request: HttpRequest, *args, **kwargs) -> None:
-        """Adds ``twilio_client`` to the view."""
-        self.twilio_client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
+        """Adds ``pinpoint_client`` to the view."""
+        self.pinpoint_client = boto3.client("pinpoint-sms-voice-v2")
         return super().setup(request, *args, **kwargs)
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
@@ -120,22 +120,35 @@ class DispatchNotificationView(View):
             case _:
                 raise ValueError(f"Invalid method: '{method}'")
 
-    def _send_sms_notification(self, to_number: str, message: str) -> None:
+    def _send_sms_notification(
+        self, to_number: str, message: str, dry_run: bool = False
+    ) -> str | None:
         """Sends ``message`` to ``to_number`` via sms."""
-        if settings.DEBUG:
-            return
-
-        self.twilio_client.messages.create(
-            to=to_number, from_=settings.TWILIO_FROM_NUMBER, body=message
+        response = self.pinpoint_client.send_text_message(
+            **{
+                "DestinationPhoneNumber": to_number,
+                "OriginationIdentity": settings.AWS_PINPOINT_POOL_ARN,
+                "MessageBody": message,
+                "MaxPrice": settings.AWS_PINPOINT_MAX_PRICE_SMS,
+                "TimeToLive": 3600,
+                "DryRun": dry_run or settings.DEBUG,
+            }
         )
+        return response.get("MessageId")
 
-    def _send_voice_notification(self, to_number: str, message: str) -> None:
+    def _send_voice_notification(
+        self, to_number: str, message: str, dry_run: bool = False
+    ) -> str | None:
         """Sends ``message`` to ``to_number`` via voice."""
-        if settings.DEBUG:
-            return
-
-        self.twilio_client.calls.create(
-            to=to_number,
-            from_=settings.TWILIO_FROM_NUMBER,
-            twiml=f"<Response><Say>{message}</Say></Response>",
+        response = self.pinpoint_client.send_voice_message(
+            **{
+                "DestinationPhoneNumber": to_number,
+                "OriginationIdentity": settings.AWS_PINPOINT_POOL_ARN,
+                "MessageBody": message,
+                "MessageBodyTextType": "TEXT",
+                "VoiceId": "MATTHEW",
+                "MaxPricePerMinute": settings.AWS_PINPOINT_MAX_PRICE_VOICE,
+                "DryRun": dry_run or settings.DEBUG,
+            }
         )
+        return response.get("MessageId")

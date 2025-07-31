@@ -1,29 +1,24 @@
 import os
 from pathlib import Path
-from socket import gethostbyname, gethostname
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-ALLOWED_HOSTS = [".terminusgps.com", ".terminusgpsapp.com"]
-ALLOWED_HOSTS.append(gethostbyname(gethostname()))
+ALLOWED_HOSTS = [".terminusgps.com"]
 ASGI_APPLICATION = "src.asgi.application"
+AWS_PINPOINT_MAX_PRICE_SMS = os.getenv("AWS_PINPOINT_MAX_PRICE_SMS")
+AWS_PINPOINT_MAX_PRICE_VOICE = os.getenv("AWS_PINPOINT_MAX_PRICE_VOICE")
+AWS_PINPOINT_POOL_ARN = os.getenv("AWS_PINPOINT_POOL_ARN")
 CSRF_COOKIE_SECURE = True
 DEBUG = False
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LANGUAGE_CODE = "en-us"
 ROOT_URLCONF = "src.urls"
 SECRET_KEY = os.getenv("SECRET_KEY")
-SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_REFERRER_POLICY = "same-origin"
-SECURE_SSL_REDIRECT = False
+SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 STATIC_URL = "static/"
 TIME_ZONE = "America/Chicago"
-TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
-TWILIO_MESSAGING_SID = os.getenv("TWILIO_MESSAGING_SID")
-TWILIO_SID = os.getenv("TWILIO_SID")
-TWILIO_TOKEN = os.getenv("TWILIO_TOKEN")
 USE_I18N = True
 USE_TZ = True
 USE_X_FORWARDED_HOST = True

@@ -32,7 +32,7 @@ class DispatchNotificationView(View):
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """
-        Dispatches a notification using Twilio based on query parameters.
+        Dispatches a notification based on query parameters.
 
         Returns 200 if notifications were successfully dispatched.
 
@@ -41,8 +41,8 @@ class DispatchNotificationView(View):
         """
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            msg = form.errors.as_json(escape_html=True) + "\n"
-            return HttpResponse(str(msg).encode("utf-8"), status=406)
+            msg = f"{form.errors.as_json(escape_html=True)}\n"
+            return HttpResponse(msg.encode("utf-8"), status=406)
 
         unit_id = str(form.cleaned_data["unit_id"])
         message = str(form.cleaned_data["message"])
@@ -129,8 +129,9 @@ class DispatchNotificationView(View):
                 "DestinationPhoneNumber": to_number,
                 "OriginationIdentity": settings.AWS_PINPOINT_POOL_ARN,
                 "MessageBody": message,
+                "MessageType": "TRANSACTIONAL",
                 "MaxPrice": settings.AWS_PINPOINT_MAX_PRICE_SMS,
-                "TimeToLive": 3600,
+                "TimeToLive": 300,
                 "DryRun": dry_run or settings.DEBUG,
             }
         )

@@ -126,30 +126,30 @@ sdist = { url = "https://files.pythonhosted.org/packages/32/7f/0e26284cd5c86c5b4
 
 [[package]]
 name = "boto3"
-version = "1.39.17"
+version = "1.40.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore" },
     { name = "jmespath" },
     { name = "s3transfer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/70/15/8c2f455fccd6253ae2a95d7d872fcce27adab8c719218027b7c31a48542b/boto3-1.39.17.tar.gz", hash = "sha256:a6904a40b1c61f6a1766574b3155ec75a6020399fb570be2b51bf93a2c0a2b3d", size = 111831 }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/34/298ef2023d7d88069776c9cc26b42ba6f05d143a1c9b44a0f65cd795c65b/boto3-1.40.0.tar.gz", hash = "sha256:fc1b3ca3baf3d8820c6faddf47cbba8ad3cd16f8e8d7e2f76d304bf995932eb7", size = 111847 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f0/45/8321081d478881779551692a185bbe19574a2ac87294f5096c549837292c/boto3-1.39.17-py3-none-any.whl", hash = "sha256:6af9f7d6db7b5e72d6869ae22ebad1b0c6602591af2ef5d914b331a055953df5", size = 139901 },
+    { url = "https://files.pythonhosted.org/packages/5d/44/158581021038c5fc886ffa27fa4731fb4939258da7a23e0bc70b2d5757c9/boto3-1.40.0-py3-none-any.whl", hash = "sha256:959443055d2af676c336cc6033b3f870a8a924384b70d0b2905081d649378179", size = 139882 },
 ]
 
 [[package]]
 name = "botocore"
-version = "1.39.17"
+version = "1.40.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e3/9d/fc3cfb3305c355dde52870434917304c40dfb642c332c9edbe646939a3bc/botocore-1.39.17.tar.gz", hash = "sha256:1a1f0b29dab5d1b10d16f14423c16ac0a3043272f579e9ab0d757753ee9a7d2b", size = 14250697 }
+sdist = { url = "https://files.pythonhosted.org/packages/8f/e7/770ce910457ac6c68ea79b83892ab7a7cb08528f5d1dd77e51bf02a8529e/botocore-1.40.0.tar.gz", hash = "sha256:850242560dc8e74d542045a81eb6cc15f1b730b4ba55ba5b30e6d686548dfcaf", size = 14262316 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/40/d16536e0db30c35c14cfd7f2227fccb59f7b999b501ed410bddb9e1492cf/botocore-1.39.17-py3-none-any.whl", hash = "sha256:41db169e919f821b3ef684794c5e67dd7bb1f5ab905d33729b1d8c27fafe8004", size = 13908201 },
+    { url = "https://files.pythonhosted.org/packages/38/5a/bebc53f022514412613615b09aef20fbe804abb3ea26ec27e504a2d21c8f/botocore-1.40.0-py3-none-any.whl", hash = "sha256:2063e6d035a6a382b2ae37e40f5144044e55d4e091910d0c9f1be3121ad3e4e6", size = 13921768 },
 ]
 
 [[package]]
@@ -573,7 +573,7 @@ wheels = [
 
 [[package]]
 name = "python-terminusgps"
-version = "38.2.0"
+version = "38.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "argparse" },
@@ -584,9 +584,9 @@ dependencies = [
     { name = "python-wialon" },
     { name = "twilio" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/45/afed25bc6da14f33ce75fcdb965d2f7d411ac8a896322aedb39503dde072/python_terminusgps-38.2.0.tar.gz", hash = "sha256:a4a8d786ef2d866692b60e7cf4a1d14d361da5f81b673e2161dcfd2a22afaeae", size = 10475221 }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/b1/a2657c54d6e1efa950b402d5abc635cc95592c2b85d5f1e92320d691fd98/python_terminusgps-38.3.1.tar.gz", hash = "sha256:458f0e2fae5c092ff2e15bd4144deffa3d6ee7d37dfb1628d9849c95c0b17b1b", size = 10477814 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/7f/938f493eac7f6d21add22dfa0f7cce8084c3a69acc2fa2bca1fa3719f9cd/python_terminusgps-38.2.0-py3-none-any.whl", hash = "sha256:86c90c9d5bfaa08627baa15e5454d4670739ff244009a13103616773e394627c", size = 64430 },
+    { url = "https://files.pythonhosted.org/packages/1d/2c/2d71a83984a253faf433823e2e8bd62456739af3889aeeab34be9720b082/python_terminusgps-38.3.1-py3-none-any.whl", hash = "sha256:67375db044bdf72f1f2197893da85997a6eda7dfab3341413251a671ba863994", size = 64384 },
 ]
 
 [[package]]
@@ -709,7 +709,6 @@ dependencies = [
     { name = "django" },
     { name = "gunicorn" },
     { name = "python-terminusgps" },
-    { name = "twilio" },
 ]
 
 [package.metadata]
@@ -717,8 +716,7 @@ requires-dist = [
     { name = "boto3", specifier = ">=1.39.12" },
     { name = "django", specifier = ">=5.2.4" },
     { name = "gunicorn", specifier = ">=23.0.0" },
-    { name = "python-terminusgps", specifier = ">=38.2.0" },
-    { name = "twilio", specifier = ">=9.6.5" },
+    { name = "python-terminusgps", specifier = ">=38.3.1" },
 ]
 
 [[package]]

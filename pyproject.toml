@@ -17,8 +17,7 @@ dependencies = [
     "boto3>=1.39.12",
     "django>=5.2.4",
     "gunicorn>=23.0.0",
-    "python-terminusgps>=38.2.0",
-    "twilio>=9.6.5",
+    "python-terminusgps>=38.3.1",
 ]
 
 [project.urls]

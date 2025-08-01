@@ -5,6 +5,6 @@
 __pycache__/
 *.egg-info/
 dist/
-test.py
 logs/
 db.sqlite3
+src/docs/build/

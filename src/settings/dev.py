@@ -21,6 +21,7 @@ USE_I18N = True
 USE_TZ = True
 WIALON_TOKEN = os.getenv("WIALON_TOKEN")
 WSGI_APPLICATION = "src.wsgi.application"
+DOCS_ROOT = BASE_DIR / "docs" / "build" / "html"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -30,6 +31,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "django.forms",
+    "docs",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
 

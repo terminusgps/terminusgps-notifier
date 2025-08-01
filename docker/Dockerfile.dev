@@ -15,7 +15,7 @@ COPY . /usr/local/terminusgps-notifier
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
-ENV PATH="/usr/local/terminusgps-site/.venv/bin:$PATH"
+ENV PATH="/usr/local/terminusgps-notifier/.venv/bin:$PATH"
 
 ENTRYPOINT []
 

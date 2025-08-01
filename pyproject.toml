@@ -75,7 +75,6 @@ skip-magic-trailing-comma = true
 
 [dependency-groups]
 dev = [
-    "django-docs>=0.3.3",
     "sphinx-rtd-theme>=3.0.2",
     "sphinx>=8.2.3",
 ]

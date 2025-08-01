@@ -3,7 +3,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-ALLOWED_HOSTS = [".terminusgps.com"]
+ALLOWED_HOSTS = [".terminusgps.com", ".terminusgpsapp.com"]
 ASGI_APPLICATION = "src.asgi.application"
 AWS_PINPOINT_MAX_PRICE_SMS = os.getenv("AWS_PINPOINT_MAX_PRICE_SMS")
 AWS_PINPOINT_MAX_PRICE_VOICE = os.getenv("AWS_PINPOINT_MAX_PRICE_VOICE")
@@ -35,13 +35,6 @@ INSTALLED_APPS = [
     "django.forms",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": "WARNING"},
-}
 
 DATABASES = {
     "default": {

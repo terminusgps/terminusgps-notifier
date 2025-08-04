@@ -36,9 +36,9 @@ class DispatchNotificationView(View):
 
         Returns 200 if notifications were successfully dispatched.
 
-        Returns 406 if the unit id, message or method was invalid.
+        Returns 200 if the provided unit id didn't have attached phone numbers.
 
-        Returns 406 if the unit didn't have assigned phone numbers.
+        Returns 406 if the unit id, message or method was invalid.
 
         """
         form = WialonUnitNotificationForm(request.GET)
@@ -54,11 +54,13 @@ class DispatchNotificationView(View):
             unit_id, settings.WIALON_TOKEN
         )
 
+        # Early 200 response if no phones
         if not target_phones:
             content = f"No phones for #{unit_id}"
             logger.warning(content)
-            return HttpResponse(f"{content}\n".encode("utf-8"), status=406)
+            return HttpResponse(f"{content}\n".encode("utf-8"), status=200)
 
+        # Handle notifications if phones
         try:
             method: str = str(self.kwargs["method"])
             for phone in target_phones:
@@ -96,13 +98,13 @@ class DispatchNotificationView(View):
         """
         Sends a notification to ``to_number`` via ``method``.
 
-        :param to_number: Notification recipient (target) phone number.
+        :param to_number: Destination (target) phone number.
         :type to_number: :py:obj:`str`
         :param message: Notification message.
         :type message: :py:obj:`str`
-        :param method: Notification method. Options are ``sms``, ``call``, ``phone`` or ``voice``.
+        :param method: Notification method. Options are ``sms`` or ``voice``.
         :type method: :py:obj:`str`
-        :raises ValueError: If the provided method was invalid.
+        :raises ValueError: If the provided notification method was invalid.
         :returns: Nothing.
         :rtype: :py:obj:`None`
 
@@ -112,42 +114,62 @@ class DispatchNotificationView(View):
                 logger.debug(
                     f"Sending '{message}' to '{to_number}' via sms..."
                 )
-                self._send_sms_notification(to_number, message)
-            case "call" | "phone" | "voice":
+                self._send_sms_message(to_number, message)
+            case "voice":
                 logger.debug(
                     f"Sending '{message}' to '{to_number}' via voice..."
                 )
-                self._send_voice_notification(to_number, message)
+                self._send_voice_message(to_number, message)
             case _:
                 raise ValueError(f"Invalid method: '{method}'")
 
-    def _send_sms_notification(
+    def _send_sms_message(
         self, to_number: str, message: str, dry_run: bool = False
     ) -> str | None:
-        """Sends ``message`` to ``to_number`` via sms."""
-        if settings.DEBUG:
-            return
+        """
+        Sends ``message`` to ``to_number`` via sms.
 
+        :param to_number: Destination phone number.
+        :type to_number: :py:obj:`str`
+        :param message: A message to deliver to the destination phone number via sms.
+        :type message: :py:obj:`str`
+        :param dry_run: Whether or not to execute the API call as a dry run. Default is :py:obj:`False`.
+        :type dry_run: :py:obj:`bool`
+        :returns: A message id, if sent.
+        :rtype: :py:obj:`str` | :py:obj:`None`
+
+        """
         response = self.pinpoint_client.send_text_message(
             **{
                 "DestinationPhoneNumber": to_number,
                 "OriginationIdentity": settings.AWS_PINPOINT_POOL_ARN,
                 "MessageBody": message,
                 "MessageType": "TRANSACTIONAL",
+                "ConfigurationSetName": settings.AWS_PINPOINT_CONFIGURATION_ARN,
                 "MaxPrice": settings.AWS_PINPOINT_MAX_PRICE_SMS,
                 "TimeToLive": 300,
-                "DryRun": dry_run,
+                "DryRun": dry_run or settings.DEBUG,
+                "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
             }
         )
         return response.get("MessageId")
 
-    def _send_voice_notification(
+    def _send_voice_message(
         self, to_number: str, message: str, dry_run: bool = False
     ) -> str | None:
-        """Sends ``message`` to ``to_number`` via voice."""
-        if settings.DEBUG:
-            return
+        """
+        Sends ``message`` to ``to_number`` via voice.
 
+        :param to_number: Destination phone number.
+        :type to_number: :py:obj:`str`
+        :param message: A message to read aloud to the destination phone number via voice.
+        :type message: :py:obj:`str`
+        :param dry_run: Whether or not to execute the API call as a dry run. Default is :py:obj:`False`.
+        :type dry_run: :py:obj:`bool`
+        :returns: A message id, if sent.
+        :rtype: :py:obj:`str` | :py:obj:`None`
+
+        """
         response = self.pinpoint_client.send_voice_message(
             **{
                 "DestinationPhoneNumber": to_number,
@@ -155,8 +177,10 @@ class DispatchNotificationView(View):
                 "MessageBody": message,
                 "MessageBodyTextType": "TEXT",
                 "VoiceId": "MATTHEW",
+                "ConfigurationSetName": settings.AWS_PINPOINT_CONFIGURATION_ARN,
                 "MaxPricePerMinute": settings.AWS_PINPOINT_MAX_PRICE_VOICE,
-                "DryRun": dry_run,
+                "DryRun": dry_run or settings.DEBUG,
+                "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
             }
         )
         return response.get("MessageId")

@@ -9,7 +9,7 @@ from terminusgps.wialon.session import WialonSession
 
 from .forms import WialonUnitNotificationForm
 
-logger = logging.getLogger()
+logger = logging.getLogger(__file__)
 
 
 class HealthCheckView(View):
@@ -38,35 +38,39 @@ class DispatchNotificationView(View):
 
         Returns 406 if the unit id, message or method was invalid.
 
+        Returns 406 if the unit didn't have assigned phone numbers.
+
         """
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            msg = f"{form.errors.as_json(escape_html=True)}\n"
-            return HttpResponse(msg.encode("utf-8"), status=406)
+            content = form.errors.as_json(escape_html=True)
+            return HttpResponse(f"{content}\n".encode("utf-8"), status=406)
 
         unit_id = str(form.cleaned_data["unit_id"])
         message = str(form.cleaned_data["message"])
+
+        logger.debug(f"Retrieving phone numbers for #{unit_id} from Wialon...")
         target_phones: list[str] = self.get_wialon_phone_numbers(
             unit_id, settings.WIALON_TOKEN
         )
 
         if not target_phones:
-            msg = f"No phones for unit #{unit_id}\n"
-            logger.warning(msg)
-            return HttpResponse(msg.encode("utf-8"), status=406)
+            content = f"No phones for #{unit_id}"
+            logger.warning(content)
+            return HttpResponse(f"{content}\n".encode("utf-8"), status=406)
 
         try:
             method: str = str(self.kwargs["method"])
             for phone in target_phones:
                 self.send_notification(phone, message, method)
 
-            msg = f"Sent '{message}' to: {target_phones} via {method}\n"
-            logger.debug(msg)
-            return HttpResponse(msg.encode("utf-8"), status=200)
+            content = f"Sent '{message}' to: {target_phones} via {method}"
+            logger.debug(content)
+            return HttpResponse(f"{content}\n".encode("utf-8"), status=200)
         except ValueError as e:
-            msg = str(e)
-            logger.warning(msg)
-            return HttpResponse(msg.encode("utf-8"), status=406)
+            content = str(e)
+            logger.warning(content)
+            return HttpResponse(f"{content}\n".encode("utf-8"), status=406)
 
     @staticmethod
     def get_wialon_phone_numbers(
@@ -84,9 +88,6 @@ class DispatchNotificationView(View):
 
         """
         with WialonSession(token=wialon_api_token) as session:
-            logger.debug(
-                f"Retrieving phone numbers for unit #{unit_id} using sid #{session.id}..."
-            )
             return WialonUnit(unit_id, session).get_phone_numbers()
 
     def send_notification(
@@ -99,7 +100,7 @@ class DispatchNotificationView(View):
         :type to_number: :py:obj:`str`
         :param message: Notification message.
         :type message: :py:obj:`str`
-        :param method: Notification method. Options are ``sms``, ``call`` or ``phone``.
+        :param method: Notification method. Options are ``sms``, ``call``, ``phone`` or ``voice``.
         :type method: :py:obj:`str`
         :raises ValueError: If the provided method was invalid.
         :returns: Nothing.
@@ -124,6 +125,9 @@ class DispatchNotificationView(View):
         self, to_number: str, message: str, dry_run: bool = False
     ) -> str | None:
         """Sends ``message`` to ``to_number`` via sms."""
+        if settings.DEBUG:
+            return
+
         response = self.pinpoint_client.send_text_message(
             **{
                 "DestinationPhoneNumber": to_number,
@@ -132,7 +136,7 @@ class DispatchNotificationView(View):
                 "MessageType": "TRANSACTIONAL",
                 "MaxPrice": settings.AWS_PINPOINT_MAX_PRICE_SMS,
                 "TimeToLive": 300,
-                "DryRun": dry_run or settings.DEBUG,
+                "DryRun": dry_run,
             }
         )
         return response.get("MessageId")
@@ -141,6 +145,9 @@ class DispatchNotificationView(View):
         self, to_number: str, message: str, dry_run: bool = False
     ) -> str | None:
         """Sends ``message`` to ``to_number`` via voice."""
+        if settings.DEBUG:
+            return
+
         response = self.pinpoint_client.send_voice_message(
             **{
                 "DestinationPhoneNumber": to_number,
@@ -149,7 +156,7 @@ class DispatchNotificationView(View):
                 "MessageBodyTextType": "TEXT",
                 "VoiceId": "MATTHEW",
                 "MaxPricePerMinute": settings.AWS_PINPOINT_MAX_PRICE_VOICE,
-                "DryRun": dry_run or settings.DEBUG,
+                "DryRun": dry_run,
             }
         )
         return response.get("MessageId")

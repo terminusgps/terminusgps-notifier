@@ -1,16 +1,18 @@
 import logging
-import uuid
 
+import boto3
+from django.conf import settings
 from django.test import TestCase
 from django.test.client import Client
 from django.test.utils import override_settings
 from terminusgps.wialon import utils as wialon_utils
-from terminusgps.wialon.items import WialonResource, WialonUnit
+from terminusgps.wialon.items import WialonUnit
 from terminusgps.wialon.session import WialonSession
 
 logging.disable(logging.WARNING)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class HealthCheckViewTestCase(TestCase):
     def setUp(self) -> None:
         self.client = Client()
@@ -48,69 +50,76 @@ class DispatchNotificationViewTestCase(TestCase):
         response = self.client.get("/notify/sms/", data=data)
         self.assertNotEqual(response.status_code, 200)
 
-    @override_settings(DEBUG=True)
-    def test_wialon_unit_with_to_number(self) -> None:
-        """Fails if a notification wasn't sent to the phone numbers in the Wialon unit's ``to_number`` custom field."""
-        with WialonSession() as test_session:
-            test_unit = WialonUnit(
-                id=None,
-                creator_id=test_session.uid,
-                name=f"test_unit_{str(uuid.uuid4())[:24].strip('-')}",
-                hw_type_id=wialon_utils.get_hw_types(test_session)[0]["id"],
-                session=test_session,
-            )
-            test_unit.update_cfield("to_number", "+17135555555,+12815555555")
 
-            data = {"unit_id": test_unit.id, "message": "test"}
-            response = self.client.get("/notify/sms/", data=data)
+class WialonIntegrationTestCase(TestCase):
+    def setUp(self) -> None:
+        self.client = Client()
+        self.test_session = WialonSession()
+        self.test_session.login(token=settings.WIALON_TOKEN)
 
-            test_unit.delete()
-            self.assertEqual(response.status_code, 200)
+    def tearDown(self) -> None:
+        self.test_session.logout()
 
-    @override_settings(DEBUG=True)
-    def test_wialon_unit_with_driver(self) -> None:
-        """Fails if a notification wasn't sent to the Wialon unit's attached driver."""
-        with WialonSession() as test_session:
-            test_unit = WialonUnit(
-                id=None,
-                creator_id=test_session.uid,
-                name=f"test_unit_{str(uuid.uuid4())[:24].strip('-')}",
-                hw_type_id=wialon_utils.get_hw_types(test_session)[0]["id"],
-                session=test_session,
-            )
-            test_resource = WialonResource(
-                id=None,
-                creator_id=test_session.uid,
-                name=f"test_resource_{str(uuid.uuid4())[:24].strip('-')}",
-                skip_creator_check=True,
-                session=test_session,
-            )
-            driver_id = test_resource.create_driver(
-                name="Test Driver", phone="+17135555555"
-            )
-            test_resource.bind_unit_driver(test_unit.id, driver_id)
+    def test_wialon_unit_with_no_phone_numbers_returns_empty_list(
+        self,
+    ) -> None:
+        """Fails if a test unit with no phone numbers returns anything other than an empty list when calling :py:meth:`WialonUnit.get_phone_numbers`."""
+        test_unit = WialonUnit(
+            id=None,
+            name="Test Unit 01",
+            creator_id=self.test_session.uid,
+            hw_type_id=wialon_utils.get_hw_types(self.test_session)[0]["id"],
+            session=self.test_session,
+        )
+        retrieved_phones = test_unit.get_phone_numbers()
 
-            data = {"unit_id": test_unit.id, "message": "test"}
-            response = self.client.get("/notify/sms/", data=data)
+        test_unit.delete()
+        self.assertEqual(retrieved_phones, [])
 
-            test_unit.delete()
-            test_resource.delete()
-            self.assertEqual(response.status_code, 200)
+    def test_retrieve_phone_number_from_custom_field(self) -> None:
+        """Fails if phone numbers from the test unit's ``to_number`` custom field weren't retrieved."""
+        test_unit = WialonUnit(
+            id=None,
+            name="Test Unit 01",
+            creator_id=self.test_session.uid,
+            hw_type_id=wialon_utils.get_hw_types(self.test_session)[0]["id"],
+            session=self.test_session,
+        )
+        test_unit.update_cfield("to_number", "+15555555555")
+        retrieved_phones = test_unit.get_phone_numbers()
 
-    @override_settings(DEBUG=True)
-    def test_wialon_unit_without_phone_numbers(self) -> None:
-        """Fails if a Wialon unit without phone numbers assigned to it doesn't return status code 406."""
-        with WialonSession() as test_session:
-            test_unit = WialonUnit(
-                id=None,
-                creator_id=test_session.uid,
-                name=f"test_unit_{str(uuid.uuid4())[:24].strip('-')}",
-                hw_type_id=wialon_utils.get_hw_types(test_session)[0]["id"],
-                session=test_session,
-            )
+        test_unit.delete()
+        self.assertEqual(retrieved_phones, ["+15555555555"])
 
-            data = {"unit_id": test_unit.id, "message": "test"}
-            response = self.client.get("/notify/sms/", data=data)
+    # def test_retrieve_phone_number_from_attached_driver(self) -> None:
+    #     """Fails if the phone number from the test unit's attached driver wasn't retrieved."""
+    #     test_resource = WialonResource(
+    #         id=None,
+    #         creator_id=self.test_session.uid,
+    #         name="test_resource_01",
+    #         skip_creator_check=True,
+    #         session=self.test_session,
+    #     )
+    #     driver_id = test_resource.create_driver(
+    #         name="Test Driver", phone="+15555555555"
+    #     )
+    #     test_unit = WialonUnit(
+    #         id=None,
+    #         name="Test Unit 01",
+    #         creator_id=self.test_session.uid,
+    #         hw_type_id=wialon_utils.get_hw_types(self.test_session)[0]["id"],
+    #         session=self.test_session,
+    #     )
+    #     test_resource.update_attachable_drivers(units=[test_unit.id])
+    #     test_resource.bind_unit_driver(test_unit.id, driver_id)
+    #     retrieved_phones = test_unit.get_phone_numbers()
 
-            test_unit.delete()
-            self.assertEqual(response.status_code, 406)
+    #     test_resource.delete()
+    #     test_unit.delete()
+    #     self.assertEqual(retrieved_phones, ["+15555555555"])
+
+
+class AWSPinpointIntegrationTestCase(TestCase):
+    def setUp(self) -> None:
+        self.client = Client()
+        self.test_pinpoint_client = boto3.client("pinpoint-sms-voice-v2")

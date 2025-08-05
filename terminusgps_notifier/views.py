@@ -48,6 +48,7 @@ class DispatchNotificationView(View):
 
         unit_id = str(form.cleaned_data["unit_id"])
         message = str(form.cleaned_data["message"])
+        dry_run = bool(form.cleaned_data["dry_run"])
 
         logger.debug(f"Retrieving phone numbers for #{unit_id} from Wialon...")
         target_phones: list[str] = self.get_wialon_phone_numbers(
@@ -64,7 +65,7 @@ class DispatchNotificationView(View):
         try:
             method: str = str(self.kwargs["method"])
             for phone in target_phones:
-                self.send_notification(phone, message, method)
+                self.send_notification(phone, message, method, dry_run)
 
             content = f"Sent '{message}' to: {target_phones} via {method}"
             logger.debug(content)
@@ -93,7 +94,7 @@ class DispatchNotificationView(View):
             return WialonUnit(unit_id, session).get_phone_numbers()
 
     def send_notification(
-        self, to_number: str, message: str, method: str
+        self, to_number: str, message: str, method: str, dry_run: bool = False
     ) -> None:
         """
         Sends a notification to ``to_number`` via ``method``.
@@ -104,6 +105,8 @@ class DispatchNotificationView(View):
         :type message: :py:obj:`str`
         :param method: Notification method. Options are ``sms`` or ``voice``.
         :type method: :py:obj:`str`
+        :param dry_run: Whether or not to execute the API call as a dry run. Default is :py:obj:`False`.
+        :type dry_run: :py:obj:`bool`
         :raises ValueError: If the provided notification method was invalid.
         :returns: Nothing.
         :rtype: :py:obj:`None`
@@ -114,12 +117,12 @@ class DispatchNotificationView(View):
                 logger.debug(
                     f"Sending '{message}' to '{to_number}' via sms..."
                 )
-                self._send_sms_message(to_number, message)
+                self._send_sms_message(to_number, message, dry_run)
             case "voice":
                 logger.debug(
                     f"Sending '{message}' to '{to_number}' via voice..."
                 )
-                self._send_voice_message(to_number, message)
+                self._send_voice_message(to_number, message, dry_run)
             case _:
                 raise ValueError(f"Invalid method: '{method}'")
 
@@ -148,7 +151,7 @@ class DispatchNotificationView(View):
                 "ConfigurationSetName": settings.AWS_PINPOINT_CONFIGURATION_ARN,
                 "MaxPrice": settings.AWS_PINPOINT_MAX_PRICE_SMS,
                 "TimeToLive": 300,
-                "DryRun": dry_run or settings.DEBUG,
+                "DryRun": dry_run,
                 "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
             }
         )
@@ -179,7 +182,7 @@ class DispatchNotificationView(View):
                 "VoiceId": "MATTHEW",
                 "ConfigurationSetName": settings.AWS_PINPOINT_CONFIGURATION_ARN,
                 "MaxPricePerMinute": settings.AWS_PINPOINT_MAX_PRICE_VOICE,
-                "DryRun": dry_run or settings.DEBUG,
+                "DryRun": dry_run,
                 "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
             }
         )

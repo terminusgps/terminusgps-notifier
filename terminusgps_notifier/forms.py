@@ -8,3 +8,4 @@ class WialonUnitNotificationForm(forms.Form):
         min_length=8, max_length=8, validators=[validate_is_digit]
     )
     message = forms.CharField(max_length=1024)
+    dry_run = forms.BooleanField(required=False, initial=False)

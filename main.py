@@ -41,7 +41,6 @@ def get_phone_numbers(
     if unit_id:
         with WialonSession() as session:
             unit = WialonUnit(id=str(unit_id), session=session)
-            print(f"{unit.get_phone_numbers() = }")
             phone_numbers.extend(unit.get_phone_numbers())
     return phone_numbers
 

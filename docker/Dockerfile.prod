@@ -9,7 +9,7 @@ ENV UV_NO_SYNC=1
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project
+    uv sync --locked --no-install-project --no-dev
 
 COPY . /usr/local/terminusgps-notifier
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -19,6 +19,6 @@ ENV PATH="/usr/local/terminusgps-notifier/.venv/bin:$PATH"
 
 ENTRYPOINT []
 
-CMD ["uv", "run", "gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "src.wsgi"]
-
 EXPOSE 8000
+
+CMD ["uv", "run", "gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "src.wsgi"]

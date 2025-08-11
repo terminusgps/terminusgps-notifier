@@ -4,7 +4,6 @@ import boto3
 from django.conf import settings
 from django.test import TestCase
 from django.test.client import Client
-from django.test.utils import override_settings
 from terminusgps.wialon import utils as wialon_utils
 from terminusgps.wialon.items import WialonUnit
 from terminusgps.wialon.session import WialonSession
@@ -12,7 +11,6 @@ from terminusgps.wialon.session import WialonSession
 logging.disable(logging.WARNING)
 
 
-@override_settings(SECURE_SSL_REDIRECT=False)
 class HealthCheckViewTestCase(TestCase):
     def setUp(self) -> None:
         self.client = Client()

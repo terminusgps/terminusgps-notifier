@@ -1,3 +1,3 @@
-# TerminusGPS Notifier Webapp
+# TerminusGPS Notifier
 
-## Accepts webhooks from Wialon and calls/texts according to webhook data.
+Accepts webhooks from Wialon and sends voice calls/text messages.

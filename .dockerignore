@@ -1,0 +1,5 @@
+.venv
+.env
+docker/
+dist/
+__pycache__/

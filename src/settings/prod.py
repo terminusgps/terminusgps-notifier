@@ -66,6 +66,20 @@ INSTALLED_APPS = [
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
 
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "APP_DIRS": True,
+    }
+]
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",

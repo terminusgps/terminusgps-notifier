@@ -18,7 +18,6 @@ Set these settings in your Django project's ``settings.py``, preferably retrieve
     WIALON_TOKEN = os.getenv("WIALON_TOKEN")
 
     # rest of the settings
-    BASE_DIR = Path(__file__).resolve().parent.parent
     ...
 
 

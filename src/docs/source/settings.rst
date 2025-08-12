@@ -12,9 +12,10 @@ Set these settings in your Django project's ``settings.py``, preferably retrieve
 
     AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-    AWS_PINPOINT_POOL_ARN = os.getenv("AWS_PINPOINT_POOL_ARN")
-    AWS_PINPOINT_MAX_PRICE_VOICE = os.getenv("AWS_PINPOINT_MAX_PRICE_VOICE")
+    AWS_PINPOINT_CONFIGURATION_ARN = os.getenv("AWS_PINPOINT_CONFIGURATION_ARN")
     AWS_PINPOINT_MAX_PRICE_SMS = os.getenv("AWS_PINPOINT_MAX_PRICE_SMS")
+    AWS_PINPOINT_MAX_PRICE_VOICE = os.getenv("AWS_PINPOINT_MAX_PRICE_VOICE")
+    AWS_PINPOINT_POOL_ARN = os.getenv("AWS_PINPOINT_POOL_ARN")
     WIALON_TOKEN = os.getenv("WIALON_TOKEN")
 
     # rest of the settings
@@ -24,21 +25,23 @@ Set these settings in your Django project's ``settings.py``, preferably retrieve
 Reference
 ---------
 
-+------------------------------+--------------------------------------------------+
-| Name                         | Description                                      |
-+==============================+==================================================+
-| AWS_ACCESS_KEY_ID            | An AWS access key id.                            |
-+------------------------------+--------------------------------------------------+
-| AWS_SECRET_ACCESS_KEY        | An AWS secret access key.                        |
-+------------------------------+--------------------------------------------------+
-| AWS_PINPOINT_POOL_ARN        | An AWS pinpoint phone pool ARN.                  |
-+------------------------------+--------------------------------------------------+
-| AWS_PINPOINT_MAX_PRICE_VOICE | Max price-per-minute for pinpoint voice calls.   |
-+------------------------------+--------------------------------------------------+
-| AWS_PINPOINT_MAX_PRICE_SMS   | Max price-per-message for pinpoint sms messages. |
-+------------------------------+--------------------------------------------------+
-| WIALON_TOKEN                 | An active Wialon API token.                      |
-+------------------------------+--------------------------------------------------+
++--------------------------------+--------------------------------------------------+
+| Name                           | Description                                      |
++================================+==================================================+
+| AWS_ACCESS_KEY_ID              | An AWS access key id.                            |
++--------------------------------+--------------------------------------------------+
+| AWS_SECRET_ACCESS_KEY          | An AWS secret access key.                        |
++--------------------------------+--------------------------------------------------+
+| AWS_PINPOINT_CONFIGURATION_ARN | An AWS pinpoint configuration ARN.               |
++--------------------------------+--------------------------------------------------+
+| AWS_PINPOINT_MAX_PRICE_SMS     | Max price-per-message for pinpoint sms messages. |
++--------------------------------+--------------------------------------------------+
+| AWS_PINPOINT_MAX_PRICE_VOICE   | Max price-per-minute for pinpoint voice calls.   |
++--------------------------------+--------------------------------------------------+
+| AWS_PINPOINT_POOL_ARN          | An AWS pinpoint phone pool ARN.                  |
++--------------------------------+--------------------------------------------------+
+| WIALON_TOKEN                   | An active Wialon API token.                      |
++--------------------------------+--------------------------------------------------+
 
 Security Policy
 ---------------

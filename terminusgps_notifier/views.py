@@ -16,19 +16,14 @@ from .forms import WialonUnitNotificationForm
 logger = logging.getLogger(__name__)
 
 
-def get_phone_numbers_from_wialon(unit_id: int | str, token: str) -> list[str]:
-    """Returns a list of the unit's assigned phone numbers from the Wialon API."""
-    with WialonSession(token=token) as session:
-        return WialonUnit(unit_id, session).get_phone_numbers()
-
-
 def get_phone_numbers(unit_id: int | str, wialon_token: str) -> list[str]:
     """Returns a list of the unit's assigned phone numbers."""
     if cached_phones := cache.get(unit_id):
         return cached_phones
-    wialon_phones = get_phone_numbers_from_wialon(unit_id, wialon_token)
-    cache.set(unit_id, wialon_phones)
-    return wialon_phones
+    with WialonSession(token=wialon_token) as session:
+        wialon_phones = WialonUnit(unit_id, session).get_phone_numbers()
+        cache.set(unit_id, wialon_phones)
+        return wialon_phones
 
 
 def get_wialon_api_token() -> str:

@@ -4,4 +4,4 @@ from django.apps import AppConfig
 class TerminusgpsNotifierConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "terminusgps_notifier"
-    verbose_name = "Terminus GPS Notification Dispatcher"
+    verbose_name = "Terminus GPS Notifier"

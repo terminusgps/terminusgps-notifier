@@ -1,6 +1,5 @@
 import logging
 
-import boto3
 from django.conf import settings
 from django.test import TestCase
 from django.test.client import Client
@@ -115,9 +114,3 @@ class WialonIntegrationTestCase(TestCase):
     #     test_resource.delete()
     #     test_unit.delete()
     #     self.assertEqual(retrieved_phones, ["+15555555555"])
-
-
-class AWSPinpointIntegrationTestCase(TestCase):
-    def setUp(self) -> None:
-        self.client = Client()
-        self.test_pinpoint_client = boto3.client("pinpoint-sms-voice-v2")

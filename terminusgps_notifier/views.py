@@ -1,7 +1,9 @@
 import asyncio
 import logging
+from itertools import compress
 
 import aioboto3
+from django import forms
 from django.conf import ImproperlyConfigured, settings
 from django.core.cache import cache
 from django.http import HttpRequest, HttpResponse
@@ -23,9 +25,7 @@ def get_phone_numbers_from_wialon(unit_id: int | str, token: str) -> list[str]:
 def get_phone_numbers(unit_id: int | str, wialon_token: str) -> list[str]:
     """Returns a list of the unit's assigned phone numbers."""
     if cached_phones := cache.get(unit_id):
-        logger.debug(f"Cache HIT while retrieving phones for {unit_id}...")
         return cached_phones
-    logger.debug(f"Cache MISS while retrieving phones for {unit_id}...")
     wialon_phones = get_phone_numbers_from_wialon(unit_id, wialon_token)
     cache.set(unit_id, wialon_phones)
     return wialon_phones
@@ -77,38 +77,46 @@ class DispatchNotificationView(View):
         Returns 406 if the unit id, message or method was invalid.
 
         """
-        form = WialonUnitNotificationForm(request.GET)
+        form: forms.Form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            content = form.errors.as_json(escape_html=True)
-            logger.warning(content)
-            return HttpResponse(f"{content}\n".encode("utf-8"), status=406)
+            return HttpResponse(
+                f"{form.errors.as_json(escape_html=True)}\n".encode("utf-8"),
+                status=406,
+            )
 
-        unit_id = str(form.cleaned_data["unit_id"])
-        message = str(form.cleaned_data["message"])
-        dry_run = bool(form.cleaned_data["dry_run"])
-        logger.debug(f"Retrieving phone numbers for #{unit_id}...")
-        target_phones: list[str] = get_phone_numbers(
-            unit_id, get_wialon_api_token()
-        )
+        unit_id: str = str(form.cleaned_data["unit_id"])
+        message: str = str(form.cleaned_data["message"])
+        dry_run: bool = bool(form.cleaned_data["dry_run"])
+        wialon_token: str = get_wialon_api_token()
+        target_phones: list[str] = get_phone_numbers(unit_id, wialon_token)
 
         if not target_phones:
-            content = f"No phones for #{unit_id}"
-            logger.warning(content)
-            return HttpResponse(f"{content}\n".encode("utf-8"), status=200)
+            return HttpResponse(
+                f"No phones retrieved for #{unit_id}\n".encode("utf-8"),
+                status=200,
+            )
 
         try:
             method: str = str(self.kwargs["method"])
-            message_ids = await asyncio.gather(
+            message_ids: list[str | None] = await asyncio.gather(
                 *[
                     self.send_notification(phone, message, method, dry_run)
                     for phone in target_phones
                 ]
             )
-
-            logger.debug(f"Message ids: '{message_ids}'.")
-            content = f"Sent '{message}' to: {target_phones} via {method}."
-            logger.info(content)
-            return HttpResponse(f"{content}\n".encode("utf-8"), status=200)
+            success_mask = [bool(msg_id) for msg_id in message_ids]
+            delivery_successes = list(compress(target_phones, success_mask))
+            delivery_failures = list(
+                compress(target_phones, [not _ for _ in success_mask])
+            )
+            if delivery_failures:
+                logger.warning(
+                    f"Failed to deliver notifications to: '{delivery_failures}'."
+                )
+            logger.info(
+                f"Successfully sent '{message}' to: '{delivery_successes}' via {method}."
+            )
+            return HttpResponse("Success".encode("utf-8"), status=200)
         except ValueError as e:
             content = str(e)
             logger.warning(content)

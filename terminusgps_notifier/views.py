@@ -45,7 +45,7 @@ class HealthCheckView(View):
 
     async def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """Responds with status code 200."""
-        return HttpResponse(b"I'm alive\n", status=200)
+        return HttpResponse(status=200)
 
 
 class DispatchNotificationView(View):
@@ -79,10 +79,9 @@ class DispatchNotificationView(View):
         """
         form: forms.Form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            return HttpResponse(
-                f"{form.errors.as_json(escape_html=True)}\n".encode("utf-8"),
-                status=406,
-            )
+            errors = form.errors.as_json(escape_html=True)
+            logger.warning(f"Bad input: {errors}")
+            return HttpResponse(status=406)
 
         unit_id: str = str(form.cleaned_data["unit_id"])
         message: str = str(form.cleaned_data["message"])
@@ -91,10 +90,8 @@ class DispatchNotificationView(View):
         target_phones: list[str] = get_phone_numbers(unit_id, wialon_token)
 
         if not target_phones:
-            return HttpResponse(
-                f"No phones retrieved for #{unit_id}\n".encode("utf-8"),
-                status=200,
-            )
+            logger.info(f"No phones retrieved for #{unit_id}\n")
+            return HttpResponse(status=200)
 
         try:
             method: str = str(self.kwargs["method"])
@@ -109,18 +106,19 @@ class DispatchNotificationView(View):
             delivery_failures = list(
                 compress(target_phones, [not _ for _ in success_mask])
             )
+
+            if delivery_successes:
+                logger.info(
+                    f"Successfully sent '{message}' to: '{delivery_successes}' via {method}."
+                )
             if delivery_failures:
                 logger.warning(
                     f"Failed to deliver notifications to: '{delivery_failures}'."
                 )
-            logger.info(
-                f"Successfully sent '{message}' to: '{delivery_successes}' via {method}."
-            )
-            return HttpResponse("Success".encode("utf-8"), status=200)
-        except ValueError as e:
-            content = str(e)
-            logger.warning(content)
-            return HttpResponse(f"{content}\n".encode("utf-8"), status=406)
+            return HttpResponse(status=200)
+        except ValueError:
+            logger.warning(f"Bad method: {self.kwargs['method']}")
+            return HttpResponse(b"Bad method\n", status=406)
 
     async def send_notification(
         self, to_number: str, message: str, method: str, dry_run: bool = False

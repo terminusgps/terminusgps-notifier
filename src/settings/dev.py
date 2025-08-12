@@ -46,6 +46,7 @@ LOGGING = {
     },
     "loggers": {
         "django": {"handlers": ["console"], "propagate": True},
+        "django.request": {"handlers": ["console"], "propagate": True},
         "terminusgps_notifier": {
             "handlers": ["console"],
             "level": "DEBUG",
@@ -61,7 +62,17 @@ DATABASES = {
     }
 }
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379",
+        "TIMEOUT": 60 * 15,
+    }
+}
+
 INSTALLED_APPS = [
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
     "django.forms",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]

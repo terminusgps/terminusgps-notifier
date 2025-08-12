@@ -14,10 +14,11 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "boto3>=1.39.12",
+    "aioboto3>=15.0.0",
     "django>=5.2.4",
-    "gunicorn>=23.0.0",
     "python-terminusgps>=40.1.2",
+    "redis[hiredis]>=6.4.0",
+    "uvicorn>=0.35.0",
 ]
 
 [project.urls]

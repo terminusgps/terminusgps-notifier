@@ -21,4 +21,4 @@ ENTRYPOINT []
 
 EXPOSE 8000
 
-CMD ["uv", "run", "gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "src.wsgi"]
+CMD ["uv", "run", "uvicorn", "--workers", "4", "--host", "0.0.0.0", "--port", "8000", "src.asgi:application"]

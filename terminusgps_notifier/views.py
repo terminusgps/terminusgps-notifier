@@ -63,7 +63,7 @@ class DispatchNotificationView(View):
 
     async def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """
-        Dispatches a notification based on query parameters.
+        Dispatches a notification based on path parameters.
 
         Returns 200 if notifications were successfully dispatched.
 

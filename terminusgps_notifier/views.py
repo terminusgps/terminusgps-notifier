@@ -21,7 +21,7 @@ def get_phone_numbers(unit_id: int | str, wialon_token: str) -> list[str]:
         return cached_phones
     with WialonSession(token=wialon_token) as session:
         wialon_phones = WialonUnit(unit_id, session).get_phone_numbers()
-        cache.set(unit_id, wialon_phones)
+        cache.set(unit_id, wialon_phones, timeout=60 * 3)
         return wialon_phones
 
 

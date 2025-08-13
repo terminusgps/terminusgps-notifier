@@ -15,6 +15,19 @@ from .forms import WialonUnitNotificationForm
 logger = logging.getLogger(__name__)
 
 
+REQUIRED_SETTINGS = [
+    "AWS_PINPOINT_POOL_ARN",
+    "AWS_PINPOINT_CONFIGURATION_ARN",
+    "AWS_PINPOINT_MAX_PRICE_SMS",
+    "AWS_PINPOINT_MAX_PRICE_VOICE",
+    "AWS_PINPOINT_PROTECT_ID",
+]
+
+for setting in REQUIRED_SETTINGS:
+    if not hasattr(settings, setting):
+        raise ImproperlyConfigured(f"'{setting}' setting is required.")
+
+
 def get_phone_numbers(unit_id: int | str, wialon_token: str) -> list[str]:
     """Returns a list of the unit's assigned phone numbers."""
     if cached_phones := cache.get(unit_id):
@@ -37,20 +50,6 @@ class HealthCheckView(View):
 class DispatchNotificationView(View):
     content_type = "text/plain"
     http_method_names = ["get"]
-
-    def __init__(self, *args, **kwargs) -> None:
-        REQUIRED_SETTINGS = [
-            "AWS_PINPOINT_POOL_ARN",
-            "AWS_PINPOINT_CONFIGURATION_ARN",
-            "AWS_PINPOINT_MAX_PRICE_SMS",
-            "AWS_PINPOINT_MAX_PRICE_VOICE",
-            "AWS_PINPOINT_PROTECT_ID",
-        ]
-
-        for setting in REQUIRED_SETTINGS:
-            if not hasattr(settings, setting):
-                raise ImproperlyConfigured(f"'{setting}' setting is required.")
-        return super().__init__(*args, **kwargs)
 
     async def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """

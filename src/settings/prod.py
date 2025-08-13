@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 ALLOWED_HOSTS = [
     ".terminusgps.com",
-    ".amazonaws.com",
+    ".elb.amazonaws.com",
     gethostbyname(gethostname()),
 ]
 ASGI_APPLICATION = "src.asgi.application"

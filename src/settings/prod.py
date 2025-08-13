@@ -50,12 +50,17 @@ LOGGING = {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
-        }
+        },
+        "console_simple": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
     },
     "loggers": {
         "django": {"handlers": ["console"], "propagate": True},
-        "terminusgps_notifier": {
-            "handlers": ["console"],
+        "terminusgps_notifier.views": {
+            "handlers": ["console_simple"],
             "level": "INFO",
             "propagate": True,
         },

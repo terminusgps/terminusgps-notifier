@@ -87,16 +87,18 @@ class DispatchNotificationView(View):
                     for phone in target_phones
                 ]
             )
-            delivery_successes = []
-            delivery_failures = []
+            results_map = {
+                phone: bool(msg_id)
+                for phone, msg_id in zip(target_phones, message_ids)
+            }
 
-            if delivery_successes:
+            if any([results_map.values()]):
                 logger.info(
-                    f"Successfully sent '{message}' to: '{delivery_successes}' via {method}."
+                    f"Successfully sent '{message}' to: '{[phone for phone, result in results_map.items() if result]}' via {method}."
                 )
-            if delivery_failures:
+            if not any([results_map.values()]):
                 logger.warning(
-                    f"Failed send '{message}' to: '{delivery_failures}' via {method}."
+                    f"Failed to send '{message}' to: '{[phone for phone, result in results_map.items() if not result]}' via {method}."
                 )
             return HttpResponse(status=200)
         except ValueError:

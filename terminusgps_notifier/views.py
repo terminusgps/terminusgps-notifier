@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from itertools import compress
 
 import aioboto3
 from django import forms
@@ -24,14 +23,6 @@ def get_phone_numbers(unit_id: int | str, wialon_token: str) -> list[str]:
         wialon_phones = WialonUnit(unit_id, session).get_phone_numbers()
         cache.set(unit_id, wialon_phones)
         return wialon_phones
-
-
-def get_wialon_api_token() -> str:
-    """Returns an activated Wialon API token, raises :py:exec:`~django.conf.ImproperlyConfigured` if the 'WIALON_TOKEN' wasn't set."""
-    # TODO: Retrieve from database
-    if not hasattr(settings, "WIALON_TOKEN"):
-        raise ImproperlyConfigured("'WIALON_TOKEN' setting is required.")
-    return settings.WIALON_TOKEN
 
 
 class HealthCheckView(View):
@@ -74,14 +65,14 @@ class DispatchNotificationView(View):
         """
         form: forms.Form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            errors = form.errors.as_json(escape_html=True)
-            logger.warning(f"Bad input: {errors}")
-            return HttpResponse(status=406)
+            return HttpResponse(b"Bad notification params\n", status=406)
 
         unit_id: str = str(form.cleaned_data["unit_id"])
         message: str = str(form.cleaned_data["message"])
         dry_run: bool = bool(form.cleaned_data["dry_run"])
-        wialon_token: str = get_wialon_api_token()
+
+        # TODO: retrieve token from db instead of settings
+        wialon_token: str = settings.WIALON_TOKEN
         target_phones: list[str] = get_phone_numbers(unit_id, wialon_token)
 
         if not target_phones:
@@ -96,11 +87,8 @@ class DispatchNotificationView(View):
                     for phone in target_phones
                 ]
             )
-            success_mask = [bool(msg_id) for msg_id in message_ids]
-            delivery_successes = list(compress(target_phones, success_mask))
-            delivery_failures = list(
-                compress(target_phones, [not _ for _ in success_mask])
-            )
+            delivery_successes = []
+            delivery_failures = []
 
             if delivery_successes:
                 logger.info(
@@ -108,12 +96,11 @@ class DispatchNotificationView(View):
                 )
             if delivery_failures:
                 logger.warning(
-                    f"Failed to deliver notifications to: '{delivery_failures}'."
+                    f"Failed send '{message}' to: '{delivery_failures}' via {method}."
                 )
             return HttpResponse(status=200)
         except ValueError:
-            logger.warning(f"Bad method: {self.kwargs['method']}")
-            return HttpResponse(b"Bad method\n", status=406)
+            return HttpResponse(b"Bad notification method\n", status=406)
 
     async def send_notification(
         self, to_number: str, message: str, method: str, dry_run: bool = False

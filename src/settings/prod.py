@@ -2,6 +2,17 @@ import os
 from pathlib import Path
 from socket import gethostbyname, gethostname
 
+import requests
+
+
+def get_public_ip() -> str | None:
+    try:
+        response = requests.get("https://checkip.amazonaws.com/")
+        return response.text.removesuffix("\n")
+    except Exception:
+        return
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 ALLOWED_HOSTS = [
@@ -9,6 +20,8 @@ ALLOWED_HOSTS = [
     ".elb.amazonaws.com",
     gethostbyname(gethostname()),
 ]
+if public_ip := get_public_ip():
+    ALLOWED_HOSTS.append(public_ip)
 ASGI_APPLICATION = "src.asgi.application"
 AWS_PINPOINT_CONFIGURATION_ARN = os.getenv("AWS_PINPOINT_CONFIGURATION_ARN")
 AWS_PINPOINT_MAX_PRICE_SMS = os.getenv("AWS_PINPOINT_MAX_PRICE_SMS")

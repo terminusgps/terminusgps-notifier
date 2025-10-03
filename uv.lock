@@ -957,6 +957,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aioboto3" },
     { name = "django" },
+    { name = "psycopg" },
     { name = "python-terminusgps" },
     { name = "redis", extra = ["hiredis"] },
     { name = "terminusgps-payments" },
@@ -973,6 +974,7 @@ dev = [
 requires-dist = [
     { name = "aioboto3", specifier = ">=15.0.0" },
     { name = "django", specifier = ">=5.2.7" },
+    { name = "psycopg", specifier = ">=3.2.10" },
     { name = "python-terminusgps", specifier = ">=46.1.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=6.4.0" },
     { name = "terminusgps-payments", specifier = ">=1.4.3" },

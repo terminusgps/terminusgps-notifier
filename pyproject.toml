@@ -15,8 +15,8 @@ classifiers = [
 requires-python = ">=3.12"
 dependencies = [
     "aioboto3>=15.0.0",
-    "django>=5.2.4",
-    "python-terminusgps>=40.1.2",
+    "django>=5.2.7",
+    "python-terminusgps>=46.1.0",
     "redis[hiredis]>=6.4.0",
     "uvicorn>=0.35.0",
 ]
@@ -62,10 +62,12 @@ select = [
     "E7",
     "E9",
     "F",
+    "DJ",
 ]
-ignore = ["F821"]
+ignore = ["DJ001", "F821"]
 fixable = [ "ALL" ]
 unfixable = []
+extend-per-file-ignores = {"*/migrations/*.py" = ["E501"]}
 
 [tool.ruff.format]
 quote-style = "double"

@@ -2,15 +2,12 @@ import asyncio
 import logging
 
 import aioboto3
-from django import forms
 from django.conf import ImproperlyConfigured, settings
-from django.core.cache import cache
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import View
-from terminusgps.wialon.items import WialonUnit
-from terminusgps.wialon.session import WialonSession
 
 from .forms import WialonUnitNotificationForm
+from .services import get_phone_numbers
 
 logger = logging.getLogger(__name__)
 
@@ -26,16 +23,6 @@ REQUIRED_SETTINGS = [
 for setting in REQUIRED_SETTINGS:
     if not hasattr(settings, setting):
         raise ImproperlyConfigured(f"'{setting}' setting is required.")
-
-
-def get_phone_numbers(unit_id: int | str, wialon_token: str) -> list[str]:
-    """Returns a list of the unit's assigned phone numbers."""
-    if cached_phones := cache.get(unit_id):
-        return cached_phones
-    with WialonSession(token=wialon_token) as session:
-        wialon_phones = WialonUnit(unit_id, session).get_phone_numbers()
-        cache.set(unit_id, wialon_phones)
-        return wialon_phones
 
 
 class HealthCheckView(View):
@@ -62,99 +49,83 @@ class DispatchNotificationView(View):
         Returns 406 if the unit id, message or method was invalid.
 
         """
-        form: forms.Form = WialonUnitNotificationForm(request.GET)
+        form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
             return HttpResponse(b"Bad notification params\n", status=406)
 
-        unit_id: str = str(form.cleaned_data["unit_id"])
-        message: str = str(form.cleaned_data["message"])
-        dry_run: bool = bool(form.cleaned_data["dry_run"])
-
+        unit_id = str(form.cleaned_data["unit_id"])
+        message = str(form.cleaned_data["message"])
+        dry_run = bool(form.cleaned_data["dry_run"])
         # TODO: retrieve token from db instead of settings
-        wialon_token: str = settings.WIALON_TOKEN
-        target_phones: list[str] = get_phone_numbers(unit_id, wialon_token)
-
+        target_phones = get_phone_numbers(unit_id, settings.WIALON_TOKEN)
         if not target_phones:
             logger.info(f"No phones retrieved for #{unit_id}\n")
             return HttpResponse(status=200)
 
         try:
-            method: str = str(self.kwargs["method"])
-            message_ids: list[str | None] = await asyncio.gather(
+            method = str(self.kwargs["method"])
+            message_ids = await asyncio.gather(
                 *[
                     self.send_notification(phone, message, method, dry_run)
                     for phone in target_phones
                 ]
             )
-            delivery_successes = [
-                phone
-                for phone, msg_id in zip(target_phones, message_ids)
-                if msg_id
-            ]
-            if delivery_successes:
-                logger.info(
-                    f"Successfully sent '{message}' to: '{delivery_successes}' via {method}."
-                )
-            delivery_failures = [
-                phone
-                for phone, msg_id in zip(target_phones, message_ids)
-                if not msg_id
-            ]
-            if delivery_failures:
-                logger.warning(
-                    f"Failed to send '{message}' to: '{delivery_failures}' via {method}."
-                )
+            logger.info(f"Sent messages: '{message_ids}'.")
             return HttpResponse(status=200)
         except ValueError:
             return HttpResponse(b"Bad notification method\n", status=406)
 
     async def send_notification(
         self, to_number: str, message: str, method: str, dry_run: bool = False
-    ) -> None:
+    ) -> dict[str, str] | None:
         """
         Sends a notification to ``to_number`` via ``method``.
 
         :param to_number: Destination (target) phone number.
-        :type to_number: :py:obj:`str`
+        :type to_number: str
         :param message: Notification message.
-        :type message: :py:obj:`str`
+        :type message: str
         :param method: Notification method. Options are ``sms`` or ``voice``.
-        :type method: :py:obj:`str`
-        :param dry_run: Whether or not to execute the API call as a dry run. Default is :py:obj:`False`.
-        :type dry_run: :py:obj:`bool`
-        :raises ValueError: If the provided notification method was invalid.
-        :returns: Nothing.
-        :rtype: :py:obj:`None`
+        :type method: str
+        :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
+        :type dry_run: bool
+        :raises ValueError: If the notification method was invalid.
+        :returns: .
+        :rtype: None
 
         """
         match method:
             case "sms":
-                await self._send_sms_message(to_number, message, dry_run)
+                return await self._send_sms_message(
+                    to_number, message, dry_run
+                )
             case "voice":
-                await self._send_voice_message(to_number, message, dry_run)
+                return await self._send_voice_message(
+                    to_number, message, dry_run
+                )
             case _:
                 raise ValueError(f"Invalid method: '{method}'")
 
     async def _send_sms_message(
         self, to_number: str, message: str, dry_run: bool = False
-    ) -> str | None:
+    ) -> dict[str, str] | None:
         """
         Sends ``message`` to ``to_number`` via sms.
 
         :param to_number: Destination phone number.
-        :type to_number: :py:obj:`str`
+        :type to_number: str
         :param message: A message to deliver to the destination phone number via sms.
-        :type message: :py:obj:`str`
+        :type message: str
         :param dry_run: Whether or not to execute the API call as a dry run. Default is :py:obj:`False`.
-        :type dry_run: :py:obj:`bool`
-        :returns: A message id, if sent.
-        :rtype: :py:obj:`str` | :py:obj:`None`
+        :type dry_run: bool
+        :returns: A dictionary containing the PinpointSMSVoiceV2 message id.
+        :rtype: dict[str, str] | None
 
         """
         async with aioboto3.Session().client(
             "pinpoint-sms-voice-v2"
         ) as client:
-            response = await client.send_text_message(
+            return await client.send_text_message(
                 **{
                     "DestinationPhoneNumber": to_number,
                     "OriginationIdentity": settings.AWS_PINPOINT_POOL_ARN,
@@ -167,28 +138,27 @@ class DispatchNotificationView(View):
                     "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
                 }
             )
-            return response.get("MessageId")
 
     async def _send_voice_message(
         self, to_number: str, message: str, dry_run: bool = False
-    ) -> str | None:
+    ) -> dict[str, str] | None:
         """
         Sends ``message`` to ``to_number`` via voice.
 
         :param to_number: Destination phone number.
-        :type to_number: :py:obj:`str`
+        :type to_number: str
         :param message: A message to read aloud to the destination phone number via voice.
-        :type message: :py:obj:`str`
+        :type message: str
         :param dry_run: Whether or not to execute the API call as a dry run. Default is :py:obj:`False`.
-        :type dry_run: :py:obj:`bool`
-        :returns: A message id, if sent.
-        :rtype: :py:obj:`str` | :py:obj:`None`
+        :type dry_run: bool
+        :returns: A dictionary containing the PinpointSMSVoiceV2 message id.
+        :rtype: dict[str, str] | None
 
         """
         async with aioboto3.Session().client(
             "pinpoint-sms-voice-v2"
         ) as client:
-            response = await client.send_voice_message(
+            return await client.send_voice_message(
                 **{
                     "DestinationPhoneNumber": to_number,
                     "OriginationIdentity": settings.AWS_PINPOINT_POOL_ARN,
@@ -201,4 +171,3 @@ class DispatchNotificationView(View):
                     "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
                 }
             )
-            return response.get("MessageId")

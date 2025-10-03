@@ -18,7 +18,7 @@ ROOT_URLCONF = "src.urls"
 SECRET_KEY = "k_il7ce@&k-=n9zo+7_^^b4kb+k$7##aa&z#=3(s7jkc_w5j9l"
 SESSION_COOKIE_SECURE = False
 STATIC_URL = "static/"
-TIME_ZONE = "America/Chicago"
+TIME_ZONE = "US/Central"
 USE_I18N = True
 USE_TZ = True
 WIALON_TOKEN = os.getenv("WIALON_TOKEN")
@@ -67,16 +67,18 @@ CACHES = {
 }
 
 INSTALLED_APPS = [
+    "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.forms",
-    "terminusgps_payments.apps.TerminusgpsPaymentsConfig",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

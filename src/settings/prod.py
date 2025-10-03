@@ -90,10 +90,10 @@ CACHES = {
 }
 
 INSTALLED_APPS = [
+    "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.forms",
-    "terminusgps_payments.apps.TerminusgpsPaymentsConfig",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
 
@@ -108,5 +108,6 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

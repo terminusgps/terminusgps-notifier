@@ -6,8 +6,8 @@ from django.conf import ImproperlyConfigured, settings
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import View
 
+from . import services
 from .forms import WialonUnitNotificationForm
-from .services import get_phone_numbers
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +56,11 @@ class DispatchNotificationView(View):
         unit_id = str(form.cleaned_data["unit_id"])
         message = str(form.cleaned_data["message"])
         dry_run = bool(form.cleaned_data["dry_run"])
-        # TODO: retrieve token from db instead of settings
-        target_phones = get_phone_numbers(unit_id, settings.WIALON_TOKEN)
+
+        # TODO: Retrieve Wialon token from specific customer
+        target_phones = services.get_phone_numbers(
+            unit_id, settings.WIALON_TOKEN
+        )
         if not target_phones:
             logger.info(f"No phones retrieved for #{unit_id}\n")
             return HttpResponse(status=200)

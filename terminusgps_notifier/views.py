@@ -126,7 +126,7 @@ class DispatchNotificationView(View):
 
         """
         async with aioboto3.Session().client(
-            "pinpoint-sms-voice-v2"
+            "pinpoint-sms-voice-v2", region_name="us-east-1"
         ) as client:
             return await client.send_text_message(
                 **{
@@ -159,7 +159,7 @@ class DispatchNotificationView(View):
 
         """
         async with aioboto3.Session().client(
-            "pinpoint-sms-voice-v2"
+            "pinpoint-sms-voice-v2", region_name="us-east-1"
         ) as client:
             return await client.send_voice_message(
                 **{

@@ -5,6 +5,9 @@ from django.test.client import Client
 
 logging.disable(logging.WARNING)
 
+# TODO: Add Wialon integration tests
+# TODO: Add terminusgps_payments integration tests
+
 
 class HealthCheckViewTestCase(TestCase):
     def setUp(self) -> None:

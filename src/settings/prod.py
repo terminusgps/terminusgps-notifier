@@ -70,8 +70,14 @@ LOGGING = {
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "HOST": os.getenv("DB_HOST"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "PORT": os.getenv("DB_PORT", 5432),
+        "OPTIONS": {"client_encoding": "UTF8"},
+        "CONN_MAX_AGE": None,
     }
 }
 
@@ -79,7 +85,7 @@ CACHES = {
     "default": {
         "ENGINE": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": "redis://127.0.0.1:6379",
-        "TIMEOUT": 60 * 3,
+        "TIMEOUT": 60 * 5,
     }
 }
 
@@ -87,6 +93,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.forms",
+    "terminusgps_payments.apps.TerminusgpsPaymentsConfig",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
 

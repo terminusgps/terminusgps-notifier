@@ -28,11 +28,11 @@ for setting in REQUIRED_SETTINGS:
 
 
 def get_customer_from_user_id(
-    user_id: int,
+    user_id: str,
 ) -> TerminusgpsNotificationsCustomer | None:
     try:
         customer = TerminusgpsNotificationsCustomer.objects.get(
-            user__id=user_id
+            user__id=int(user_id)
         )
         if hasattr(customer, "subscription"):
             status = getattr(customer.subscription, "status")
@@ -79,14 +79,14 @@ class DispatchNotificationView(View):
         if not form.is_valid():
             return HttpResponse(b"Bad notification params\n", status=406)
 
-        unit_id = int(form.cleaned_data["unit_id"])
-        user_id = int(form.cleaned_data["user_id"])
+        unit_id = str(form.cleaned_data["unit_id"])
+        user_id = str(form.cleaned_data["user_id"])
         message = str(form.cleaned_data["message"])
         dry_run = bool(form.cleaned_data["dry_run"])
         customer = get_customer_from_user_id(user_id)
         token = get_token_from_customer(customer)
         if token is None:
-            return HttpResponse(b"Invalid customer\n", status=406)
+            return HttpResponse(b"Invalid customer\n", status=403)
 
         target_phones = services.get_phone_numbers(unit_id, token)
         if not target_phones:

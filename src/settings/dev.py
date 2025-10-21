@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 
+from terminusgps.authorizenet.constants import Environment, ValidationMode
+from terminusgps.wialon.flags import TokenFlag
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
@@ -14,6 +17,10 @@ CSRF_COOKIE_SECURE = False
 DEBUG = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LANGUAGE_CODE = "en-us"
+MERCHANT_AUTH_ENVIRONMENT = Environment.SANDBOX
+MERCHANT_AUTH_LOGIN_ID = os.getenv("MERCHANT_AUTH_LOGIN_ID")
+MERCHANT_AUTH_TRANSACTION_KEY = os.getenv("MERCHANT_AUTH_TRANSACTION_KEY")
+MERCHANT_AUTH_VALIDATION_MODE = ValidationMode.TEST
 ROOT_URLCONF = "src.urls"
 SECRET_KEY = "k_il7ce@&k-=n9zo+7_^^b4kb+k$7##aa&z#=3(s7jkc_w5j9l"
 SESSION_COOKIE_SECURE = False
@@ -21,7 +28,12 @@ STATIC_URL = "static/"
 TIME_ZONE = "US/Central"
 USE_I18N = True
 USE_TZ = True
-WIALON_TOKEN = os.getenv("WIALON_TOKEN")
+WIALON_TOKEN_ACCESS_TYPE = (
+    TokenFlag.VIEW_ACCESS
+    | TokenFlag.MANAGE_NONSENSITIVE
+    | TokenFlag.MANAGE_SENSITIVE
+)
+WIALON_RESOURCE_NAME = "Terminus GPS Notifications"
 WSGI_APPLICATION = "src.wsgi.application"
 
 LOGGING = {
@@ -75,6 +87,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "django.forms",
+    "terminusgps_payments.apps.TerminusgpsPaymentsConfig",
+    "terminusgps_notifications.apps.TerminusgpsNotificationsConfig",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
 

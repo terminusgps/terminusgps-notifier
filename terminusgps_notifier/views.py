@@ -5,6 +5,8 @@ import aioboto3
 from django.conf import ImproperlyConfigured, settings
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import View
+from terminusgps.authorizenet.constants import SubscriptionStatus
+from terminusgps_notifications.models import TerminusgpsNotificationsCustomer
 
 from . import services
 from .forms import WialonUnitNotificationForm
@@ -23,6 +25,29 @@ REQUIRED_SETTINGS = [
 for setting in REQUIRED_SETTINGS:
     if not hasattr(settings, setting):
         raise ImproperlyConfigured(f"'{setting}' setting is required.")
+
+
+def get_customer_from_user_id(
+    user_id: int,
+) -> TerminusgpsNotificationsCustomer | None:
+    try:
+        customer = TerminusgpsNotificationsCustomer.objects.get(
+            user__id=user_id
+        )
+        if hasattr(customer, "subscription"):
+            status = getattr(customer.subscription, "status")
+            if status == SubscriptionStatus.ACTIVE:
+                return customer
+    except TerminusgpsNotificationsCustomer.DoesNotExist:
+        return
+
+
+def get_token_from_customer(
+    customer: TerminusgpsNotificationsCustomer | None = None,
+) -> str | None:
+    if customer is None or not hasattr(customer, "token"):
+        return
+    return getattr(customer, "token").name
 
 
 class HealthCheckView(View):
@@ -46,25 +71,29 @@ class DispatchNotificationView(View):
 
         Returns 200 if the provided unit id didn't have attached phone numbers.
 
-        Returns 406 if the unit id, message or method was invalid.
+        Returns 406 if the unit id, user id, message or method was invalid.
+
+        Returns 403 if the user id represents a non-existent user, a user without a subscription, a user with an inactive subscription or a user without a valid Wialon API token.
 
         """
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
+            print(f"{form.errors = }")
             return HttpResponse(b"Bad notification params\n", status=406)
 
-        unit_id = str(form.cleaned_data["unit_id"])
+        unit_id = int(form.cleaned_data["unit_id"])
+        user_id = int(form.cleaned_data["user_id"])
         message = str(form.cleaned_data["message"])
         dry_run = bool(form.cleaned_data["dry_run"])
+        customer = get_customer_from_user_id(user_id)
+        token = get_token_from_customer(customer)
+        if token is None:
+            return HttpResponse(b"Invalid customer\n", status=406)
 
-        # TODO: Retrieve Wialon token from specific customer
-        target_phones = services.get_phone_numbers(
-            unit_id, settings.WIALON_TOKEN
-        )
+        target_phones = services.get_phone_numbers(unit_id, token)
         if not target_phones:
             logger.info(f"No phones retrieved for #{unit_id}\n")
             return HttpResponse(status=200)
-
         try:
             method = str(self.kwargs["method"])
             message_ids = await asyncio.gather(

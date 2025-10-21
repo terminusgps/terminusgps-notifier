@@ -45,9 +45,8 @@ def get_customer_from_user_id(
 def get_token_from_customer(
     customer: TerminusgpsNotificationsCustomer | None = None,
 ) -> str | None:
-    if customer is None or not hasattr(customer, "token"):
-        return
-    return getattr(customer, "token").name
+    if customer is not None and hasattr(customer, "token"):
+        return getattr(customer, "token").name
 
 
 class HealthCheckView(View):

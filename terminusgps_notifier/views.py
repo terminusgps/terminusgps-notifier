@@ -77,7 +77,6 @@ class DispatchNotificationView(View):
         """
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            print(f"{form.errors = }")
             return HttpResponse(b"Bad notification params\n", status=406)
 
         unit_id = int(form.cleaned_data["unit_id"])

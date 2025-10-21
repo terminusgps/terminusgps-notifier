@@ -92,9 +92,9 @@ class DispatchNotificationView(View):
         :type method: str
         :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
         :type dry_run: bool
-        :raises ValueError: If the notification method was invalid.
-        :returns: .
-        :rtype: None
+        :raises ValueError: If the method was invalid.
+        :returns: A dictionary of message ids.
+        :rtype: dict[str, str] | None
 
         """
         match method:

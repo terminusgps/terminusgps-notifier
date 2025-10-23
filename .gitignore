@@ -9,4 +9,3 @@ dist/
 logs/
 db.sqlite3
 src/docs/build/
-docker-build.sh

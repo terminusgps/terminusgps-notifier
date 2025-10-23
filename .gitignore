@@ -1,6 +1,7 @@
 .*
 !.gitignore
 !.dockerignore
+!.github/
 
 __pycache__/
 *.egg-info/

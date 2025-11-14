@@ -5,13 +5,13 @@ from terminusgps.wialon.session import WialonSession
 
 def get_phone_numbers(unit_id: str, session: WialonSession) -> list[str]:
     """
-    Returns a list of the unit's assigned phone numbers.
+    Returns a list of unit assigned phone numbers by id.
 
     :param unit_id: Wialon unit id.
     :type unit_id: str
     :param session: Active Wialon API session.
     :type session: ~terminusgps.wialon.session.WialonSession
-    :returns: A list of unit phone numbers.
+    :returns: A list of phone numbers.
     :rtype: list[str]
 
     """

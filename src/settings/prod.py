@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from socket import gethostbyname, gethostname
 
@@ -46,56 +47,52 @@ WSGI_APPLICATION = "src.wsgi.application"
 
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": False,
+    "disable_existing_loggers": "test" in sys.argv,
     "formatters": {
-        "simple": {
-            "format": "[{asctime} {levelname}] {message}",
-            "style": "{",
-        },
         "verbose": {
-            "format": "[{asctime} {levelname}] {module} {process:d} {thread:d} {message}",
-            "style": "{",
+            "format": "%(asctime)s [%(process)d] [%(module)s] [%(levelname)s] %(message)s",
+            "datefmt": "[%Y-%m-%d %H:%M:%S%z]",
+            "class": "logging.Formatter",
+        },
+        "simple": {
+            "format": "%(asctime)s [%(levelname)s] %(message)s",
+            "datefmt": "[%Y-%m-%d %H:%M:%S%z]",
+            "class": "logging.Formatter",
         },
     },
     "handlers": {
-        "console": {
-            "level": "INFO",
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+        "console_verbose": {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
-        "console_simple": {
-            "level": "INFO",
-            "class": "logging.StreamHandler",
-            "formatter": "simple",
-        },
     },
+    "root": {"handlers": ["console"], "level": "WARNING"},
     "loggers": {
-        "django": {"handlers": ["console"], "propagate": True},
-        "terminusgps_notifier.views": {
-            "handlers": ["console_simple"],
-            "level": "INFO",
-            "propagate": True,
+        "django": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+        "terminusgps_notifier": {
+            "handlers": ["console_verbose"],
+            "level": os.getenv("NOTIFIER_LOG_LEVEL", "INFO"),
+            "propagate": False,
         },
     },
 }
 
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": os.getenv("DB_NAME"),
-#         "HOST": os.getenv("DB_HOST"),
-#         "USER": os.getenv("DB_USER"),
-#         "PASSWORD": os.getenv("DB_PASSWORD"),
-#         "PORT": os.getenv("DB_PORT", 5432),
-#         "OPTIONS": {"client_encoding": "UTF8"},
-#         "CONN_MAX_AGE": None,
-#     }
-# }
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "HOST": os.getenv("DB_HOST"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "PORT": os.getenv("DB_PORT", 5432),
+        "OPTIONS": {"client_encoding": "UTF8"},
+        "CONN_MAX_AGE": None,
     }
 }
 

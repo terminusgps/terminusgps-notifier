@@ -3,12 +3,18 @@ import logging
 
 import aioboto3
 from django.conf import ImproperlyConfigured, settings
+from django.db.models import F
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import View
 from terminusgps.authorizenet.constants import SubscriptionStatus
-from terminusgps_notifications.models import TerminusgpsNotificationsCustomer
+from terminusgps.wialon.session import WialonSession
+from terminusgps_notifications.models import (
+    MessagePackage,
+    TerminusgpsNotificationsCustomer,
+    WialonToken,
+)
 
-from . import services
+from . import phones
 from .forms import WialonUnitNotificationForm
 
 logger = logging.getLogger(__name__)
@@ -31,22 +37,71 @@ def get_customer_from_user_id(
     user_id: str,
 ) -> TerminusgpsNotificationsCustomer | None:
     try:
-        customer = TerminusgpsNotificationsCustomer.objects.get(
+        return TerminusgpsNotificationsCustomer.objects.get(
             user__id=int(user_id)
         )
-        if hasattr(customer, "subscription"):
-            status = getattr(customer.subscription, "status")
-            if status == SubscriptionStatus.ACTIVE:
-                return customer
     except TerminusgpsNotificationsCustomer.DoesNotExist:
         return
 
 
-def get_token_from_customer(
-    customer: TerminusgpsNotificationsCustomer | None = None,
-) -> str | None:
-    if customer is not None and hasattr(customer, "token"):
-        return getattr(customer, "token").name
+def get_token_from_user_id(user_id: str) -> str | None:
+    try:
+        customer = TerminusgpsNotificationsCustomer.objects.get(
+            user__id=int(user_id)
+        )
+        return WialonToken.objects.get(customer=customer).name
+    except (
+        WialonToken.DoesNotExist,
+        TerminusgpsNotificationsCustomer.DoesNotExist,
+    ):
+        return
+
+
+def has_subscription(customer: TerminusgpsNotificationsCustomer) -> bool:
+    return (
+        customer.subscription.status == SubscriptionStatus.ACTIVE
+        if customer.subscription is not None
+        and hasattr(customer.subscription, "status")
+        else False
+    )
+
+
+def has_messages(customer: TerminusgpsNotificationsCustomer) -> bool:
+    if customer.messages_count <= customer.messages_max:
+        return True
+    packages = MessagePackage.objects.filter(customer=customer)
+    if packages.count() > 0:
+        for package in packages:
+            if package.count <= package.max:
+                return True
+    return False
+
+
+def increment_packages_message_count(
+    customer: TerminusgpsNotificationsCustomer, num_messages: int
+) -> TerminusgpsNotificationsCustomer:
+    packages = MessagePackage.objects.filter(customer=customer)
+    if packages.count() == 0:
+        return customer
+    for package in packages:
+        if package.count >= package.max:
+            continue
+        else:
+            package.count = F("count") + num_messages
+            package.save(update_fields=["count"])
+            break
+    customer.refresh_from_db()
+    return customer
+
+
+def increment_customer_message_count(
+    customer: TerminusgpsNotificationsCustomer, num_messages: int
+) -> TerminusgpsNotificationsCustomer:
+    if customer.messages_count < customer.messages_max:
+        customer.messages_count = F("messages_count") + num_messages
+        customer.save(update_fields=["messages_count"])
+        customer.refresh_from_db()
+    return customer
 
 
 class HealthCheckView(View):
@@ -84,14 +139,25 @@ class DispatchNotificationView(View):
         message = str(form.cleaned_data["message"])
         dry_run = bool(form.cleaned_data["dry_run"])
         customer = get_customer_from_user_id(user_id)
-        token = get_token_from_customer(customer)
-        if token is None:
+        token = get_token_from_user_id(user_id)
+        if customer is None:
             return HttpResponse(b"Invalid customer\n", status=403)
+        if token is None:
+            return HttpResponse(b"Invalid Wialon API token\n", status=403)
+        if not has_subscription(customer):
+            return HttpResponse(
+                b"Customer lacks a valid subscription\n", status=403
+            )
+        if not has_messages(customer):
+            return HttpResponse(
+                b"Customer lacks available messages\n", status=403
+            )
+        with WialonSession(token=token) as session:
+            target_phones = phones.get_phone_numbers(unit_id, session)
+            if not target_phones:
+                logger.info(f"No phones retrieved for #{unit_id}\n")
+                return HttpResponse(status=200)
 
-        target_phones = services.get_phone_numbers(unit_id, token)
-        if not target_phones:
-            logger.info(f"No phones retrieved for #{unit_id}\n")
-            return HttpResponse(status=200)
         try:
             method = str(self.kwargs["method"])
             message_ids = await asyncio.gather(
@@ -101,6 +167,11 @@ class DispatchNotificationView(View):
                 ]
             )
             logger.info(f"Sent messages: '{message_ids}'.")
+            num_messages = len(target_phones)
+            increment_customer_message_count(customer, num_messages)
+            logger.info(f"Incremented customer messages for '{customer}'.")
+            increment_packages_message_count(customer, num_messages)
+            logger.info(f"Incremented packages messages for '{customer}'.")
             return HttpResponse(status=200)
         except ValueError:
             return HttpResponse(b"Bad notification method\n", status=406)
@@ -137,7 +208,12 @@ class DispatchNotificationView(View):
                 raise ValueError(f"Invalid method: '{method}'")
 
     async def _send_sms_message(
-        self, to_number: str, message: str, dry_run: bool = False
+        self,
+        to_number: str,
+        message: str,
+        ttl: int = 300,
+        region_name: str = "us-east-1",
+        dry_run: bool = False,
     ) -> dict[str, str] | None:
         """
         Sends ``message`` to ``to_number`` via sms.
@@ -146,14 +222,18 @@ class DispatchNotificationView(View):
         :type to_number: str
         :param message: A message to deliver to the destination phone number via sms.
         :type message: str
-        :param dry_run: Whether or not to execute the API call as a dry run. Default is :py:obj:`False`.
+        :param ttl: Time to live in seconds. Default is ``300`` seconds.
+        :type ttl: int
+        :param region_name: An AWS region to use for the message dispatch. Default is ``"us-east-1"``.
+        :type region_name: str
+        :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
         :type dry_run: bool
         :returns: A dictionary containing the PinpointSMSVoiceV2 message id.
         :rtype: dict[str, str] | None
 
         """
         async with aioboto3.Session().client(
-            "pinpoint-sms-voice-v2", region_name="us-east-1"
+            "pinpoint-sms-voice-v2", region_name=region_name
         ) as client:
             return await client.send_text_message(
                 **{
@@ -163,14 +243,20 @@ class DispatchNotificationView(View):
                     "MessageType": "TRANSACTIONAL",
                     "ConfigurationSetName": settings.AWS_PINPOINT_CONFIGURATION_ARN,
                     "MaxPrice": settings.AWS_PINPOINT_MAX_PRICE_SMS,
-                    "TimeToLive": 300,
+                    "TimeToLive": ttl,
                     "DryRun": dry_run,
                     "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
                 }
             )
 
     async def _send_voice_message(
-        self, to_number: str, message: str, dry_run: bool = False
+        self,
+        to_number: str,
+        message: str,
+        message_type: str = "TEXT",
+        voice_id: str = "MATTHEW",
+        region_name: str = "us-east-1",
+        dry_run: bool = False,
     ) -> dict[str, str] | None:
         """
         Sends ``message`` to ``to_number`` via voice.
@@ -179,22 +265,28 @@ class DispatchNotificationView(View):
         :type to_number: str
         :param message: A message to read aloud to the destination phone number via voice.
         :type message: str
-        :param dry_run: Whether or not to execute the API call as a dry run. Default is :py:obj:`False`.
+        :param message_type: An AWS End User Messaging message type. Default is ``"TEXT"``.
+        :type message_type: str
+        :param voice_id: An AWS End User Messaging synthetic voice id. Default is ``"MATTHEW"``.
+        :type voice_id: str
+        :param region_name: An AWS region to use for the message dispatch. Default is ``"us-east-1"``.
+        :type region_name: str
+        :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
         :type dry_run: bool
         :returns: A dictionary containing the PinpointSMSVoiceV2 message id.
         :rtype: dict[str, str] | None
 
         """
         async with aioboto3.Session().client(
-            "pinpoint-sms-voice-v2", region_name="us-east-1"
+            "pinpoint-sms-voice-v2", region_name=region_name
         ) as client:
             return await client.send_voice_message(
                 **{
                     "DestinationPhoneNumber": to_number,
                     "OriginationIdentity": settings.AWS_PINPOINT_POOL_ARN,
                     "MessageBody": message,
-                    "MessageBodyTextType": "TEXT",
-                    "VoiceId": "MATTHEW",
+                    "MessageBodyTextType": message_type,
+                    "VoiceId": voice_id,
                     "ConfigurationSetName": settings.AWS_PINPOINT_CONFIGURATION_ARN,
                     "MaxPricePerMinute": settings.AWS_PINPOINT_MAX_PRICE_VOICE,
                     "DryRun": dry_run,

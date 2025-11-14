@@ -19,7 +19,7 @@ dependencies = [
     "python-terminusgps>=46.1.0",
     "redis[hiredis]>=6.4.0",
     "terminusgps-payments>=1.4.3",
-    "terminusgps-notifications>=1.1.0",
+    "terminusgps-notifications>=1.2.0",
     "uvicorn>=0.35.0",
 ]
 

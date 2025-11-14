@@ -37,7 +37,6 @@ TIME_ZONE = "US/Central"
 USE_I18N = True
 USE_TZ = True
 USE_X_FORWARDED_HOST = True
-WIALON_RESOURCE_NAME = "Terminus GPS Notifications"
 WIALON_TOKEN_ACCESS_TYPE = (
     TokenFlag.VIEW_ACCESS
     | TokenFlag.MANAGE_NONSENSITIVE

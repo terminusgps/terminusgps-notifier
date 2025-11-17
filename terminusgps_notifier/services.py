@@ -120,7 +120,8 @@ async def get_token_from_user_id(user_id: str) -> str | None:
         customer = await TerminusgpsNotificationsCustomer.objects.aget(
             user__id=int(user_id)
         )
-        return await WialonToken.objects.aget(customer=customer).name
+        token = await WialonToken.objects.aget(customer=customer)
+        return token.name
     except (
         WialonToken.DoesNotExist,
         TerminusgpsNotificationsCustomer.DoesNotExist,

@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 import aioboto3
+from asgiref.sync import sync_to_async
 from django.conf import ImproperlyConfigured, settings
 from django.db.models import F
 from django.http import HttpRequest, HttpResponse
@@ -57,7 +58,11 @@ def get_token_from_user_id(user_id: str) -> str | None:
         return
 
 
-def has_subscription(customer: TerminusgpsNotificationsCustomer) -> bool:
+def has_subscription(
+    customer: TerminusgpsNotificationsCustomer | None = None,
+) -> bool:
+    if customer is None:
+        return False
     return (
         customer.subscription.status == SubscriptionStatus.ACTIVE
         if customer.subscription is not None
@@ -66,7 +71,11 @@ def has_subscription(customer: TerminusgpsNotificationsCustomer) -> bool:
     )
 
 
-def has_messages(customer: TerminusgpsNotificationsCustomer) -> bool:
+def has_messages(
+    customer: TerminusgpsNotificationsCustomer | None = None,
+) -> bool:
+    if customer is None:
+        return False
     if customer.messages_count <= customer.messages_max:
         return True
     packages = MessagePackage.objects.filter(customer=customer)
@@ -138,22 +147,26 @@ class DispatchNotificationView(View):
         user_id = str(form.cleaned_data["user_id"])
         message = str(form.cleaned_data["message"])
         dry_run = bool(form.cleaned_data["dry_run"])
-        customer = get_customer_from_user_id(user_id)
-        token = get_token_from_user_id(user_id)
+        customer = await sync_to_async(get_customer_from_user_id)(user_id)
+        token = await sync_to_async(get_token_from_user_id)(user_id)
+        has_sub = await sync_to_async(has_subscription)(customer)
+        has_msgs = await sync_to_async(has_messages)(customer)
         if customer is None:
             return HttpResponse(b"Invalid customer\n", status=403)
         if token is None:
             return HttpResponse(b"Invalid Wialon API token\n", status=403)
-        if not has_subscription(customer):
+        if not has_sub:
             return HttpResponse(
                 b"Customer lacks a valid subscription\n", status=403
             )
-        if not has_messages(customer):
+        if not has_msgs:
             return HttpResponse(
                 b"Customer lacks available messages\n", status=403
             )
         with WialonSession(token=token) as session:
-            target_phones = phones.get_phone_numbers(unit_id, session)
+            target_phones = await sync_to_async(
+                phones.get_phone_numbers, thread_sensitive=True
+            )(unit_id, session)
             if not target_phones:
                 logger.info(f"No phones retrieved for #{unit_id}\n")
                 return HttpResponse(status=200)
@@ -168,9 +181,13 @@ class DispatchNotificationView(View):
             )
             logger.info(f"Sent messages: '{message_ids}'.")
             num_messages = len(target_phones)
-            increment_customer_message_count(customer, num_messages)
+            await sync_to_async(
+                increment_customer_message_count, thread_sensitive=True
+            )(customer, num_messages)
             logger.info(f"Incremented customer messages for '{customer}'.")
-            increment_packages_message_count(customer, num_messages)
+            await sync_to_async(
+                increment_packages_message_count, thread_sensitive=True
+            )(customer, num_messages)
             logger.info(f"Incremented packages messages for '{customer}'.")
             return HttpResponse(status=200)
         except ValueError:

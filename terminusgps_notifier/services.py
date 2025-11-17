@@ -9,12 +9,6 @@ from terminusgps_notifications.models import (
     WialonToken,
 )
 
-__all__ = [
-    "get_phone_numbers",
-    "get_driver_phone_numbers",
-    "get_cfield_phone_numbers",
-]
-
 
 def get_phone_numbers(unit_id: str, session: WialonSession) -> list[str]:
     """

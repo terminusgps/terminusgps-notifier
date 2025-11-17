@@ -3,7 +3,7 @@ import logging
 
 import aioboto3
 from asgiref.sync import sync_to_async
-from django.conf import ImproperlyConfigured, settings
+from django.conf import settings
 from django.db.models import F
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import View
@@ -21,36 +21,23 @@ from .forms import WialonUnitNotificationForm
 logger = logging.getLogger(__name__)
 
 
-REQUIRED_SETTINGS = [
-    "AWS_PINPOINT_CONFIGURATION_ARN",
-    "AWS_PINPOINT_MAX_PRICE_SMS",
-    "AWS_PINPOINT_MAX_PRICE_VOICE",
-    "AWS_PINPOINT_POOL_ARN",
-    "AWS_PINPOINT_PROTECT_ID",
-]
-
-for setting in REQUIRED_SETTINGS:
-    if not hasattr(settings, setting):
-        raise ImproperlyConfigured(f"'{setting}' setting is required.")
-
-
-def get_customer_from_user_id(
+async def get_customer_from_user_id(
     user_id: str,
 ) -> TerminusgpsNotificationsCustomer | None:
     try:
-        return TerminusgpsNotificationsCustomer.objects.get(
+        return await TerminusgpsNotificationsCustomer.objects.aget(
             user__id=int(user_id)
         )
     except TerminusgpsNotificationsCustomer.DoesNotExist:
         return
 
 
-def get_token_from_user_id(user_id: str) -> str | None:
+async def get_token_from_user_id(user_id: str) -> str | None:
     try:
-        customer = TerminusgpsNotificationsCustomer.objects.get(
+        customer = await TerminusgpsNotificationsCustomer.objects.aget(
             user__id=int(user_id)
         )
-        return WialonToken.objects.get(customer=customer).name
+        return await WialonToken.objects.aget(customer=customer).name
     except (
         WialonToken.DoesNotExist,
         TerminusgpsNotificationsCustomer.DoesNotExist,
@@ -71,45 +58,48 @@ def has_subscription(
     )
 
 
-def has_messages(
+async def has_messages(
     customer: TerminusgpsNotificationsCustomer | None = None,
 ) -> bool:
     if customer is None:
         return False
     if customer.messages_count <= customer.messages_max:
         return True
-    packages = MessagePackage.objects.filter(customer=customer)
-    if packages.count() > 0:
-        for package in packages:
-            if package.count <= package.max:
+
+    packages_qs = MessagePackage.objects.filter(customer=customer)
+    num_packages = await packages_qs.acount()
+    if num_packages > 0:
+        async for package in packages_qs:
+            if package.count < package.max:
                 return True
     return False
 
 
-def increment_packages_message_count(
+async def increment_packages_message_count(
     customer: TerminusgpsNotificationsCustomer, num_messages: int
 ) -> TerminusgpsNotificationsCustomer:
-    packages = MessagePackage.objects.filter(customer=customer)
-    if packages.count() == 0:
+    packages_qs = MessagePackage.objects.filter(customer=customer)
+    num_packages = await packages_qs.acount()
+    if num_packages == 0:
         return customer
-    for package in packages:
+    async for package in packages_qs:
         if package.count >= package.max:
             continue
         else:
             package.count = F("count") + num_messages
-            package.save(update_fields=["count"])
+            await package.asave(update_fields=["count"])
             break
-    customer.refresh_from_db()
+    await customer.arefresh_from_db()
     return customer
 
 
-def increment_customer_message_count(
+async def increment_customer_message_count(
     customer: TerminusgpsNotificationsCustomer, num_messages: int
 ) -> TerminusgpsNotificationsCustomer:
     if customer.messages_count < customer.messages_max:
         customer.messages_count = F("messages_count") + num_messages
-        customer.save(update_fields=["messages_count"])
-        customer.refresh_from_db()
+        await customer.asave(update_fields=["messages_count"])
+        await customer.arefresh_from_db()
     return customer
 
 
@@ -147,10 +137,11 @@ class DispatchNotificationView(View):
         user_id = str(form.cleaned_data["user_id"])
         message = str(form.cleaned_data["message"])
         dry_run = bool(form.cleaned_data["dry_run"])
-        customer = await sync_to_async(get_customer_from_user_id)(user_id)
-        token = await sync_to_async(get_token_from_user_id)(user_id)
+        customer = await get_customer_from_user_id(user_id)
+        token = await get_token_from_user_id(user_id)
         has_sub = await sync_to_async(has_subscription)(customer)
-        has_msgs = await sync_to_async(has_messages)(customer)
+        has_msg = await has_messages(customer)
+
         if customer is None:
             return HttpResponse(b"Invalid customer\n", status=403)
         if token is None:
@@ -159,14 +150,12 @@ class DispatchNotificationView(View):
             return HttpResponse(
                 b"Customer lacks a valid subscription\n", status=403
             )
-        if not has_msgs:
+        if not has_msg:
             return HttpResponse(
                 b"Customer lacks available messages\n", status=403
             )
         with WialonSession(token=token) as session:
-            target_phones = await sync_to_async(
-                phones.get_phone_numbers, thread_sensitive=True
-            )(unit_id, session)
+            target_phones = phones.get_phone_numbers(unit_id, session)
             if not target_phones:
                 logger.info(f"No phones retrieved for #{unit_id}\n")
                 return HttpResponse(status=200)
@@ -181,13 +170,9 @@ class DispatchNotificationView(View):
             )
             logger.info(f"Sent messages: '{message_ids}'.")
             num_messages = len(target_phones)
-            await sync_to_async(
-                increment_customer_message_count, thread_sensitive=True
-            )(customer, num_messages)
+            await increment_customer_message_count(customer, num_messages)
             logger.info(f"Incremented customer messages for '{customer}'.")
-            await sync_to_async(
-                increment_packages_message_count, thread_sensitive=True
-            )(customer, num_messages)
+            await increment_packages_message_count(customer, num_messages)
             logger.info(f"Incremented packages messages for '{customer}'.")
             return HttpResponse(status=200)
         except ValueError:
@@ -215,11 +200,11 @@ class DispatchNotificationView(View):
         match method:
             case "sms":
                 return await self._send_sms_message(
-                    to_number, message, dry_run
+                    to_number, message, dry_run=dry_run
                 )
             case "voice":
                 return await self._send_voice_message(
-                    to_number, message, dry_run
+                    to_number, message, dry_run=dry_run
                 )
             case _:
                 raise ValueError(f"Invalid method: '{method}'")

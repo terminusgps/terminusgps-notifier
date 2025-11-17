@@ -4,103 +4,22 @@ import logging
 import aioboto3
 from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.db.models import F
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import View
-from terminusgps.authorizenet.constants import SubscriptionStatus
 from terminusgps.wialon.session import WialonSession
-from terminusgps_notifications.models import (
-    MessagePackage,
-    TerminusgpsNotificationsCustomer,
-    WialonToken,
+
+from .forms import WialonUnitNotificationForm
+from .services import (
+    get_customer_from_user_id,
+    get_phone_numbers,
+    get_token_from_user_id,
+    has_messages,
+    has_subscription,
+    increment_customer_message_count,
+    increment_packages_message_count,
 )
 
-from . import phones
-from .forms import WialonUnitNotificationForm
-
 logger = logging.getLogger(__name__)
-
-
-async def get_customer_from_user_id(
-    user_id: str,
-) -> TerminusgpsNotificationsCustomer | None:
-    try:
-        return await TerminusgpsNotificationsCustomer.objects.aget(
-            user__id=int(user_id)
-        )
-    except TerminusgpsNotificationsCustomer.DoesNotExist:
-        return
-
-
-async def get_token_from_user_id(user_id: str) -> str | None:
-    try:
-        customer = await TerminusgpsNotificationsCustomer.objects.aget(
-            user__id=int(user_id)
-        )
-        return await WialonToken.objects.aget(customer=customer).name
-    except (
-        WialonToken.DoesNotExist,
-        TerminusgpsNotificationsCustomer.DoesNotExist,
-    ):
-        return
-
-
-def has_subscription(
-    customer: TerminusgpsNotificationsCustomer | None = None,
-) -> bool:
-    if customer is None:
-        return False
-    return (
-        customer.subscription.status == SubscriptionStatus.ACTIVE
-        if customer.subscription is not None
-        and hasattr(customer.subscription, "status")
-        else False
-    )
-
-
-async def has_messages(
-    customer: TerminusgpsNotificationsCustomer | None = None,
-) -> bool:
-    if customer is None:
-        return False
-    if customer.messages_count <= customer.messages_max:
-        return True
-
-    packages_qs = MessagePackage.objects.filter(customer=customer)
-    num_packages = await packages_qs.acount()
-    if num_packages > 0:
-        async for package in packages_qs:
-            if package.count < package.max:
-                return True
-    return False
-
-
-async def increment_packages_message_count(
-    customer: TerminusgpsNotificationsCustomer, num_messages: int
-) -> TerminusgpsNotificationsCustomer:
-    packages_qs = MessagePackage.objects.filter(customer=customer)
-    num_packages = await packages_qs.acount()
-    if num_packages == 0:
-        return customer
-    async for package in packages_qs:
-        if package.count >= package.max:
-            continue
-        else:
-            package.count = F("count") + num_messages
-            await package.asave(update_fields=["count"])
-            break
-    await customer.arefresh_from_db()
-    return customer
-
-
-async def increment_customer_message_count(
-    customer: TerminusgpsNotificationsCustomer, num_messages: int
-) -> TerminusgpsNotificationsCustomer:
-    if customer.messages_count < customer.messages_max:
-        customer.messages_count = F("messages_count") + num_messages
-        await customer.asave(update_fields=["messages_count"])
-        await customer.arefresh_from_db()
-    return customer
 
 
 class HealthCheckView(View):
@@ -155,7 +74,7 @@ class DispatchNotificationView(View):
                 b"Customer lacks available messages\n", status=403
             )
         with WialonSession(token=token) as session:
-            target_phones = phones.get_phone_numbers(unit_id, session)
+            target_phones = get_phone_numbers(unit_id, session)
             if not target_phones:
                 logger.info(f"No phones retrieved for #{unit_id}\n")
                 return HttpResponse(status=200)

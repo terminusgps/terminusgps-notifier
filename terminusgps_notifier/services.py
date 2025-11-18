@@ -75,15 +75,15 @@ def get_cfield_phone_numbers(
         **{"id": unit_id, "flags": flags.DataFlag.UNIT_CUSTOM_FIELDS}
     )
     phones = []
-    print(f"{response = }")
-    dirty_phones = [
-        cfield["v"]
-        for cfield in response["item"]["flds"].values()
-        if cfield["n"] == cfield_key
-    ]
-    for num in dirty_phones:
-        phones.extend(num.split(",")) if "," in num else phones.append(num)
-    cache.set(cache_key, phones)
+    if int(response["item"]["fldsmax"]) > 0:
+        dirty_phones = [
+            cfield["v"]
+            for cfield in response["item"]["flds"].values()
+            if cfield["n"] == cfield_key
+        ]
+        for num in dirty_phones:
+            phones.extend(num.split(",")) if "," in num else phones.append(num)
+        cache.set(cache_key, phones)
     return phones
 
 

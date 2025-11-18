@@ -90,9 +90,9 @@ class DispatchNotificationView(View):
             logger.info(f"Sent messages: '{message_ids}'.")
             num_messages = len(target_phones)
             await increment_customer_message_count(customer, num_messages)
-            logger.info(f"Incremented customer messages for '{customer}'.")
+            logger.info(f"Incremented customer messages for user #{user_id}.")
             await increment_packages_message_count(customer, num_messages)
-            logger.info(f"Incremented packages messages for '{customer}'.")
+            logger.info(f"Incremented packages messages for user #{user_id}.")
             return HttpResponse(status=200)
         except ValueError:
             return HttpResponse(b"Bad notification method\n", status=406)

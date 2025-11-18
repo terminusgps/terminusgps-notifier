@@ -75,6 +75,7 @@ def get_cfield_phone_numbers(
         **{"id": unit_id, "flags": flags.DataFlag.UNIT_CUSTOM_FIELDS}
     )
     phones = []
+    print(f"{response = }")
     dirty_phones = [
         cfield["v"]
         for cfield in response["item"]["flds"].values()

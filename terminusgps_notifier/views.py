@@ -48,33 +48,33 @@ class DispatchNotificationView(View):
         """
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            return HttpResponse(b"Bad notification params\n", status=406)
+            msg = "Bad notification parameters"
+            return HttpResponse(f"{msg}\n".encode("utf-8"), status=406)
 
         unit_id = form.cleaned_data["unit_id"]
         user_id = form.cleaned_data["user_id"]
         message = form.cleaned_data["message"]
-        has_sub = await has_subscription(user_id)
-        has_msg = await has_messages(user_id)
         token = await get_token(user_id)
 
-        if not has_sub:
-            err = f"Invalid subscription from user id: '{user_id}'"
-            logger.warning(err)
-            return HttpResponse(f"{err}\n".encode("utf-8"), status=403)
-        if not has_msg:
-            err = f"Invalid message count from user id: '{user_id}'"
-            logger.warning(err)
-            return HttpResponse(f"{err}\n".encode("utf-8"), status=403)
         if token is None:
-            err = f"Failed to retrieve token from user id: '{user_id}'."
-            logger.warning(err)
-            return HttpResponse(f"{err}\n".encode("utf-8"), status=400)
+            msg = f"Failed to retrieve token from user id: '{user_id}'."
+            logger.warning(msg)
+            return HttpResponse(f"{msg}\n".encode("utf-8"), status=400)
+        if not await has_subscription(user_id):
+            msg = f"Invalid subscription from user id: '{user_id}'"
+            logger.warning(msg)
+            return HttpResponse(f"{msg}\n".encode("utf-8"), status=403)
+        if not await has_messages(user_id):
+            msg = f"Invalid message count from user id: '{user_id}'"
+            logger.warning(msg)
+            return HttpResponse(f"{msg}\n".encode("utf-8"), status=403)
 
         with WialonSession(token=token) as session:
             target_phones = get_phone_numbers(unit_id, session)
             if not target_phones:
-                logger.info(f"No phones retrieved for #{unit_id}\n")
-                return HttpResponse(status=200)
+                msg = f"No phones retrieved for #{unit_id}"
+                logger.info(msg)
+                return HttpResponse(f"{msg}\n".encode("utf-8"), status=200)
         try:
             constructed_message = await self.construct_message(
                 base=message,
@@ -95,14 +95,16 @@ class DispatchNotificationView(View):
                 ]
             )
             message_ids = [msg.get("MessageId") for msg in messages_response]
-            logger.info(f"Sent messages: {message_ids}")
+            msg = f"Sent {len(message_ids)} messages: {message_ids}"
+            logger.info(msg)
             await increment_customer_message_count(user_id, len(message_ids))
             logger.info(f"Incremented customer messages for user #{user_id}")
             await increment_packages_message_count(user_id, len(message_ids))
             logger.info(f"Incremented packages messages for user #{user_id}")
-            return HttpResponse(status=200)
+            return HttpResponse(f"{msg}\n".encode("utf-8"), status=200)
         except ValueError:
-            return HttpResponse(b"Bad notification method\n", status=406)
+            msg = "Bad notification method"
+            return HttpResponse(f"{msg}\n".encode("utf-8"), status=406)
 
     async def construct_message(
         self,

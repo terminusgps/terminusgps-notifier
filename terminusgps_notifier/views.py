@@ -1,8 +1,8 @@
 import asyncio
+import datetime
 import logging
 
 import aioboto3
-from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import View
@@ -10,9 +10,9 @@ from terminusgps.wialon.session import WialonSession
 
 from .forms import WialonUnitNotificationForm
 from .services import (
-    get_customer_from_user_id,
+    get_date_format,
     get_phone_numbers,
-    get_token_from_user_id,
+    get_token,
     has_messages,
     has_subscription,
     increment_customer_message_count,
@@ -43,59 +43,107 @@ class DispatchNotificationView(View):
 
         Returns 200 if the provided unit id didn't have attached phone numbers.
 
-        Returns 406 if the unit id, user id, message or method was invalid.
-
-        Returns 403 if the user id represents a non-existent user, a user without a subscription, a user with an inactive subscription or a user without a valid Wialon API token.
+        Returns 4XX in any other case.
 
         """
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
             return HttpResponse(b"Bad notification params\n", status=406)
 
-        unit_id = str(form.cleaned_data["unit_id"])
-        user_id = str(form.cleaned_data["user_id"])
-        message = str(form.cleaned_data["message"])
-        dry_run = bool(form.cleaned_data["dry_run"])
-        customer = await get_customer_from_user_id(user_id)
-        token = await get_token_from_user_id(user_id)
-        has_sub = await sync_to_async(has_subscription)(customer)
-        has_msg = await has_messages(customer)
+        unit_id = form.cleaned_data["unit_id"]
+        user_id = form.cleaned_data["user_id"]
+        message = form.cleaned_data["message"]
+        has_sub = await has_subscription(user_id)
+        has_msg = await has_messages(user_id)
+        token = await get_token(user_id)
 
-        if customer is None:
-            return HttpResponse(b"Invalid customer\n", status=403)
-        if token is None:
-            return HttpResponse(b"Invalid Wialon API token\n", status=403)
         if not has_sub:
-            return HttpResponse(
-                b"Customer lacks a valid subscription\n", status=403
-            )
+            err = f"Invalid subscription from user id: '{user_id}'"
+            logger.warning(err)
+            return HttpResponse(f"{err}\n".encode("utf-8"), status=403)
         if not has_msg:
-            return HttpResponse(
-                b"Customer lacks available messages\n", status=403
-            )
+            err = f"Invalid message count from user id: '{user_id}'"
+            logger.warning(err)
+            return HttpResponse(f"{err}\n".encode("utf-8"), status=403)
+        if token is None:
+            err = f"Failed to retrieve token from user id: '{user_id}'."
+            logger.warning(err)
+            return HttpResponse(f"{err}\n".encode("utf-8"), status=400)
+
         with WialonSession(token=token) as session:
             target_phones = get_phone_numbers(unit_id, session)
             if not target_phones:
                 logger.info(f"No phones retrieved for #{unit_id}\n")
                 return HttpResponse(status=200)
-
         try:
-            method = str(self.kwargs["method"])
-            message_ids = await asyncio.gather(
+            constructed_message = await self.construct_message(
+                base=message,
+                user_id=user_id,
+                msg_time_int=form.cleaned_data.get("msg_time_int"),
+                location=form.cleaned_data.get("location"),
+                unit_name=form.cleaned_data.get("unit_name"),
+            )
+            messages_response = await asyncio.gather(
                 *[
-                    self.send_notification(phone, message, method, dry_run)
+                    self.send_notification(
+                        to_number=phone,
+                        message=constructed_message,
+                        method=str(self.kwargs["method"]),
+                        dry_run=form.cleaned_data["dry_run"],
+                    )
                     for phone in target_phones
                 ]
             )
-            logger.info(f"Sent messages: '{message_ids}'.")
-            num_messages = len(target_phones)
-            await increment_customer_message_count(customer, num_messages)
-            logger.info(f"Incremented customer messages for user #{user_id}.")
-            await increment_packages_message_count(customer, num_messages)
-            logger.info(f"Incremented packages messages for user #{user_id}.")
+            message_ids = [msg.get("MessageId") for msg in messages_response]
+            logger.info(f"Sent messages: {message_ids}")
+            await increment_customer_message_count(user_id, len(message_ids))
+            logger.info(f"Incremented customer messages for user #{user_id}")
+            await increment_packages_message_count(user_id, len(message_ids))
+            logger.info(f"Incremented packages messages for user #{user_id}")
             return HttpResponse(status=200)
         except ValueError:
             return HttpResponse(b"Bad notification method\n", status=406)
+
+    async def construct_message(
+        self,
+        base: str,
+        user_id: int,
+        *,
+        msg_time_int: int | None = None,
+        location: str | None = None,
+        unit_name: str | None = None,
+    ) -> str:
+        """
+        Returns a constructed message to be delivered to a destination phone number.
+
+        :param base: Base message.
+        :type base: str
+        :param user_id: A Django user id.
+        :type user_id: int
+        :param msg_time_int: Message time as UNIX-timestamp. Default is :py:obj:`None`.
+        :type msg_time_int: int | None
+        :param location: Location of the notification trigger. Default is :py:obj:`None`.
+        :type location: str | None
+        :param unit_name: Name of the triggering unit. Default is :py:obj:`None`.
+        :type unit_name: str | None
+        :returns: A constructed notification message.
+        :rtype: str
+
+        """
+        msg_parts: list[str] = []
+        if msg_time_int:
+            date_fmt = await get_date_format(user_id)
+            msg_time = datetime.datetime.utcfromtimestamp(msg_time_int)
+            msg_parts.append(f"[{msg_time.strftime(date_fmt)}]")
+        if location:
+            msg_parts.append(f"[{location}]")
+        if unit_name:
+            msg_parts.append(f"[{unit_name}]")
+        return (
+            " ".join(msg_parts + [f"{base}"])
+            if any([unit_name, msg_time_int, location])
+            else base
+        )
 
     async def send_notification(
         self, to_number: str, message: str, method: str, dry_run: bool = False
@@ -116,6 +164,7 @@ class DispatchNotificationView(View):
         :rtype: dict[str, str] | None
 
         """
+        logger.info(f"Sending '{message}' to '{to_number}' via {method}...")
         match method:
             case "sms":
                 return await self._send_sms_message(

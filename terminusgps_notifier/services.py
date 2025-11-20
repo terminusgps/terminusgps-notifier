@@ -1,21 +1,27 @@
+import logging
+
+from asgiref.sync import sync_to_async
 from django.core.cache import cache
 from django.db.models import F
 from terminusgps.authorizenet.constants import SubscriptionStatus
 from terminusgps.wialon import flags
-from terminusgps.wialon.session import WialonSession
+from terminusgps.wialon.session import WialonAPIError, WialonSession
 from terminusgps_notifications.models import (
     MessagePackage,
     TerminusgpsNotificationsCustomer,
     WialonToken,
 )
+from terminusgps_payments.models import Subscription
+
+logger = logging.getLogger(__name__)
 
 
-def get_phone_numbers(unit_id: str, session: WialonSession) -> list[str]:
+def get_phone_numbers(unit_id: int, session: WialonSession) -> list[str]:
     """
     Returns a list of unit assigned phone numbers by id.
 
     :param unit_id: Wialon unit id.
-    :type unit_id: str
+    :type unit_id: int
     :param session: Active Wialon API session.
     :type session: ~terminusgps.wialon.session.WialonSession
     :returns: A list of phone numbers.
@@ -28,13 +34,13 @@ def get_phone_numbers(unit_id: str, session: WialonSession) -> list[str]:
 
 
 def get_driver_phone_numbers(
-    unit_id: str, session: WialonSession
+    unit_id: int, session: WialonSession
 ) -> list[str]:
     """
     Returns a list of the unit's attached driver phone numbers.
 
     :param unit_id: Wialon unit id.
-    :type unit_id: str
+    :type unit_id: int
     :param session: Active Wialon API session.
     :type session: ~terminusgps.wialon.session.WialonSession
     :returns: A list of phone numbers.
@@ -44,22 +50,28 @@ def get_driver_phone_numbers(
     cache_key = f"{unit_id}_get_driver_phone_numbers"
     if cached_driver_phones := cache.get(cache_key):
         return cached_driver_phones
-    response = session.wialon_api.resource_get_unit_drivers(
-        **{"unitId": unit_id}
-    )
-    phones = [driver[0].get("ph") for driver in response.values()]
-    cache.set(cache_key, phones)
-    return phones
+    phones: list[str] = []
+
+    try:
+        response = session.wialon_api.resource_get_unit_drivers(
+            **{"unitId": unit_id}
+        )
+        phones.extend([driver[0].get("ph") for driver in response.values()])
+        cache.set(cache_key, phones)
+    except WialonAPIError as e:
+        logger.warning(e)
+    finally:
+        return phones
 
 
 def get_cfield_phone_numbers(
-    unit_id: str, session: WialonSession, cfield_key: str = "to_number"
+    unit_id: int, session: WialonSession, cfield_key: str = "to_number"
 ) -> list[str]:
     """
     Returns a list of the unit's attached driver phone numbers.
 
     :param unit_id: Wialon unit id.
-    :type unit_id: str
+    :type unit_id: int
     :param session: Active Wialon API session.
     :type session: ~terminusgps.wialon.session.WialonSession
     :param cfield_key: Custom field key containing a comma-separated list of phone numbers. Default is :py:obj:`"to_number"`.
@@ -71,158 +83,173 @@ def get_cfield_phone_numbers(
     cache_key = f"{unit_id}_get_cfield_phone_numbers"
     if cached_cfield_phones := cache.get(cache_key):
         return cached_cfield_phones
-    response = session.wialon_api.core_search_item(
-        **{"id": unit_id, "flags": flags.DataFlag.UNIT_CUSTOM_FIELDS}
-    )
-    phones = []
-    if int(response["item"]["fldsmax"]) > 0:
-        dirty_phones = [
-            cfield["v"]
-            for cfield in response["item"]["flds"].values()
-            if cfield["n"] == cfield_key
-        ]
-        for num in dirty_phones:
-            phones.extend(num.split(",")) if "," in num else phones.append(num)
-        cache.set(cache_key, phones)
-    return phones
+    phones: list[str] = []
+
+    try:
+        response = session.wialon_api.core_search_item(
+            **{"id": unit_id, "flags": flags.DataFlag.UNIT_CUSTOM_FIELDS}
+        )["item"]
+        if cfields := response.get("flds"):
+            dirty_phones = [
+                cfield["v"]
+                for cfield in cfields.values()
+                if cfield["n"] == cfield_key
+            ]
+            for num in dirty_phones:
+                phones.extend(num.split(",")) if "," in num else phones.append(
+                    num
+                )
+            cache.set(cache_key, phones)
+    except WialonAPIError as e:
+        logger.warning(e)
+    finally:
+        return phones
 
 
-async def get_customer_from_user_id(
-    user_id: str,
+async def get_customer(
+    user_id: int,
 ) -> TerminusgpsNotificationsCustomer | None:
     """
-    Returns a Terminus GPS Notifications customer by id.
+    Returns a customer by id.
 
-    :param user_id: A Django user id.
-    :type user_id: str
+    :param user_id: Django user id.
+    :type user_id: int
     :returns: A Terminus GPS Notifications customer, if found.
     :rtype: ~terminusgps_notifications.models.TerminusgpsNotificationsCustomer | None
 
     """
     try:
         return await TerminusgpsNotificationsCustomer.objects.aget(
-            user__id=int(user_id)
+            user__id=user_id
         )
     except TerminusgpsNotificationsCustomer.DoesNotExist:
         return
 
 
-async def get_token_from_user_id(user_id: str) -> str | None:
+async def get_token(user_id: int) -> str | None:
     """
-    Returns a Terminus GPS Notifications customer's Wialon API token by id.
+    Returns a customer's Wialon API token by id.
 
-    :param user_id: A Django user id.
-    :type user_id: str
+    :param user_id: Django user id.
+    :type user_id: int
     :returns: A Wialon API token, if found.
     :rtype: str | None
 
     """
     try:
-        customer = await TerminusgpsNotificationsCustomer.objects.aget(
-            user__id=int(user_id)
-        )
-        token = await WialonToken.objects.aget(customer=customer)
-        return token.name
-    except (
-        WialonToken.DoesNotExist,
-        TerminusgpsNotificationsCustomer.DoesNotExist,
-    ):
+        if customer := await get_customer(user_id):
+            token = await sync_to_async(getattr)(customer, "token")
+            return await sync_to_async(getattr)(token, "name")
+    except WialonToken.DoesNotExist:
         return
 
 
-def has_subscription(
-    customer: TerminusgpsNotificationsCustomer | None = None,
-) -> bool:
+async def has_subscription(user_id: int) -> bool:
     """
-    Returns whether a Terminus GPS Notifications customer has a valid subscription.
+    Returns whether a customer has a valid subscription.
 
-    :param customer: A Terminus GPS Notifications customer. Default is :py:obj:`None` (probably not helpful).
-    :type customer: ~terminusgps_notifications.models.TerminusgpsNotificationsCustomer | None
+    :param user_id: Django user id.
+    :type user_id: int
     :returns: Whether the customer has a valid subscription.
     :rtype: bool
 
     """
-    if customer is None:
+    try:
+        if customer := await get_customer(user_id):
+            subscription = await sync_to_async(getattr)(
+                customer, "subscription"
+            )
+            return subscription.status == SubscriptionStatus.ACTIVE
         return False
-    return (
-        customer.subscription.status == SubscriptionStatus.ACTIVE
-        if customer.subscription is not None
-        and hasattr(customer.subscription, "status")
-        else False
-    )
+    except Subscription.DoesNotExist:
+        return False
 
 
-async def has_messages(
-    customer: TerminusgpsNotificationsCustomer | None = None,
-) -> bool:
+async def has_messages(user_id: int) -> bool:
     """
-    Returns whether a Terminus GPS Notifications customer has available messages.
+    Returns whether a customer has available messages.
 
-    :param customer: A Terminus GPS Notifications customer. Default is :py:obj:`None` (probably not helpful).
-    :type customer: ~terminusgps_notifications.models.TerminusgpsNotificationsCustomer | None
+    :param user_id: Django user id.
+    :type user_id: int
     :returns: Whether the customer has available messages.
     :rtype: bool
 
     """
-    if customer is None:
-        return False
-    if customer.messages_count <= customer.messages_max:
-        return True
-
-    packages_qs = MessagePackage.objects.filter(customer=customer)
-    num_packages = await packages_qs.acount()
-    if num_packages > 0:
-        async for package in packages_qs:
-            if package.count < package.max:
-                return True
+    if customer := await get_customer(user_id):
+        count = await sync_to_async(getattr)(customer, "messages_count")
+        max = await sync_to_async(getattr)(customer, "messages_max")
+        if count < max:
+            return True
+        packages_qs = MessagePackage.objects.filter(customer=customer)
+        if await packages_qs.acount() > 0:
+            async for package in packages_qs:
+                if package.count < package.max:
+                    return True
     return False
 
 
 async def increment_packages_message_count(
-    customer: TerminusgpsNotificationsCustomer, num_messages: int
-) -> TerminusgpsNotificationsCustomer:
+    user_id: int, num_messages: int
+) -> None:
     """
-    Adds ``num_messages`` to the first customer package with room before returning the customer.
+    Adds ``num_messages`` to the first customer package with room.
 
-    :param customer: A Terminus GPS Notifications customer.
-    :type customer: ~terminusgps_notifications.models.TerminusgpsNotificationsCustomer
+    :param user_id: A Django user id.
+    :type user_id: int
     :param num_messages: Number of messages to add.
     :type num_messages: int
-    :returns: The Terminus GPS Notifications customer.
-    :rtype: ~terminusgps_notifications.models.TerminusgpsNotificationsCustomer
+    :returns: Nothing.
+    :rtype: None
 
     """
-    packages_qs = MessagePackage.objects.filter(customer=customer)
-    num_packages = await packages_qs.acount()
-    if num_packages == 0 or customer.messages_count < customer.messages_max:
-        return customer
-    async for package in packages_qs:
-        if package.count >= package.max:
-            continue
-        else:
-            package.count = F("count") + num_messages
-            await package.asave(update_fields=["count"])
-            break
-    await customer.arefresh_from_db()
-    return customer
+    if customer := await get_customer(user_id):
+        packages_qs = MessagePackage.objects.filter(customer=customer)
+        if (
+            customer.messages_count < customer.messages_max
+            or await packages_qs.acount() <= 0
+        ):
+            return
+        async for package in packages_qs:
+            if package.count >= package.max:
+                continue
+            else:
+                package.count = F("count") + num_messages
+                await package.asave(update_fields=["count"])
+                break
 
 
 async def increment_customer_message_count(
-    customer: TerminusgpsNotificationsCustomer, num_messages: int
-) -> TerminusgpsNotificationsCustomer:
+    user_id: int, num_messages: int
+) -> None:
     """
-    Adds ``num_messages`` to the customer's message count before returning it.
+    Adds ``num_messages`` to the customer's message count.
 
-    :param customer: A Terminus GPS Notifications customer.
-    :type customer: ~terminusgps_notifications.models.TerminusgpsNotificationsCustomer
+    :param user_id: A Django user id.
+    :type user_id: int
     :param num_messages: Number of messages to add.
     :type num_messages: int
-    :returns: The Terminus GPS Notifications customer.
-    :rtype: ~terminusgps_notifications.models.TerminusgpsNotificationsCustomer
+    :returns: Nothing.
+    :rtype: None
 
     """
-    if customer.messages_count < customer.messages_max:
-        customer.messages_count = F("messages_count") + num_messages
-        await customer.asave(update_fields=["messages_count"])
-        await customer.arefresh_from_db()
-    return customer
+    if customer := await get_customer(user_id):
+        if customer.messages_count < customer.messages_max:
+            customer.messages_count = F("messages_count") + num_messages
+            await customer.asave(update_fields=["messages_count"])
+
+
+async def get_date_format(user_id: int) -> str:
+    """
+    Returns the date format for a customer.
+
+    Default date format is: '%Y-%m-%d %H:%M:%S'
+
+    :param user_id: A Django user id.
+    :type user_id: int
+    :returns: A strftime format string.
+    :rtype: str
+
+    """
+    if customer := await get_customer(user_id):
+        return customer.date_format
+    return "%Y-%m-%d %H:%M:%S"

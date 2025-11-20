@@ -42,6 +42,6 @@ class DispatchNotificationViewTestCase(TestCase):
 
     def test_message_too_long(self) -> None:
         """Fails if a request with a message longer than 2048 characters returns status code 200."""
-        data = {"unit_id": "12345678", "message": "test" * 513}
+        data = {"unit_id": "12345678", "message": "test" * (512 + 1)}
         response = self.client.get("/v3/notify/sms/", data=data)
         self.assertNotEqual(response.status_code, 200)

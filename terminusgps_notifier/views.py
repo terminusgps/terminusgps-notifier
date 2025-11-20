@@ -5,6 +5,7 @@ import logging
 import aioboto3
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
+from django.utils.translation import ngettext
 from django.views.generic import View
 from terminusgps.wialon.session import WialonSession
 
@@ -93,7 +94,7 @@ class DispatchNotificationView(View):
                 ]
             )
             message_ids = [msg.get("MessageId") for msg in messages_response]
-            msg = f"Sent {len(message_ids)} messages: {message_ids}"
+            msg = f"Sent {len(message_ids)} {ngettext('message', 'messages', len(message_ids))}: {message_ids}"
             logger.info(msg)
             await increment_customer_message_count(user_id, len(message_ids))
             logger.info(f"Incremented customer messages for user #{user_id}")

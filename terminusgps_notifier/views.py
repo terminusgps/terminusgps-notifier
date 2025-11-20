@@ -39,9 +39,7 @@ class DispatchNotificationView(View):
         """
         Dispatches a notification based on path parameters.
 
-        Returns 200 if notifications were successfully dispatched.
-
-        Returns 200 if the provided unit id didn't have attached phone numbers.
+        Returns 200 if notifications were successfully dispatched or the unit didn't have phone numbers.
 
         Returns 4XX in any other case.
 
@@ -72,7 +70,7 @@ class DispatchNotificationView(View):
         with WialonSession(token=token) as session:
             target_phones = get_phone_numbers(unit_id, session)
             if not target_phones:
-                msg = f"No phones retrieved for #{unit_id}"
+                msg = f"No phones retrieved for unit_id: '{unit_id}'"
                 logger.info(msg)
                 return HttpResponse(f"{msg}\n".encode("utf-8"), status=200)
         try:

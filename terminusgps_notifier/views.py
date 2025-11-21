@@ -29,7 +29,7 @@ class HealthCheckView(View):
 
     async def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """Responds with status code 200."""
-        return HttpResponse(b"I'm alive\n", status=200)
+        return HttpResponse("I'm alive".encode("utf-8"), status=200)
 
 
 class DispatchNotificationView(View):
@@ -48,7 +48,7 @@ class DispatchNotificationView(View):
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
             msg = "Bad notification parameters"
-            return HttpResponse(f"{msg}\n".encode("utf-8"), status=406)
+            return HttpResponse(msg.encode("utf-8"), status=406)
 
         unit_id = form.cleaned_data["unit_id"]
         user_id = form.cleaned_data["user_id"]
@@ -56,24 +56,24 @@ class DispatchNotificationView(View):
         token = await get_token(user_id)
 
         if token is None:
-            msg = f"Failed to retrieve token from user id: '{user_id}'."
+            msg = f"Failed to retrieve token from user id: '{user_id}'"
             logger.warning(msg)
-            return HttpResponse(f"{msg}\n".encode("utf-8"), status=400)
+            return HttpResponse(msg.encode("utf-8"), status=400)
         if not await has_subscription(user_id):
             msg = f"Invalid subscription from user id: '{user_id}'"
             logger.warning(msg)
-            return HttpResponse(f"{msg}\n".encode("utf-8"), status=403)
+            return HttpResponse(msg.encode("utf-8"), status=403)
         if not await has_messages(user_id):
             msg = f"Invalid message count from user id: '{user_id}'"
             logger.warning(msg)
-            return HttpResponse(f"{msg}\n".encode("utf-8"), status=403)
+            return HttpResponse(msg.encode("utf-8"), status=403)
 
         with WialonSession(token=token) as session:
             target_phones = get_phone_numbers(unit_id, session)
             if not target_phones:
                 msg = f"No phones retrieved for unit_id: '{unit_id}'"
                 logger.info(msg)
-                return HttpResponse(f"{msg}\n".encode("utf-8"), status=200)
+                return HttpResponse(msg.encode("utf-8"), status=200)
         try:
             constructed_message = await self.construct_message(
                 base=message,
@@ -100,10 +100,9 @@ class DispatchNotificationView(View):
             logger.info(f"Incremented customer messages for user #{user_id}")
             await increment_packages_message_count(user_id, len(message_ids))
             logger.info(f"Incremented packages messages for user #{user_id}")
-            return HttpResponse(f"{msg}\n".encode("utf-8"), status=200)
-        except ValueError:
-            msg = "Bad notification method"
-            return HttpResponse(f"{msg}\n".encode("utf-8"), status=406)
+            return HttpResponse(msg.encode("utf-8"), status=200)
+        except ValueError as e:
+            return HttpResponse(str(e).encode("utf-8"), status=406)
 
     async def construct_message(
         self,
@@ -182,6 +181,7 @@ class DispatchNotificationView(View):
         self,
         to_number: str,
         message: str,
+        *,
         ttl: int = 300,
         region_name: str = "us-east-1",
         dry_run: bool = False,
@@ -224,6 +224,7 @@ class DispatchNotificationView(View):
         self,
         to_number: str,
         message: str,
+        *,
         message_type: str = "TEXT",
         voice_id: str = "MATTHEW",
         region_name: str = "us-east-1",

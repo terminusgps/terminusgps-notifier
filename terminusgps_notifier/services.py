@@ -52,8 +52,8 @@ def get_driver_phone_numbers(
 
     """
     cache_key = f"{unit_id}_get_driver_phone_numbers"
-    if cached_driver_phones := cache.get(cache_key):
-        return cached_driver_phones
+    if cached_phones := cache.get(cache_key):
+        return cached_phones
     phones: list[str] = []
 
     try:
@@ -85,8 +85,8 @@ def get_cfield_phone_numbers(
 
     """
     cache_key = f"{unit_id}_get_cfield_phone_numbers"
-    if cached_cfield_phones := cache.get(cache_key):
-        return cached_cfield_phones
+    if cached_phones := cache.get(cache_key):
+        return cached_phones
     phones: list[str] = []
 
     try:
@@ -247,7 +247,7 @@ async def get_date_format(user_id: int) -> str:
     """
     Returns the date format for a customer.
 
-    Default date format is: '%Y-%m-%d %H:%M:%S'
+    Default date format: '%Y-%m-%d %H:%M:%S'
 
     :param user_id: A Django user id.
     :type user_id: int

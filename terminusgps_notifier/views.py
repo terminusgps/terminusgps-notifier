@@ -147,7 +147,7 @@ class DispatchNotificationView(View):
 
     async def send_notification(
         self, to_number: str, message: str, method: str, dry_run: bool = False
-    ) -> dict[str, str] | None:
+    ) -> dict | None:
         """
         Sends a notification to ``to_number`` via ``method``.
 
@@ -200,7 +200,7 @@ class DispatchNotificationView(View):
         :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
         :type dry_run: bool
         :returns: A dictionary containing the PinpointSMSVoiceV2 message id.
-        :rtype: dict[str, str] | None
+        :rtype: dict | None
 
         """
         async with aioboto3.Session().client(
@@ -229,7 +229,7 @@ class DispatchNotificationView(View):
         voice_id: str = "MATTHEW",
         region_name: str = "us-east-1",
         dry_run: bool = False,
-    ) -> dict[str, str] | None:
+    ) -> dict | None:
         """
         Sends ``message`` to ``to_number`` via voice.
 
@@ -246,7 +246,7 @@ class DispatchNotificationView(View):
         :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
         :type dry_run: bool
         :returns: A dictionary containing the PinpointSMSVoiceV2 message id.
-        :rtype: dict[str, str] | None
+        :rtype: dict | None
 
         """
         async with aioboto3.Session().client(

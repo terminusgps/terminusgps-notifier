@@ -9,7 +9,6 @@ from terminusgps.wialon.session import WialonAPIError, WialonSession
 from terminusgps_notifications.models import (
     MessagePackage,
     TerminusgpsNotificationsCustomer,
-    WialonToken,
 )
 
 logger = logging.getLogger(__name__)
@@ -141,17 +140,20 @@ async def get_token(user_id: int) -> str | None:
     :rtype: str | None
 
     """
-    try:
-        if customer := await get_customer(user_id):
-            token = await sync_to_async(getattr)(customer, "token")
+    if customer := await get_customer(user_id):
+        if token := await sync_to_async(getattr)(customer, "token"):
             return await sync_to_async(getattr)(token, "name")
-    except WialonToken.DoesNotExist:
-        return
 
 
 async def has_subscription(user_id: int) -> bool:
     """
     Returns whether a customer has a valid subscription.
+
+    Returns :py:obj:`True` if the customer has a subscription with status 'active'.
+
+    Returns :py:obj:`True` if the customer user is staff.
+
+    Returns :py:obj:`False` in any other case.
 
     :param user_id: Django user id.
     :type user_id: int
@@ -161,14 +163,12 @@ async def has_subscription(user_id: int) -> bool:
     """
     if customer := await get_customer(user_id):
         user = await sync_to_async(getattr)(customer, "user")
-        if user and user.is_staff:
-            return True
         subscription = await sync_to_async(getattr)(customer, "subscription")
         return (
             subscription.status == SubscriptionStatus.ACTIVE
             if subscription is not None
             else False
-        )
+        ) or (user is not None and user.is_staff)
     return False
 
 

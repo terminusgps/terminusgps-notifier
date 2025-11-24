@@ -140,7 +140,7 @@ class DispatchNotificationView(View):
         if unit_name:
             msg_parts.append(f"[{unit_name}]")
         return (
-            " ".join(msg_parts + [f"{base}"])
+            " ".join(msg_parts + [base])
             if any([unit_name, msg_time_int, location])
             else base
         )

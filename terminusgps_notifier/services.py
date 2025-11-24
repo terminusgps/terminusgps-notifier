@@ -159,6 +159,8 @@ async def has_subscription(user_id: int) -> bool:
             subscription = await sync_to_async(getattr)(
                 customer, "subscription"
             )
+            if subscription is None:
+                return False
             return subscription.status == SubscriptionStatus.ACTIVE
         return False
     except Subscription.DoesNotExist:

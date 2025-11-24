@@ -11,7 +11,6 @@ from terminusgps_notifications.models import (
     TerminusgpsNotificationsCustomer,
     WialonToken,
 )
-from terminusgps_payments.models import Subscription
 
 logger = logging.getLogger(__name__)
 
@@ -154,19 +153,17 @@ async def has_subscription(user_id: int) -> bool:
     :rtype: bool
 
     """
-    try:
-        if customer := await get_customer(user_id):
-            subscription = await sync_to_async(getattr)(
-                customer, "subscription"
-            )
-            return (
-                subscription.status == SubscriptionStatus.ACTIVE
-                if subscription is not None
-                else False
-            )
-        return False
-    except Subscription.DoesNotExist:
-        return False
+    if customer := await get_customer(user_id):
+        user = await sync_to_async(getattr)(customer, "user")
+        if user and user.is_staff:
+            return True
+        subscription = await sync_to_async(getattr)(customer, "subscription")
+        return (
+            subscription.status == SubscriptionStatus.ACTIVE
+            if subscription is not None
+            else False
+        )
+    return False
 
 
 async def has_messages(user_id: int) -> bool:
@@ -180,9 +177,7 @@ async def has_messages(user_id: int) -> bool:
 
     """
     if customer := await get_customer(user_id):
-        count = await sync_to_async(getattr)(customer, "messages_count")
-        max = await sync_to_async(getattr)(customer, "messages_max")
-        if count < max:
+        if customer.messages_count < customer.messages_max:
             return True
         packages_qs = MessagePackage.objects.filter(customer=customer)
         if await packages_qs.acount() > 0:

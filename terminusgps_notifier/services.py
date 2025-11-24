@@ -28,7 +28,13 @@ def get_phone_numbers(unit_id: int, session: WialonSession) -> list[str]:
 
     """
     driver_phones = get_driver_phone_numbers(unit_id, session)
+    logger.debug(
+        f"Retrieved driver phones: '{driver_phones}' for #{unit_id}..."
+    )
     cfield_phones = get_cfield_phone_numbers(unit_id, session)
+    logger.debug(
+        f"Retrieved cfield phones: '{cfield_phones}' for #{unit_id}..."
+    )
     return list(frozenset(driver_phones + cfield_phones))
 
 

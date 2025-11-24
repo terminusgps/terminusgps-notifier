@@ -82,7 +82,7 @@ LOGGING = {
         },
         "terminusgps_notifier": {
             "handlers": ["console_verbose"],
-            "level": os.getenv("NOTIFIER_LOG_LEVEL", "INFO"),
+            "level": os.getenv("NOTIFIER_LOG_LEVEL", "DEBUG"),
             "propagate": False,
         },
     },

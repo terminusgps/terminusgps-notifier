@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 import aioboto3
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest, HttpResponse
 from django.utils.translation import ngettext
 from django.views.generic import View
@@ -18,6 +19,7 @@ from .services import (
     render_message,
     send_notification,
 )
+from .validators import validate_e164_phone_number
 
 logger = logging.getLogger(__name__)
 
@@ -46,33 +48,43 @@ class DispatchNotificationView(View):
         """
         form = WialonUnitNotificationForm(request.GET)
         if not form.is_valid():
-            msg = "Bad notification parameters"
-            return HttpResponse(msg.encode("utf-8"), status=406)
+            return HttpResponse(
+                "Bad notification parameters".encode("utf-8"), status=406
+            )
 
+        target_phones = []
         unit_id = form.cleaned_data["unit_id"]
         user_id = form.cleaned_data["user_id"]
         message = form.cleaned_data["message"]
         token = await get_token(user_id)
 
         if token is None:
-            msg = f"Failed to retrieve token from user id: '{user_id}'"
-            logger.warning(msg)
-            return HttpResponse(msg.encode("utf-8"), status=400)
+            log = f"Failed to retrieve token from user id: '{user_id}'"
+            logger.warning(log)
+            return HttpResponse(log.encode("utf-8"), status=400)
         if not await has_subscription(user_id):
-            msg = f"Invalid subscription from user id: '{user_id}'"
-            logger.warning(msg)
-            return HttpResponse(msg.encode("utf-8"), status=403)
+            log = f"Invalid subscription from user id: '{user_id}'"
+            logger.warning(log)
+            return HttpResponse(log.encode("utf-8"), status=403)
         if not await has_messages(user_id):
-            msg = f"Invalid message count from user id: '{user_id}'"
-            logger.warning(msg)
-            return HttpResponse(msg.encode("utf-8"), status=403)
+            log = f"Invalid message count from user id: '{user_id}'"
+            logger.warning(log)
+            return HttpResponse(log.encode("utf-8"), status=403)
 
         with WialonSession(token=token) as session:
-            target_phones = get_phone_numbers(unit_id, session)
-            if not target_phones:
+            phones = get_phone_numbers(unit_id, session)
+            if not phones:
                 msg = f"No phones retrieved for unit_id: '{unit_id}'"
                 logger.info(msg)
                 return HttpResponse(msg.encode("utf-8"), status=200)
+            for phone in phones:
+                try:
+                    validate_e164_phone_number(phone)
+                    target_phones.append(phone)
+                except ValidationError as e:
+                    logger.warning(e)
+                    continue
+
         try:
             rendered = await render_message(
                 base=message,

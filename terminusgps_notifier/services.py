@@ -57,14 +57,18 @@ def get_driver_phone_numbers(
     :rtype: list[str]
 
     """
-    logger.info(f"Retriving driver phones for unit #{unit_id}...")
     try:
+        logger.debug(
+            f"Calling the Wialon API to retrieve driver phones for unit #{unit_id}..."
+        )
         drivers = session.wialon_api.resource_get_unit_drivers(
             **{"unitId": unit_id}
-        ).values()
-        phones = [driver[0].get("ph") for driver in drivers]
-        logger.debug(f"Driver phones retrieved for unit #{unit_id}: {phones}")
-        return phones
+        )
+        return (
+            [driver[0].get("ph") for driver in drivers.values()]
+            if drivers.values()
+            else []
+        )
     except WialonAPIError as e:
         logger.warning(e)
         return []
@@ -88,23 +92,22 @@ def get_cfield_phone_numbers(
     :rtype: list[str]
 
     """
-    logger.info(f"Retriving cfield phones for unit #{unit_id}...")
     try:
-        response = session.wialon_api.core_search_item(
+        logger.debug(
+            f"Calling the Wialon API to retrieve cfield phones for unit #{unit_id}..."
+        )
+        search = session.wialon_api.core_search_item(
             **{"id": unit_id, "flags": flags.DataFlag.UNIT_CUSTOM_FIELDS}
-        )["item"]
-        if cfields := response.get("flds"):
-            for cfield in cfields.values():
-                if cfield["n"] == cfield_key:
-                    phones = (
-                        cfield["v"].split(",")
-                        if "," in cfield["v"]
-                        else [cfield["v"]]
-                    )
-                    logger.debug(
-                        f"Cfield phones retrieved for unit #{unit_id}: {phones}"
-                    )
-                    return phones
+        )
+        if item := search.get("item"):
+            if cfields := item.get("flds"):
+                for cfield in cfields.values():
+                    if cfield["n"] == cfield_key:
+                        return (
+                            cfield["v"].split(",")
+                            if "," in cfield["v"]
+                            else [cfield["v"]]
+                        )
         return []
     except WialonAPIError as e:
         logger.warning(e)

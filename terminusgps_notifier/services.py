@@ -1,8 +1,11 @@
 import logging
+from datetime import datetime
 
 from asgiref.sync import sync_to_async
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import F
+from django.template.loader import render_to_string
 from terminusgps.authorizenet.constants import SubscriptionStatus
 from terminusgps.wialon import flags
 from terminusgps.wialon.session import WialonAPIError, WialonSession
@@ -105,6 +108,44 @@ def get_cfield_phone_numbers(
     except WialonAPIError as e:
         logger.warning(e)
         return []
+
+
+async def render_message(
+    base: str,
+    user_id: int,
+    msg_time_int: int,
+    *,
+    location: str | None = None,
+    unit_name: str | None = None,
+) -> str:
+    """
+    Returns a rendered message to be delivered to a destination phone number.
+
+    :param base: Base message.
+    :type base: str
+    :param user_id: A Django user id.
+    :type user_id: int
+    :param msg_time_int: Message date/time as a UNIX-timestamp.
+    :type msg_time_int: int
+    :param location: Location of the notification trigger. Default is :py:obj:`None`.
+    :type location: str | None
+    :param unit_name: Name of the triggering unit. Default is :py:obj:`None`.
+    :type unit_name: str | None
+    :returns: A constructed notification message.
+    :rtype: str
+
+    """
+    date_format: str = await get_date_format(user_id)
+    date: datetime = datetime.utcfromtimestamp(msg_time_int)
+    return render_to_string(
+        "terminusgps_notifier/message.txt",
+        context={
+            "date": date.strftime(date_format),
+            "base": base,
+            "location": location,
+            "unit_name": unit_name,
+        },
+    ).removesuffix("\n")
 
 
 async def get_customer(
@@ -217,6 +258,9 @@ async def increment_packages_message_count(
             else:
                 package.count = F("count") + num_messages
                 await package.asave(update_fields=["count"])
+                logger.info(
+                    f"Incremented package messages for user #{user_id}"
+                )
                 break
 
 
@@ -238,6 +282,7 @@ async def increment_customer_message_count(
         if customer.messages_count < customer.messages_max:
             customer.messages_count = F("messages_count") + num_messages
             await customer.asave(update_fields=["messages_count"])
+            logger.info(f"Incremented customer messages for user #{user_id}")
 
 
 async def get_date_format(user_id: int) -> str:
@@ -255,3 +300,86 @@ async def get_date_format(user_id: int) -> str:
     if customer := await get_customer(user_id):
         return customer.date_format
     return "%Y-%m-%d %H:%M:%S"
+
+
+async def send_sms_message(
+    to_number: str,
+    message: str,
+    client,
+    *,
+    ttl: int = 300,
+    dry_run: bool = False,
+) -> dict[str, str] | None:
+    """
+    Sends ``message`` to ``to_number`` via sms.
+
+    :param to_number: Destination phone number.
+    :type to_number: str
+    :param message: A message to deliver to the destination phone number via sms.
+    :type message: str
+    :param ttl: Time to live in seconds. Default is ``300`` seconds.
+    :type ttl: int
+    :param region_name: An AWS region to use for the message dispatch. Default is ``"us-east-1"``.
+    :type region_name: str
+    :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
+    :type dry_run: bool
+    :returns: A dictionary containing the PinpointSMSVoiceV2 message id.
+    :rtype: dict | None
+
+    """
+    return await client.send_text_message(
+        **{
+            "DestinationPhoneNumber": to_number,
+            "OriginationIdentity": settings.AWS_PINPOINT_POOL_ARN,
+            "MessageBody": message,
+            "MessageType": "TRANSACTIONAL",
+            "ConfigurationSetName": settings.AWS_PINPOINT_CONFIGURATION_ARN,
+            "MaxPrice": settings.AWS_PINPOINT_MAX_PRICE_SMS,
+            "TimeToLive": ttl,
+            "DryRun": dry_run,
+            "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
+        }
+    )
+
+
+async def send_voice_message(
+    to_number: str,
+    message: str,
+    client,
+    *,
+    message_type: str = "TEXT",
+    voice_id: str = "MATTHEW",
+    dry_run: bool = False,
+) -> dict | None:
+    """
+    Sends ``message`` to ``to_number`` via voice.
+
+    :param to_number: Destination phone number.
+    :type to_number: str
+    :param message: A message to read aloud to the destination phone number via voice.
+    :type message: str
+    :param message_type: An AWS End User Messaging message type. Default is ``"TEXT"``.
+    :type message_type: str
+    :param voice_id: An AWS End User Messaging synthetic voice id. Default is ``"MATTHEW"``.
+    :type voice_id: str
+    :param region_name: An AWS region to use for the message dispatch. Default is ``"us-east-1"``.
+    :type region_name: str
+    :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
+    :type dry_run: bool
+    :returns: A dictionary containing the PinpointSMSVoiceV2 message id.
+    :rtype: dict | None
+
+    """
+    return await client.send_voice_message(
+        **{
+            "DestinationPhoneNumber": to_number,
+            "OriginationIdentity": settings.AWS_PINPOINT_POOL_ARN,
+            "MessageBody": message,
+            "MessageBodyTextType": message_type,
+            "VoiceId": voice_id,
+            "ConfigurationSetName": settings.AWS_PINPOINT_CONFIGURATION_ARN,
+            "MaxPricePerMinute": settings.AWS_PINPOINT_MAX_PRICE_VOICE,
+            "DryRun": dry_run,
+            "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
+        }
+    )

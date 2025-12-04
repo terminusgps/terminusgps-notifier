@@ -52,31 +52,31 @@ class DispatchNotificationView(View):
                 "Bad notification parameters".encode("utf-8"), status=406
             )
 
-        target_phones = []
         unit_id = form.cleaned_data["unit_id"]
         user_id = form.cleaned_data["user_id"]
         message = form.cleaned_data["message"]
         token = await get_token(user_id)
 
         if token is None:
-            log = f"Failed to retrieve token from user id: '{user_id}'"
+            log = f"Failed to retrieve token for user #{user_id}."
             logger.warning(log)
             return HttpResponse(log.encode("utf-8"), status=400)
         if not await has_subscription(user_id):
-            log = f"Invalid subscription from user id: '{user_id}'"
+            log = f"Invalid subscription for user #{user_id}."
             logger.warning(log)
             return HttpResponse(log.encode("utf-8"), status=403)
         if not await has_messages(user_id):
-            log = f"Invalid message count from user id: '{user_id}'"
+            log = f"Invalid message count for user #{user_id}."
             logger.warning(log)
             return HttpResponse(log.encode("utf-8"), status=403)
 
+        target_phones = []
         with WialonSession(token=token) as session:
             phones = get_phone_numbers(unit_id, session)
             if not phones:
-                msg = f"No phones retrieved for unit_id: '{unit_id}'"
-                logger.info(msg)
-                return HttpResponse(msg.encode("utf-8"), status=200)
+                log = f"No phones retrieved for unit #{unit_id}."
+                logger.info(log)
+                return HttpResponse(log.encode("utf-8"), status=200)
             for phone in phones:
                 try:
                     validate_e164_phone_number(phone)

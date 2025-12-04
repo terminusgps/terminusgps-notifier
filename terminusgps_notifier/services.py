@@ -32,12 +32,12 @@ def get_phone_numbers(unit_id: int, session: WialonSession) -> list[str]:
     driver_phones = cache.get_or_set(
         f"{unit_id}_get_driver_phone_numbers",
         get_driver_phone_numbers(unit_id, session),
-        timeout=60,
+        timeout=60 * 15,
     )
     cfield_phones = cache.get_or_set(
         f"{unit_id}_get_cfield_phone_numbers",
         get_cfield_phone_numbers(unit_id, session),
-        timeout=60,
+        timeout=60 * 15,
     )
     return list(frozenset(driver_phones + cfield_phones))
 

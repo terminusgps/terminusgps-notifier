@@ -60,6 +60,7 @@ def get_driver_phone_numbers(
         ).values()
         phones = [driver[0].get("ph") for driver in drivers]
         logger.debug(f"Driver phones retrieved for unit #{unit_id}: {phones}")
+        return phones
     except WialonAPIError as e:
         logger.warning(e)
         return []

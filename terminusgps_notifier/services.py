@@ -26,13 +26,15 @@ def get_phone_numbers(unit_id: int, session: WialonSession) -> list[str]:
     :rtype: list[str]
 
     """
-    driver_phones = get_driver_phone_numbers(unit_id, session)
-    logger.debug(
-        f"Retrieved driver phones: '{driver_phones}' for #{unit_id}..."
+    driver_phones = cache.get_or_set(
+        f"{unit_id}_get_driver_phone_numbers",
+        get_driver_phone_numbers(unit_id, session),
+        timeout=60,
     )
-    cfield_phones = get_cfield_phone_numbers(unit_id, session)
-    logger.debug(
-        f"Retrieved cfield phones: '{cfield_phones}' for #{unit_id}..."
+    cfield_phones = cache.get_or_set(
+        f"{unit_id}_get_cfield_phone_numbers",
+        get_cfield_phone_numbers(unit_id, session),
+        timeout=60,
     )
     return list(frozenset(driver_phones + cfield_phones))
 
@@ -51,21 +53,16 @@ def get_driver_phone_numbers(
     :rtype: list[str]
 
     """
-    cache_key = f"{unit_id}_get_driver_phone_numbers"
-    if cached_phones := cache.get(cache_key):
-        return cached_phones
-    phones: list[str] = []
-
+    logger.info(f"Retriving driver phones for unit #{unit_id}...")
     try:
-        response = session.wialon_api.resource_get_unit_drivers(
+        drivers = session.wialon_api.resource_get_unit_drivers(
             **{"unitId": unit_id}
-        )
-        phones.extend([driver[0].get("ph") for driver in response.values()])
-        cache.set(cache_key, phones)
+        ).values()
+        phones = [driver[0].get("ph") for driver in drivers]
+        logger.debug(f"Driver phones retrieved for unit #{unit_id}: {phones}")
     except WialonAPIError as e:
         logger.warning(e)
-    finally:
-        return phones
+        return []
 
 
 def get_cfield_phone_numbers(
@@ -80,34 +77,33 @@ def get_cfield_phone_numbers(
     :type session: ~terminusgps.wialon.session.WialonSession
     :param cfield_key: Custom field key containing a comma-separated list of phone numbers. Default is :py:obj:`"to_number"`.
     :type cfield_key: str
+    :param use_cache: Whether to use cached phones or force a Wialon API call. Default is :py:obj:`True`.
+    :type use_cache: bool
     :returns: A list of phone numbers.
     :rtype: list[str]
 
     """
-    cache_key = f"{unit_id}_get_cfield_phone_numbers"
-    if cached_phones := cache.get(cache_key):
-        return cached_phones
-    phones: list[str] = []
-
+    logger.info(f"Retriving cfield phones for unit #{unit_id}...")
     try:
         response = session.wialon_api.core_search_item(
             **{"id": unit_id, "flags": flags.DataFlag.UNIT_CUSTOM_FIELDS}
         )["item"]
         if cfields := response.get("flds"):
-            dirty_phones = [
-                cfield["v"]
-                for cfield in cfields.values()
-                if cfield["n"] == cfield_key
-            ]
-            for num in dirty_phones:
-                phones.extend(num.split(",")) if "," in num else phones.append(
-                    num
-                )
-            cache.set(cache_key, phones)
+            for cfield in cfields.values():
+                if cfield["n"] == cfield_key:
+                    phones = (
+                        cfield["v"].split(",")
+                        if "," in cfield["v"]
+                        else [cfield["v"]]
+                    )
+                    logger.debug(
+                        f"Cfield phones retrieved for unit #{unit_id}: {phones}"
+                    )
+                    return phones
+        return []
     except WialonAPIError as e:
         logger.warning(e)
-    finally:
-        return phones
+        return []
 
 
 async def get_customer(

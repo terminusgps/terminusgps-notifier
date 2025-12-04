@@ -383,3 +383,37 @@ async def send_voice_message(
             "ProtectConfigurationId": settings.AWS_PINPOINT_PROTECT_ID,
         }
     )
+
+
+async def send_notification(
+    to_number: str, message: str, method: str, client, dry_run: bool = False
+) -> dict | None:
+    """
+    Sends a notification to ``to_number`` via ``method``.
+
+    :param to_number: Destination (target) phone number.
+    :type to_number: str
+    :param message: Notification message.
+    :type message: str
+    :param method: Notification method. Options are ``sms`` or ``voice``.
+    :type method: str
+    :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
+    :type dry_run: bool
+    :param client: An asyncronous boto3 AWS Pinpoint Messaging client.
+    :raises ValueError: If the method was invalid.
+    :returns: A dictionary of message ids.
+    :rtype: dict[str, str] | None
+
+    """
+    logger.info(f"Sending '{message}' to '{to_number}' via {method}...")
+    match method:
+        case "sms":
+            return await send_sms_message(
+                to_number, message, client, dry_run=dry_run
+            )
+        case "voice":
+            return await send_voice_message(
+                to_number, message, client, dry_run=dry_run
+            )
+        case _:
+            raise ValueError(f"Invalid method: '{method}'")

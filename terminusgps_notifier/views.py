@@ -16,8 +16,7 @@ from .services import (
     increment_customer_message_count,
     increment_packages_message_count,
     render_message,
-    send_sms_message,
-    send_voice_message,
+    send_notification,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,7 +86,7 @@ class DispatchNotificationView(View):
             ) as client:
                 messages_response = await asyncio.gather(
                     *[
-                        self.send_notification(
+                        send_notification(
                             to_number=phone,
                             message=rendered,
                             method=self.kwargs["method"],
@@ -105,42 +104,5 @@ class DispatchNotificationView(View):
             logger.info(msg)
             return HttpResponse(msg.encode("utf-8"), status=200)
         except ValueError as e:
+            logger.warning(e)
             return HttpResponse(str(e).encode("utf-8"), status=406)
-
-    async def send_notification(
-        self,
-        to_number: str,
-        message: str,
-        method: str,
-        client,
-        dry_run: bool = False,
-    ) -> dict | None:
-        """
-        Sends a notification to ``to_number`` via ``method``.
-
-        :param to_number: Destination (target) phone number.
-        :type to_number: str
-        :param message: Notification message.
-        :type message: str
-        :param method: Notification method. Options are ``sms`` or ``voice``.
-        :type method: str
-        :param dry_run: Whether to execute the API call as a dry run. Default is :py:obj:`False`.
-        :type dry_run: bool
-        :param client: An asyncronous boto3 AWS Pinpoint Messaging client.
-        :raises ValueError: If the method was invalid.
-        :returns: A dictionary of message ids.
-        :rtype: dict[str, str] | None
-
-        """
-        logger.info(f"Sending '{message}' to '{to_number}' via {method}...")
-        match method:
-            case "sms":
-                return await send_sms_message(
-                    to_number, message, client, dry_run=dry_run
-                )
-            case "voice":
-                return await send_voice_message(
-                    to_number, message, client, dry_run=dry_run
-                )
-            case _:
-                raise ValueError(f"Invalid method: '{method}'")

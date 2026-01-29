@@ -1,7 +1,7 @@
 from django import forms
 
 
-class WialonUnitNotificationForm(forms.Form):
+class NotificationDispatchForm(forms.Form):
     """
     A form for dispatching Wialon unit notifications.
 

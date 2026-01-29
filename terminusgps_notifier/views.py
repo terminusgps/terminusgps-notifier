@@ -8,7 +8,7 @@ from django.utils.translation import ngettext
 from django.views.generic import View
 from terminusgps.wialon.session import WialonSession
 
-from .forms import WialonUnitNotificationForm
+from .forms import NotificationDispatchForm
 from .services import (
     get_phone_numbers,
     get_token,
@@ -33,7 +33,7 @@ class HealthCheckView(View):
         return HttpResponse("I'm alive".encode("utf-8"), status=200)
 
 
-class DispatchNotificationView(View):
+class NotificationDispatchView(View):
     content_type = "text/plain"
     http_method_names = ["get"]
 
@@ -46,37 +46,38 @@ class DispatchNotificationView(View):
         Returns 4XX in any other case.
 
         """
-        form = WialonUnitNotificationForm(request.GET)
+        # Validate user input
+        form = NotificationDispatchForm(request.GET)
         if not form.is_valid():
             return HttpResponse(
                 "Bad notification parameters".encode("utf-8"), status=406
             )
 
-        unit_id = form.cleaned_data["unit_id"]
+        # Check if provided user has permission to dispatch a notification
         user_id = form.cleaned_data["user_id"]
-        message = form.cleaned_data["message"]
         token = await get_token(user_id)
-
         if token is None:
-            log = f"Failed to retrieve token for user #{user_id}."
-            logger.warning(log)
-            return HttpResponse(log.encode("utf-8"), status=400)
+            msg = f"Failed to retrieve token for user #{user_id}."
+            logger.warning(msg)
+            return HttpResponse(msg.encode("utf-8"), status=400)
         if not await has_subscription(user_id):
-            log = f"Invalid subscription for user #{user_id}."
-            logger.warning(log)
-            return HttpResponse(log.encode("utf-8"), status=403)
+            msg = f"Invalid subscription for user #{user_id}."
+            logger.warning(msg)
+            return HttpResponse(msg.encode("utf-8"), status=403)
         if not await has_messages(user_id):
-            log = f"Invalid message count for user #{user_id}."
-            logger.warning(log)
-            return HttpResponse(log.encode("utf-8"), status=403)
+            msg = f"Invalid message count for user #{user_id}."
+            logger.warning(msg)
+            return HttpResponse(msg.encode("utf-8"), status=403)
 
+        # Retrieve target phones for unit from Wialon API
         target_phones = []
         with WialonSession(token=token) as session:
+            unit_id = form.cleaned_data["unit_id"]
             phones = get_phone_numbers(unit_id, session)
             if not phones:
-                log = f"No phones retrieved for unit #{unit_id}."
-                logger.info(log)
-                return HttpResponse(log.encode("utf-8"), status=200)
+                msg = f"No phones retrieved for unit #{unit_id}."
+                logger.info(msg)
+                return HttpResponse(msg.encode("utf-8"), status=200)
             for phone in phones:
                 try:
                     validate_e164_phone_number(phone)
@@ -86,13 +87,16 @@ class DispatchNotificationView(View):
                     continue
 
         try:
+            # Render notification message
             rendered = await render_message(
-                base=message,
+                base=form.cleaned_data["message"],
                 user_id=user_id,
                 msg_time_int=form.cleaned_data["msg_time_int"],
                 location=form.cleaned_data.get("location"),
                 unit_name=form.cleaned_data.get("unit_name"),
             )
+
+            # Dispatch notification messages to target phones
             async with aioboto3.Session().client(
                 "pinpoint-sms-voice-v2", region_name="us-east-1"
             ) as client:
@@ -108,7 +112,6 @@ class DispatchNotificationView(View):
                         for phone in target_phones
                     ]
                 )
-
             msg_ids = [msg.get("MessageId") for msg in messages_response]
             await increment_customer_message_count(user_id, len(msg_ids))
             await increment_packages_message_count(user_id, len(msg_ids))

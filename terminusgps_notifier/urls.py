@@ -6,7 +6,7 @@ urlpatterns = [
     path("health/", views.HealthCheckView.as_view(), name="health check"),
     path(
         "notify/<str:method>/",
-        views.DispatchNotificationView.as_view(),
+        views.NotificationDispatchView.as_view(),
         name="notify",
     ),
 ]

@@ -26,3 +26,13 @@ class NotificationDispatchForm(forms.Form):
     dry_run = forms.BooleanField(initial=False, required=False)
     unit_name = forms.CharField(required=False)
     location = forms.CharField(required=False)
+
+
+class WialonNotificationScheduleForm(forms.Form):
+    f1 = forms.IntegerField(required=False)
+    f2 = forms.IntegerField(required=False)
+    t1 = forms.IntegerField(required=False)
+    t2 = forms.IntegerField(required=False)
+    m = forms.IntegerField(min_value=2**0, max_value=2**30, required=False)
+    y = forms.IntegerField(min_value=2**0, max_value=2**11, required=False)
+    w = forms.IntegerField(min_value=2**0, max_value=2**6, required=False)

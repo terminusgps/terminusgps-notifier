@@ -1,5 +1,6 @@
 import decimal
 import typing
+from collections.abc import Sequence
 
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -12,6 +13,7 @@ from terminusgps.wialon.session import WialonSession
 class TerminusGPSNotifierCustomer(models.Model):
     messages_count = models.PositiveIntegerField(default=0)
     messages_limit = models.PositiveIntegerField(default=500)
+
     user = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,
@@ -67,11 +69,51 @@ class TerminusGPSNotifierCustomer(models.Model):
     def __str__(self) -> str:
         return str(self.user)
 
+    def get_resources_from_wialon(
+        self, session: WialonSession, force: bool = False
+    ) -> list[dict[str, typing.Any]]:
+        params = {
+            "spec": {
+                "itemsType": "avl_resource",
+                "propName": "sys_name",
+                "propValueMask": "*",
+                "sortType": "sys_name",
+                "propType": "property",
+            },
+            "flags": 1,
+            "force": int(force),
+            "from": 0,
+            "to": 0,
+        }
+        return session.wialon_api.core_search_items(**params).get("items", [])
+
+
+class MessagePackage(models.Model):
+    price = models.DecimalField(decimal_places=2, max_digits=12)
+    count = models.IntegerField(default=0)
+    limit = models.IntegerField(default=500)
+    customer = models.ForeignKey(
+        "terminusgps_notifier.TerminusGPSNotifierCustomer",
+        on_delete=models.CASCADE,
+        related_name="packages",
+    )
+
+    class Meta:
+        verbose_name = _("message package")
+        verbose_name_plural = _("message packages")
+
+    def __str__(self) -> str:
+        return f"MessagePackage #{self.pk}"
+
 
 class WialonToken(models.Model):
     name = EncryptedField(max_length=72)
     crt_date = models.DateTimeField(auto_now_add=True)
     mod_date = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("wialon token")
+        verbose_name_plural = _("wialon tokens")
 
     def __str__(self) -> str:
         return f"WialonToken #{self.pk}"
@@ -83,8 +125,13 @@ class WialonNotification(models.Model):
         EVERY_MESSAGE = 0x1
         DISABLED = 0x2
 
-    notification_id = models.IntegerField(blank=True)
-    resource_id = models.IntegerField(blank=True)
+    resource = models.ForeignKey(
+        "terminusgps_notifier.WialonResource",
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+
+    wialon_id = models.IntegerField(blank=True)
     e = models.IntegerField(blank=True, default=1, verbose_name=_("enabled"))
     n = models.CharField(blank=True, max_length=50)
     txt = models.CharField(blank=True, max_length=1024)
@@ -99,6 +146,7 @@ class WialonNotification(models.Model):
     fl = models.IntegerField(choices=NotificationFlag.choices, default=0x0)
     tz = models.IntegerField(blank=True, default=0)
     la = models.CharField(blank=True, default="en", max_length=2)
+    ac = models.IntegerField(blank=True, default=0)
     un = models.JSONField(blank=True, default=list)
     d = models.CharField(blank=True)
     sch = models.JSONField(blank=True, default=dict)
@@ -113,44 +161,47 @@ class WialonNotification(models.Model):
         verbose_name_plural = _("wialon notifications")
 
     def __str__(self) -> str:
-        return f"{self.n or self.notification_id}"
+        return f"{self.n or self.wialon_id}"
 
     def save(self, **kwargs) -> None:
         if session := kwargs.pop("session", None):
-            data = self.pull(session)[0]
-            self.notification_id = data["id"]
-            self.n = data["n"]
-            self.txt = data["txt"]
-            self.ta = data["ta"]
-            self.td = data["td"]
-            self.ma = data["ma"]
-            self.mmtd = data["mmtd"]
-            self.cdt = data["cdt"]
-            self.mast = data["mast"]
-            self.mpst = data["mpst"]
-            self.cp = data["cp"]
-            self.fl = data["fl"]
-            self.tz = data["tz"]
-            self.la = data["la"]
-            self.ac = data["ac"]
-            self.d = data["d"]
-            self.sch = data["sch"]
-            self.ctrl_sch = data["ctrl_sch"]
-            self.un = data["un"]
-            self.act = data["act"]
-            self.trg = data["trg"]
-            self.ct = data["ct"]
-            self.mt = data["mt"]
+            if self.wialon_id is not None:
+                data = self.pull(session)[0]
+                self.sync(data)
         return super().save(**kwargs)
 
     def pull(self, session: WialonSession) -> list[dict[str, typing.Any]]:
         return session.wialon_api.resource_get_notification_data(
-            **{"itemId": self.resource_id, "col": [self.notification_id]}
+            **{"itemId": self.resource.pk, "col": [self.wialon_id]}
         )
+
+    def sync(self, data: dict[str, typing.Any]) -> None:
+        self.n = data["n"]
+        self.txt = data["txt"]
+        self.ta = data["ta"]
+        self.td = data["td"]
+        self.ma = data["ma"]
+        self.mmtd = data["mmtd"]
+        self.cdt = data["cdt"]
+        self.mast = data["mast"]
+        self.mpst = data["mpst"]
+        self.cp = data["cp"]
+        self.fl = data["fl"]
+        self.tz = data["tz"]
+        self.la = data["la"]
+        self.ac = data["ac"]
+        self.d = data["d"]
+        self.sch = data["sch"]
+        self.ctrl_sch = data["ctrl_sch"]
+        self.un = data["un"]
+        self.act = data["act"]
+        self.trg = data["trg"]
+        self.ct = data["ct"]
+        self.mt = data["mt"]
 
 
 class WialonObject(models.Model):
-    id = models.PositiveIntegerField(primary_key=True)
+    id = models.PositiveBigIntegerField(primary_key=True)
     nm = models.CharField(blank=True, max_length=50)
     mu = models.IntegerField(blank=True, default=0)
     uacl = models.IntegerField(blank=True, default=0)
@@ -159,7 +210,7 @@ class WialonObject(models.Model):
         abstract = True
 
     def __str__(self) -> str:
-        return f"{self.nm or self.pk}"
+        return f"{self.nm or self.id}"
 
     def save(self, **kwargs) -> None:
         if session := kwargs.pop("session", None):
@@ -169,7 +220,7 @@ class WialonObject(models.Model):
         return super().save(**kwargs)
 
     def pull(
-        self, session: WialonSession, flags: int = 0x00000001
+        self, session: WialonSession, flags: int = 1
     ) -> dict[str, typing.Any]:
         return session.wialon_api.core_search_item(
             **{"id": self.pk, "flags": flags}
@@ -181,10 +232,18 @@ class WialonObject(models.Model):
         self.uacl = data["item"]["uacl"]
 
 
-class WialonUser(WialonObject):
+class WialonResource(WialonObject):
     class Meta:
-        verbose_name = _("wialon user")
-        verbose_name_plural = _("wialon users")
+        verbose_name = _("wialon resource")
+        verbose_name_plural = _("wialon resources")
+
+    def get_notification_data(
+        self, session: WialonSession, ids: Sequence[str] | None = None
+    ) -> list[dict[str, typing.Any]]:
+        params = {"itemId": self.pk}
+        if ids is not None:
+            params["col"] = ids
+        return session.wialon_api.resource_get_notification_data(**params)
 
 
 class WialonUnit(WialonObject):
@@ -193,7 +252,7 @@ class WialonUnit(WialonObject):
         verbose_name_plural = _("wialon units")
 
 
-class WialonResource(WialonObject):
+class WialonUnitGroup(WialonObject):
     class Meta:
-        verbose_name = _("wialon resource")
-        verbose_name_plural = _("wialon resources")
+        verbose_name = _("wialon unit group")
+        verbose_name_plural = _("wialon unit groups")

@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
+__all__ = ["validate_e164_phone_number"]
+
 
 def validate_e164_phone_number(value: str) -> None:
     """Raises :py:exec:`~django.core.exceptions.ValidationError` if the value wasn't a properly formatted E.164 phone number."""

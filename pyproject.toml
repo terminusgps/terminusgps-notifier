@@ -14,15 +14,11 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "aioboto3>=15.0.0",
-    "django>=5.2.7",
-    "python-terminusgps>=46.1.0",
-    "redis[hiredis]>=6.4.0",
-    "terminusgps-payments>=1.4.3",
-    "terminusgps-notifications>=1.5.0",
-    "uvicorn>=0.35.0",
-    "psycopg2-binary>=2.9.11",
-    "psycopg[binary,pool]>=3.2.11",
+    "aioboto3>=15.5.0",
+    "django>=6.0.2",
+    "python-terminusgps>=51.0.0",
+    "terminusgps-payments>=8.3.0",
+    "types-aioboto3[pinpoint-sms-voice-v2]>=15.5.0",
 ]
 
 [project.urls]
@@ -81,6 +77,12 @@ docstring-code-format = false
 skip-magic-trailing-comma = true
 
 [dependency-groups]
+deploy = [
+    "redis[hiredis]>=6.4.0",
+    "uvicorn>=0.35.0",
+    "psycopg2-binary>=2.9.11",
+    "psycopg[binary,pool]>=3.2.11",
+]
 dev = [
     "sphinx-rtd-theme>=3.0.2",
     "sphinx>=8.2.3",

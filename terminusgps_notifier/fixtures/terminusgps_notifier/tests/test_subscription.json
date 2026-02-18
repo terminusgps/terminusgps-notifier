@@ -1,0 +1,57 @@
+[
+  {
+    "model": "terminusgps_payments.CustomerProfile",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "email": "testuser@domain.com",
+      "merchant_id": "Test User",
+      "description": "Test User"
+    }
+  },
+  {
+    "model": "terminusgps_payments.CustomerPaymentProfile",
+    "pk": 1,
+    "fields": {
+      "customer_profile": 1,
+      "first_name": "Test",
+      "last_name": "User",
+      "company": "TestCompany",
+      "address": "TestAddress",
+      "city": "TestCity",
+      "state": "TestState",
+      "country": "TestCountry",
+      "zip": "TestZip",
+      "phone_number": "TestPhoneNumber",
+      "card_number": "XXXX1111",
+      "card_type": "TestCardType"
+    }
+  },
+  {
+    "model": "terminusgps_payments.CustomerAddressProfile",
+    "pk": 1,
+    "fields": {
+      "customer_profile": 1,
+      "first_name": "Test",
+      "last_name": "User",
+      "company": "TestCompany",
+      "address": "TestAddress",
+      "city": "TestCity",
+      "state": "TestState",
+      "country": "TestCountry",
+      "zip": "TestZip",
+      "phone_number": "TestPhoneNumber"
+    }
+  },
+  {
+    "model": "terminusgps_payments.Subscription",
+    "pk": 1,
+    "fields": {
+      "customer_profile": 1,
+      "payment_profile": 1,
+      "address_profile": 1,
+      "amount": "24.95",
+      "name": "TestSubscription"
+    }
+  }
+]

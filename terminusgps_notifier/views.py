@@ -1,27 +1,101 @@
 import asyncio
 import logging
+from datetime import datetime
 
 import aioboto3
 from django.core.exceptions import ValidationError
+from django.db.models import F
 from django.http import HttpRequest, HttpResponse
+from django.http.response import sync_to_async
+from django.template.loader import render_to_string
 from django.utils.translation import ngettext
 from django.views.generic import View
 from terminusgps.wialon.session import WialonSession
+from terminusgps_payments.models import Subscription
 
-from .forms import NotificationDispatchForm
-from .services import (
-    get_phone_numbers,
-    get_token,
-    has_messages,
-    has_subscription,
-    increment_customer_message_count,
-    increment_packages_message_count,
-    render_message,
-    send_notification,
-)
-from .validators import validate_e164_phone_number
+from terminusgps_notifier.forms import NotificationDispatchForm
+from terminusgps_notifier.models import TerminusGPSNotifierCustomer
+from terminusgps_notifier.pinpoint import dispatch_notification
+from terminusgps_notifier.validators import validate_e164_phone_number
+from terminusgps_notifier.wialon import get_phone_numbers
 
 logger = logging.getLogger(__name__)
+
+
+async def get_customer(pk: int):
+    try:
+        return await TerminusGPSNotifierCustomer.objects.aget(pk=pk)
+    except TerminusGPSNotifierCustomer.DoesNotExist:
+        return None
+
+
+@sync_to_async
+def get_customer_is_staff(customer: TerminusGPSNotifierCustomer | None):
+    if customer is None:
+        return False
+    return customer.user.is_staff
+
+
+@sync_to_async
+def get_token(customer: TerminusGPSNotifierCustomer | None):
+    if customer is None:
+        return
+    return customer.token
+
+
+@sync_to_async
+def get_subscription(customer: TerminusGPSNotifierCustomer | None):
+    if customer is None:
+        return
+    return customer.subscription
+
+
+@sync_to_async
+def get_subscription_status(subscription: Subscription | None):
+    if subscription is None:
+        return
+    return subscription.status
+
+
+@sync_to_async
+def render_notification_message(
+    form: NotificationDispatchForm, date_format: str = "%Y-%m-%d %H:%M:%S"
+) -> str:
+    date = datetime.utcfromtimestamp(form.cleaned_data["msg_time_int"])
+    return render_to_string(
+        "terminusgps_notifier/message.txt",
+        context={
+            "date": date.strftime(date_format),
+            "base": form.cleaned_data["message"],
+            "location": form.cleaned_data.get("location"),
+            "unit_name": form.cleaned_data.get("unit_name"),
+        },
+    ).removesuffix("\n")
+
+
+async def increment_customer_messages_count(
+    customer: TerminusGPSNotifierCustomer, num_messages: int
+) -> None:
+    if customer.messages_count < customer.messages_limit:
+        customer.messages_count = F("messages_count") + num_messages
+        await customer.asave(update_fields=["messages_count"])
+
+
+async def increment_message_packages_count(
+    customer: TerminusGPSNotifierCustomer, num_messages: int
+) -> None:
+    if (
+        customer.messages_count < customer.messages_limit
+        or await customer.packages.acount() <= 0
+    ):
+        return
+    async for package in customer.packages.all():
+        if package.count >= package.limit:
+            continue
+        else:
+            package.count = F("count") + num_messages
+            await package.asave(update_fields=["count"])
+            break
 
 
 class HealthCheckView(View):
@@ -30,7 +104,7 @@ class HealthCheckView(View):
 
     async def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """Responds with status code 200."""
-        return HttpResponse("I'm alive".encode("utf-8"), status=200)
+        return HttpResponse("I'm alive\n".encode("utf-8"), status=200)
 
 
 class NotificationDispatchView(View):
@@ -46,81 +120,80 @@ class NotificationDispatchView(View):
         Returns 4XX in any other case.
 
         """
-        # Validate user input
         form = NotificationDispatchForm(request.GET)
         if not form.is_valid():
-            return HttpResponse(
-                "Bad notification parameters".encode("utf-8"), status=406
-            )
-
-        # Check if provided user has permission to dispatch a notification
-        user_id = form.cleaned_data["user_id"]
-        token = await get_token(user_id)
-        if token is None:
-            msg = f"Failed to retrieve token for user #{user_id}."
-            logger.warning(msg)
+            msg = "Bad notification parameters\n"
+            logger.error(msg.removesuffix("\n"))
             return HttpResponse(msg.encode("utf-8"), status=400)
-        if not await has_subscription(user_id):
-            msg = f"Invalid subscription for user #{user_id}."
-            logger.warning(msg)
-            return HttpResponse(msg.encode("utf-8"), status=403)
-        if not await has_messages(user_id):
-            msg = f"Invalid message count for user #{user_id}."
-            logger.warning(msg)
-            return HttpResponse(msg.encode("utf-8"), status=403)
 
-        # Retrieve target phones for unit from Wialon API
-        target_phones = []
-        with WialonSession(token=token) as session:
-            unit_id = form.cleaned_data["unit_id"]
-            phones = get_phone_numbers(unit_id, session)
+        user_id = form.cleaned_data["user_id"]
+        unit_id = form.cleaned_data["unit_id"]
+        customer = await get_customer(user_id)
+        is_staff = await get_customer_is_staff(customer)
+        token = await get_token(customer)
+        subscription = await get_subscription(customer)
+        subscription_status = await get_subscription_status(subscription)
+
+        if customer is None:
+            msg = f"Failed to retrieve customer for user #{user_id}\n"
+            logger.error(msg.removesuffix("\n"))
+            return HttpResponse(msg.encode("utf-8"), status=404)
+        if token is None:
+            msg = f"Failed to retrieve Wialon token for user #{user_id}\n"
+            logger.warning(msg.removesuffix("\n"))
+            return HttpResponse(msg.encode("utf-8"), status=404)
+        if not is_staff:
+            if subscription is None:
+                msg = f"Failed to retrieve subscription for user #{user_id}\n"
+                logger.warning(msg.removesuffix("\n"))
+                return HttpResponse(msg.encode("utf-8"), status=404)
+            if subscription_status != "active":
+                msg = f"Invalid subscription status for user #{user_id}: '{subscription_status}'"
+                logger.warning(msg.removesuffix("\n"))
+                return HttpResponse(msg.encode("utf-8"), status=403)
+
+        with WialonSession(token=customer.token.name) as session:
+            phones = await get_phone_numbers(form, session)
             if not phones:
-                msg = f"No phones retrieved for unit #{unit_id}."
+                msg = f"No phones retrieved for unit #{unit_id}"
                 logger.info(msg)
                 return HttpResponse(msg.encode("utf-8"), status=200)
             for phone in phones:
                 try:
                     validate_e164_phone_number(phone)
-                    target_phones.append(phone)
-                except ValidationError as e:
-                    logger.warning(e)
-                    continue
+                except ValidationError:
+                    phones.remove(phone)
 
         try:
             # Render notification message
             if self.kwargs["method"] not in ("sms", "voice"):
                 raise ValueError(f"Invalid method: '{self.kwargs['method']}'")
-            rendered = await render_message(
-                base=form.cleaned_data["message"],
-                user_id=user_id,
-                msg_time_int=form.cleaned_data["msg_time_int"],
-                location=form.cleaned_data.get("location"),
-                unit_name=form.cleaned_data.get("unit_name"),
-                method=self.kwargs["method"],
-            )
-
             # Dispatch notification messages to target phones
             async with aioboto3.Session().client(
                 "pinpoint-sms-voice-v2", region_name="us-east-1"
             ) as client:
-                messages_response = await asyncio.gather(
+                message = await render_notification_message(
+                    form, "%Y-%m-%d %H:%M:%S"
+                )
+                responses = await asyncio.gather(
                     *[
-                        send_notification(
-                            to_number=phone,
-                            message=rendered,
+                        dispatch_notification(
+                            to_number=to_number,
+                            message=message,
                             method=self.kwargs["method"],
                             client=client,
                             dry_run=form.cleaned_data["dry_run"],
                         )
-                        for phone in target_phones
+                        for to_number in phones
                     ]
                 )
-            msg_ids = [msg.get("MessageId") for msg in messages_response]
-            await increment_customer_message_count(user_id, len(msg_ids))
-            await increment_packages_message_count(user_id, len(msg_ids))
-            msg = f"Sent {len(msg_ids)} {ngettext('message', 'messages', len(msg_ids))}: {msg_ids}"
-            logger.info(msg)
-            return HttpResponse(msg.encode("utf-8"), status=200)
-        except ValueError as e:
-            logger.warning(e)
-            return HttpResponse(str(e).encode("utf-8"), status=406)
+        except ValueError as error:
+            logger.error(error)
+            return HttpResponse(str(error).encode("utf-8"), status=400)
+
+        num_messages = len([msg.get("MessageId") for msg in responses])
+        await increment_customer_messages_count(customer, num_messages)
+        await increment_message_packages_count(customer, num_messages)
+        msg = f"Sent {num_messages} {ngettext('message', 'messages', num_messages)}"
+        logger.info(msg)
+        return HttpResponse(msg.encode("utf-8"), status=200)

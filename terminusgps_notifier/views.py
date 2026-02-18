@@ -165,6 +165,10 @@ class NotificationDispatchView(View):
                     phones.remove(phone)
 
         try:
+            # Render notification message
+            if self.kwargs["method"] not in ("sms", "voice"):
+                raise ValueError(f"Invalid method: '{self.kwargs['method']}'")
+            # Dispatch notification messages to target phones
             async with aioboto3.Session().client(
                 "pinpoint-sms-voice-v2", region_name="us-east-1"
             ) as client:

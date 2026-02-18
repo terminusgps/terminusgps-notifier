@@ -1,0 +1,1 @@
+Hello from Terminus GPS! {% include "terminusgps_notifier/message_base.txt" %}

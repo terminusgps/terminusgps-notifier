@@ -15,9 +15,9 @@ from terminusgps_payments.models import Subscription
 
 from terminusgps_notifier.forms import NotificationDispatchForm
 from terminusgps_notifier.models import TerminusGPSNotifierCustomer
-from terminusgps_notifier.phones import get_phone_numbers
 from terminusgps_notifier.pinpoint import dispatch_notification
 from terminusgps_notifier.validators import validate_e164_phone_number
+from terminusgps_notifier.wialon import get_phone_numbers
 
 logger = logging.getLogger(__name__)
 
@@ -187,11 +187,7 @@ class NotificationDispatchView(View):
             logger.error(error)
             return HttpResponse(str(error).encode("utf-8"), status=400)
 
-        num_messages = (
-            len([msg.get("MessageId") for msg in responses])
-            if responses
-            else 0
-        )
+        num_messages = len([msg.get("MessageId") for msg in responses])
         await increment_customer_messages_count(customer, num_messages)
         await increment_message_packages_count(customer, num_messages)
         msg = f"Sent {num_messages} {ngettext('message', 'messages', num_messages)}"

@@ -88,12 +88,15 @@ class NotificationDispatchView(View):
 
         try:
             # Render notification message
+            if self.kwargs["method"] not in ("sms", "voice"):
+                raise ValueError(f"Invalid method: '{self.kwargs['method']}'")
             rendered = await render_message(
                 base=form.cleaned_data["message"],
                 user_id=user_id,
                 msg_time_int=form.cleaned_data["msg_time_int"],
                 location=form.cleaned_data.get("location"),
                 unit_name=form.cleaned_data.get("unit_name"),
+                method=self.kwargs["method"],
             )
 
             # Dispatch notification messages to target phones

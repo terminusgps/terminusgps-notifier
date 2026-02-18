@@ -118,6 +118,7 @@ async def render_message(
     base: str,
     user_id: int,
     msg_time_int: int,
+    method: str,
     *,
     location: str | None = None,
     unit_name: str | None = None,
@@ -131,6 +132,8 @@ async def render_message(
     :type user_id: int
     :param msg_time_int: Message date/time as a UNIX-timestamp.
     :type msg_time_int: int
+    :param method: Notification method.
+    :type method: str
     :param location: Location of the notification trigger. Default is :py:obj:`None`.
     :type location: str | None
     :param unit_name: Name of the triggering unit. Default is :py:obj:`None`.
@@ -142,7 +145,7 @@ async def render_message(
     date_format: str = await get_date_format(user_id)
     date: datetime = datetime.utcfromtimestamp(msg_time_int)
     return render_to_string(
-        "terminusgps_notifier/message.txt",
+        f"terminusgps_notifier/message_{method}.txt",
         context={
             "date": date.strftime(date_format),
             "base": base,

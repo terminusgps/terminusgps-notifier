@@ -11,6 +11,7 @@ from django.template.loader import render_to_string
 from django.utils.translation import ngettext
 from django.views.generic import View
 from terminusgps.wialon.session import WialonSession
+from terminusgps_payments.models import Subscription
 
 from terminusgps_notifier.forms import NotificationDispatchForm
 from terminusgps_notifier.models import TerminusGPSNotifierCustomer
@@ -21,7 +22,42 @@ from terminusgps_notifier.validators import validate_e164_phone_number
 logger = logging.getLogger(__name__)
 
 
-@sync_to_async(thread_sensitive=False)
+async def get_customer(pk: int):
+    try:
+        return await TerminusGPSNotifierCustomer.objects.aget(pk=pk)
+    except TerminusGPSNotifierCustomer.DoesNotExist:
+        return None
+
+
+@sync_to_async
+def get_customer_is_staff(customer: TerminusGPSNotifierCustomer | None):
+    if customer is None:
+        return False
+    return customer.user.is_staff
+
+
+@sync_to_async
+def get_token(customer: TerminusGPSNotifierCustomer | None):
+    if customer is None:
+        return
+    return customer.token
+
+
+@sync_to_async
+def get_subscription(customer: TerminusGPSNotifierCustomer | None):
+    if customer is None:
+        return
+    return customer.subscription
+
+
+@sync_to_async
+def get_subscription_status(subscription: Subscription | None):
+    if subscription is None:
+        return
+    return subscription.status
+
+
+@sync_to_async
 def render_notification_message(
     form: NotificationDispatchForm, date_format: str = "%Y-%m-%d %H:%M:%S"
 ) -> str:
@@ -86,26 +122,35 @@ class NotificationDispatchView(View):
         """
         form = NotificationDispatchForm(request.GET)
         if not form.is_valid():
-            return HttpResponse(
-                "Bad notification parameters\n".encode("utf-8"), status=406
-            )
-
-        try:
-            unit_id = form.cleaned_data["unit_id"]
-            customer = await TerminusGPSNotifierCustomer.objects.aget(
-                user__pk=unit_id
-            )
-        except TerminusGPSNotifierCustomer.DoesNotExist:
-            msg = f"No customer for user: #{unit_id}"
-            logger.error(msg)
+            msg = "Bad notification parameters\n"
+            logger.error(msg.removesuffix("\n"))
             return HttpResponse(msg.encode("utf-8"), status=400)
 
-        if customer.token is None:
-            return HttpResponse(status=403)
-        if customer.subscription is None:
-            return HttpResponse(status=403)
-        if customer.subscription.status != "active":
-            return HttpResponse(status=403)
+        user_id = form.cleaned_data["user_id"]
+        unit_id = form.cleaned_data["unit_id"]
+        customer = await get_customer(user_id)
+        is_staff = await get_customer_is_staff(customer)
+        token = await get_token(customer)
+        subscription = await get_subscription(customer)
+        subscription_status = await get_subscription_status(subscription)
+
+        if customer is None:
+            msg = f"Failed to retrieve customer for user #{user_id}\n"
+            logger.error(msg.removesuffix("\n"))
+            return HttpResponse(msg.encode("utf-8"), status=404)
+        if token is None:
+            msg = f"Failed to retrieve Wialon token for user #{user_id}\n"
+            logger.warning(msg.removesuffix("\n"))
+            return HttpResponse(msg.encode("utf-8"), status=404)
+        if not is_staff:
+            if subscription is None:
+                msg = f"Failed to retrieve subscription for user #{user_id}\n"
+                logger.warning(msg.removesuffix("\n"))
+                return HttpResponse(msg.encode("utf-8"), status=404)
+            if subscription_status != "active":
+                msg = f"Invalid subscription status for user #{user_id}: '{subscription_status}'"
+                logger.warning(msg.removesuffix("\n"))
+                return HttpResponse(msg.encode("utf-8"), status=403)
 
         with WialonSession(token=customer.token.name) as session:
             phones = await get_phone_numbers(form, session)
@@ -142,7 +187,11 @@ class NotificationDispatchView(View):
             logger.error(error)
             return HttpResponse(str(error).encode("utf-8"), status=400)
 
-        num_messages = len([msg.get("MessageId") for msg in responses])
+        num_messages = (
+            len([msg.get("MessageId") for msg in responses])
+            if responses
+            else 0
+        )
         await increment_customer_messages_count(customer, num_messages)
         await increment_message_packages_count(customer, num_messages)
         msg = f"Sent {num_messages} {ngettext('message', 'messages', num_messages)}"

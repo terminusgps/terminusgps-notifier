@@ -108,8 +108,6 @@ class MessagePackage(models.Model):
 
 class WialonToken(models.Model):
     name = EncryptedField(max_length=72)
-    crt_date = models.DateTimeField(auto_now_add=True)
-    mod_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = _("wialon token")

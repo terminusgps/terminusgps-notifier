@@ -1,0 +1,36 @@
+[
+  {
+    "model": "auth.User",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$mvafVSNh8SmYzA7Ul2bAPv$Vrz26wEQnSZBW2vsAbcJt6hXwjNQRMuG28GeBniPV+4=",
+      "last_login": null,
+      "is_superuser": false,
+      "is_staff": false,
+      "username": "testuser",
+      "email": "testuser@domain.com",
+      "first_name": "Test",
+      "last_name": "User"
+    }
+  },
+  {
+    "model": "terminusgps_notifier.WialonToken",
+    "pk": 1,
+    "fields": {
+      "name": "token"
+    }
+  },
+  {
+    "model": "terminusgps_notifier.TerminusGPSNotifierCustomer",
+    "pk": 1,
+    "fields": {
+      "messages_count": 0,
+      "messages_limit": 500,
+      "user": 1,
+      "tax_rate": "0.0825",
+      "sub_total": "60.00",
+      "subscription": 1,
+      "token": 1
+    }
+  }
+]

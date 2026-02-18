@@ -4,7 +4,6 @@ from datetime import datetime
 
 import aioboto3
 from django.core.exceptions import ValidationError
-from django.db import transaction
 from django.db.models import F
 from django.http import HttpRequest, HttpResponse
 from django.http.response import sync_to_async
@@ -38,12 +37,29 @@ def render_notification_message(
     ).removesuffix("\n")
 
 
-@transaction.atomic
 async def increment_customer_messages_count(
     customer: TerminusGPSNotifierCustomer, num_messages: int
 ) -> None:
     if customer.messages_count < customer.messages_limit:
         customer.messages_count = F("messages_count") + num_messages
+        await customer.asave(update_fields=["messages_count"])
+
+
+async def increment_message_packages_count(
+    customer: TerminusGPSNotifierCustomer, num_messages: int
+) -> None:
+    if (
+        customer.messages_count < customer.messages_limit
+        or await customer.packages.acount() <= 0
+    ):
+        return
+    async for package in customer.packages.all():
+        if package.count >= package.limit:
+            continue
+        else:
+            package.count = F("count") + num_messages
+            await package.asave(update_fields=["count"])
+            break
 
 
 class HealthCheckView(View):
@@ -104,34 +120,31 @@ class NotificationDispatchView(View):
                     phones.remove(phone)
 
         try:
-            message = await render_notification_message(
-                form, "%Y-%m-%d %H:%M:%S"
-            )
             async with aioboto3.Session().client(
                 "pinpoint-sms-voice-v2", region_name="us-east-1"
             ) as client:
-                message_responses = await asyncio.gather(
+                message = await render_notification_message(
+                    form, "%Y-%m-%d %H:%M:%S"
+                )
+                responses = await asyncio.gather(
                     *[
                         dispatch_notification(
-                            to_number=phone,
+                            to_number=to_number,
                             message=message,
                             method=self.kwargs["method"],
                             client=client,
                             dry_run=form.cleaned_data["dry_run"],
                         )
-                        for phone in phones
+                        for to_number in phones
                     ]
                 )
-                message_ids = [
-                    msg.get("MessageId") for msg in message_responses
-                ]
-                await increment_customer_messages_count(
-                    customer, len(message_ids)
-                )
-                await customer.asave(update_fields=["messages_count"])
-                msg = f"Sent {len(message_ids)} {ngettext('message', 'messages', len(message_ids))}.\n"
-                logger.info(msg)
-                return HttpResponse(msg.encode("utf-8"), status=200)
-        except ValueError as e:
-            logger.error(e)
-            return HttpResponse(str(e).encode("utf-8"), status=400)
+        except ValueError as error:
+            logger.error(error)
+            return HttpResponse(str(error).encode("utf-8"), status=400)
+
+        num_messages = len([msg.get("MessageId") for msg in responses])
+        await increment_customer_messages_count(customer, num_messages)
+        await increment_message_packages_count(customer, num_messages)
+        msg = f"Sent {num_messages} {ngettext('message', 'messages', num_messages)}"
+        logger.info(msg)
+        return HttpResponse(msg.encode("utf-8"), status=200)

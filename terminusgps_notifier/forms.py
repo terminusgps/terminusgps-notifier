@@ -61,6 +61,7 @@ class NotificationDispatchForm(forms.Form):
             - dry_run: Whether to dispatch the notification as a dry run.
             - unit_name: Name of the unit that triggered the notification.
             - location: Location of the notification trigger.
+            - date_format: Date format string.
 
     """
 
@@ -71,6 +72,7 @@ class NotificationDispatchForm(forms.Form):
     dry_run = forms.BooleanField(initial=False, required=False)
     unit_name = forms.CharField(required=False)
     location = forms.CharField(required=False)
+    date_format = forms.CharField(required=False, initial="%Y-%m-%d %H:%M:%S")
 
 
 class WialonNotificationScheduleForm(forms.Form):

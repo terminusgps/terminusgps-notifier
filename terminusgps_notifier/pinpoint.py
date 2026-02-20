@@ -1,3 +1,5 @@
+from typing import Literal
+
 from django.conf import settings
 from types_aiobotocore_pinpoint_sms_voice_v2.client import (
     PinpointSMSVoiceV2Client,
@@ -9,27 +11,24 @@ __all__ = ["dispatch_notification", "send_sms_message", "send_voice_message"]
 async def dispatch_notification(
     to_number: str,
     message: str,
-    method: str,
+    method: Literal["sms", "voice"],
     client: PinpointSMSVoiceV2Client,
-    dry_run: bool = False,
+    dry_run: bool,
 ) -> dict | None:
-    match method:
-        case "sms":
-            return await send_sms_message(
-                to_number=to_number,
-                message=message,
-                client=client,
-                dry_run=dry_run,
-            )
-        case "voice":
-            return await send_voice_message(
-                to_number=to_number,
-                message=message,
-                client=client,
-                dry_run=dry_run,
-            )
-        case _:
-            raise ValueError(f"Invalid method: '{method}'.")
+    if method == "sms":
+        return await send_sms_message(
+            to_number=to_number,
+            message=message,
+            client=client,
+            dry_run=dry_run,
+        )
+    elif method == "voice":
+        return await send_voice_message(
+            to_number=to_number,
+            message=message,
+            client=client,
+            dry_run=dry_run,
+        )
 
 
 async def send_sms_message(

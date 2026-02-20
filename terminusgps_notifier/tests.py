@@ -41,9 +41,9 @@ class DispatchNotificationViewTestCase(TestCase):
         self.assertEqual(response.status_code, 405)
 
     def test_get_invalid_method(self) -> None:
-        """Fails if a request with an invalid method doesn't respond with 400."""
+        """Fails if a request with an invalid method doesn't respond with 404."""
         response = self.client.get("/v3/notify/not_a_method/")
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 404)
 
     def test_get_non_digit_unit_id(self) -> None:
         """Fails if a request with a non-digit unit id parameter doesn't respond with 400."""

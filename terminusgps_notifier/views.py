@@ -11,7 +11,6 @@ from django.template.loader import render_to_string
 from django.utils.translation import ngettext
 from django.views.generic import View
 from terminusgps.wialon.session import WialonSession
-from terminusgps_payments.models import Subscription
 
 from terminusgps_notifier.forms import NotificationDispatchForm
 from terminusgps_notifier.models import TerminusGPSNotifierCustomer
@@ -48,13 +47,6 @@ def get_subscription(customer: TerminusGPSNotifierCustomer | None):
     if customer is None:
         return
     return customer.subscription
-
-
-@sync_to_async
-def get_subscription_status(subscription: Subscription | None):
-    if subscription is None:
-        return
-    return subscription.status
 
 
 @sync_to_async
@@ -120,80 +112,101 @@ class NotificationDispatchView(View):
         Returns 4XX in any other case.
 
         """
+        # Validate method
+        if self.kwargs["method"] not in ("sms", "voice"):
+            msg = f"Invalid method: '{self.kwargs['method']}'\n"
+            logger.error(msg.removesuffix("\n"))
+            return HttpResponse(msg.encode("utf-8"), status=404)
+
+        # Validate path parameters
         form = NotificationDispatchForm(request.GET)
         if not form.is_valid():
             msg = "Bad notification parameters\n"
             logger.error(msg.removesuffix("\n"))
-            return HttpResponse(msg.encode("utf-8"), status=400)
+            return HttpResponse(msg.encode("utf-8"), status=406)
 
+        # Set dispatch variables
         user_id = form.cleaned_data["user_id"]
         unit_id = form.cleaned_data["unit_id"]
         customer = await get_customer(user_id)
-        is_staff = await get_customer_is_staff(customer)
+        customer_is_staff = await get_customer_is_staff(customer)
         token = await get_token(customer)
         subscription = await get_subscription(customer)
-        subscription_status = await get_subscription_status(subscription)
 
+        # Check if customer was retrieved
         if customer is None:
             msg = f"Failed to retrieve customer for user #{user_id}\n"
-            logger.error(msg.removesuffix("\n"))
-            return HttpResponse(msg.encode("utf-8"), status=404)
+            logger.critical(msg.removesuffix("\n"))
+            return HttpResponse(msg.encode("utf-8"), status=400)
+        # Check if Wialon token was retrieved
         if token is None:
             msg = f"Failed to retrieve Wialon token for user #{user_id}\n"
-            logger.warning(msg.removesuffix("\n"))
-            return HttpResponse(msg.encode("utf-8"), status=404)
-        if not is_staff:
+            logger.error(msg.removesuffix("\n"))
+            return HttpResponse(msg.encode("utf-8"), status=400)
+        # Subscription checks are skipped for staff users
+        if not customer_is_staff:
+            # Check if subscription was retrieved
             if subscription is None:
                 msg = f"Failed to retrieve subscription for user #{user_id}\n"
-                logger.warning(msg.removesuffix("\n"))
-                return HttpResponse(msg.encode("utf-8"), status=404)
-            if subscription_status != "active":
-                msg = f"Invalid subscription status for user #{user_id}: '{subscription_status}'"
-                logger.warning(msg.removesuffix("\n"))
+                logger.error(msg.removesuffix("\n"))
+                return HttpResponse(msg.encode("utf-8"), status=400)
+            # Check if subscription status is active
+            if subscription.status != "active":
+                msg = f"Invalid subscription status for user #{user_id}: '{subscription.status}'\n"
+                logger.error(msg.removesuffix("\n"))
                 return HttpResponse(msg.encode("utf-8"), status=403)
+            if customer.messages_count >= customer.messages_limit:
+                if await customer.packages.acount() == 0:
+                    msg = f"Invalid messages count for user #{user_id}: {customer.messages_count}/{customer.messages_limit}\n"
+                    logger.error(msg.removesuffix("\n"))
+                    return HttpResponse(msg.encode("utf-8"), status=403)
+                else:
+                    async for package in customer.packages.all():
+                        if package.count >= package.limit:
+                            continue
+                        else:
+                            break
 
-        with WialonSession(token=customer.token.name) as session:
+        # Retrieve target phone numbers from Wialon api
+        with WialonSession(token=token.name) as session:
             phones = await get_phone_numbers(form, session)
+            # Early 200 if no phones were returned from Wialon api
             if not phones:
-                msg = f"No phones retrieved for unit #{unit_id}"
-                logger.info(msg)
+                msg = f"No phones retrieved for unit #{unit_id}\n"
+                logger.info(msg.removesuffix("\n"))
                 return HttpResponse(msg.encode("utf-8"), status=200)
+            # Clean phone numbers before passing them in boto3 api calls
             for phone in phones:
                 try:
                     validate_e164_phone_number(phone)
                 except ValidationError:
                     phones.remove(phone)
 
-        try:
-            # Render notification message
-            if self.kwargs["method"] not in ("sms", "voice"):
-                raise ValueError(f"Invalid method: '{self.kwargs['method']}'")
-            # Dispatch notification messages to target phones
-            async with aioboto3.Session().client(
-                "pinpoint-sms-voice-v2", region_name="us-east-1"
-            ) as client:
-                message = await render_notification_message(
-                    form, "%Y-%m-%d %H:%M:%S"
-                )
-                responses = await asyncio.gather(
-                    *[
-                        dispatch_notification(
-                            to_number=to_number,
-                            message=message,
-                            method=self.kwargs["method"],
-                            client=client,
-                            dry_run=form.cleaned_data["dry_run"],
-                        )
-                        for to_number in phones
-                    ]
-                )
-        except ValueError as error:
-            logger.error(error)
-            return HttpResponse(str(error).encode("utf-8"), status=400)
+        # Render end-user message
+        message = await render_notification_message(form, "%Y-%m-%d %H:%M:%S")
+        async with aioboto3.Session().client(
+            "pinpoint-sms-voice-v2", region_name="us-east-1"
+        ) as client:
+            # Login to AWS and dispatch notifications
+            responses = await asyncio.gather(
+                *[
+                    dispatch_notification(
+                        to_number=to_number,
+                        message=message,
+                        method=self.kwargs["method"],
+                        client=client,
+                        dry_run=form.cleaned_data["dry_run"],
+                    )
+                    for to_number in phones
+                ]
+            )
 
+        # Count up how many notifications were dispatched
         num_messages = len([msg.get("MessageId") for msg in responses])
+        # Increment customer limits
         await increment_customer_messages_count(customer, num_messages)
         await increment_message_packages_count(customer, num_messages)
+        # Return 200
         msg = f"Sent {num_messages} {ngettext('message', 'messages', num_messages)}"
         logger.info(msg)
         return HttpResponse(msg.encode("utf-8"), status=200)

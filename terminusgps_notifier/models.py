@@ -150,7 +150,7 @@ class WialonNotification(models.Model):
     sch = models.JSONField(blank=True, default=dict)
     ctrl_sch = models.JSONField(blank=True, default=dict)
     trg = models.JSONField(blank=True, default=dict)
-    act = models.JSONField(blank=True, default=dict)
+    act = models.JSONField(blank=True, default=list)
     ct = models.IntegerField(blank=True, default=0)
     mt = models.IntegerField(blank=True, default=0)
 

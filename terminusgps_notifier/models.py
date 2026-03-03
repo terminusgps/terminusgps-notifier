@@ -20,7 +20,7 @@ class TerminusGPSNotifierCustomer(models.Model):
         related_name="notifier_customer",
     )
     tax_rate = models.DecimalField(
-        decimal_places=2,
+        decimal_places=4,
         default=decimal.Decimal("0.0825"),
         help_text=_("Enter a tax rate as a decimal."),
         max_digits=12,

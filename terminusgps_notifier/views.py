@@ -22,11 +22,13 @@ logger = logging.getLogger(__name__)
 
 @sync_to_async
 def render_notification_message(
-    form: NotificationDispatchForm, date_format: str = "%Y-%m-%d %H:%M:%S"
+    form: NotificationDispatchForm,
+    date_format: str = "%Y-%m-%d %H:%M:%S",
+    method: str = "sms",
 ) -> str:
     date = datetime.utcfromtimestamp(form.cleaned_data["msg_time_int"])
     return render_to_string(
-        "terminusgps_notifier/message.txt",
+        f"terminusgps_notifier/message_{method}.txt",
         context={
             "date": date.strftime(date_format),
             "base": form.cleaned_data["message"],
@@ -88,7 +90,9 @@ class NotificationDispatchView(View):
 
         # Render end-user message
         date_fmt = "%Y-%m-%d %H:%M:%S"
-        message = await render_notification_message(form, date_fmt)
+        message = await render_notification_message(
+            form, date_fmt, self.kwargs["method"]
+        )
         async with aioboto3.Session().client(
             "pinpoint-sms-voice-v2", region_name="us-east-1"
         ) as client:

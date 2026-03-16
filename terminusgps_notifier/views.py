@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 
 import aioboto3
+from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db.models import F
 from django.http import HttpRequest, HttpResponse
 from django.http.response import sync_to_async
 from django.template.loader import render_to_string
@@ -13,40 +13,11 @@ from django.views.generic import View
 from terminusgps.wialon.session import WialonSession
 
 from terminusgps_notifier.forms import NotificationDispatchForm
-from terminusgps_notifier.models import TerminusGPSNotifierCustomer
 from terminusgps_notifier.pinpoint import dispatch_notification
 from terminusgps_notifier.validators import validate_e164_phone_number
 from terminusgps_notifier.wialon import get_phone_numbers
 
 logger = logging.getLogger(__name__)
-
-
-async def get_customer(pk: int):
-    try:
-        return await TerminusGPSNotifierCustomer.objects.aget(pk=pk)
-    except TerminusGPSNotifierCustomer.DoesNotExist:
-        return None
-
-
-@sync_to_async
-def get_customer_is_staff(customer: TerminusGPSNotifierCustomer | None):
-    if customer is None:
-        return False
-    return customer.user.is_staff
-
-
-@sync_to_async
-def get_token(customer: TerminusGPSNotifierCustomer | None):
-    if customer is None:
-        return
-    return customer.token
-
-
-@sync_to_async
-def get_subscription(customer: TerminusGPSNotifierCustomer | None):
-    if customer is None:
-        return
-    return customer.subscription
 
 
 @sync_to_async
@@ -63,31 +34,6 @@ def render_notification_message(
             "unit_name": form.cleaned_data.get("unit_name"),
         },
     ).removesuffix("\n")
-
-
-async def increment_customer_messages_count(
-    customer: TerminusGPSNotifierCustomer, num_messages: int
-) -> None:
-    if customer.messages_count < customer.messages_limit:
-        customer.messages_count = F("messages_count") + num_messages
-        await customer.asave(update_fields=["messages_count"])
-
-
-async def increment_message_packages_count(
-    customer: TerminusGPSNotifierCustomer, num_messages: int
-) -> None:
-    if (
-        customer.messages_count < customer.messages_limit
-        or await customer.packages.acount() <= 0
-    ):
-        return
-    async for package in customer.packages.all():
-        if package.count >= package.limit:
-            continue
-        else:
-            package.count = F("count") + num_messages
-            await package.asave(update_fields=["count"])
-            break
 
 
 class HealthCheckView(View):
@@ -125,54 +71,12 @@ class NotificationDispatchView(View):
             logger.error(msg.removesuffix("\n"))
             return HttpResponse(msg.encode("utf-8"), status=406)
 
-        # Set dispatch variables
-        user_id = form.cleaned_data["user_id"]
-        unit_id = form.cleaned_data["unit_id"]
-        customer = await get_customer(user_id)
-        customer_is_staff = await get_customer_is_staff(customer)
-        token = await get_token(customer)
-        subscription = await get_subscription(customer)
-
-        # Check if customer was retrieved
-        if customer is None:
-            msg = f"Failed to retrieve customer for user #{user_id}\n"
-            logger.critical(msg.removesuffix("\n"))
-            return HttpResponse(msg.encode("utf-8"), status=400)
-        # Check if Wialon token was retrieved
-        if token is None:
-            msg = f"Failed to retrieve Wialon token for user #{user_id}\n"
-            logger.error(msg.removesuffix("\n"))
-            return HttpResponse(msg.encode("utf-8"), status=400)
-        # Subscription checks are skipped for staff users
-        if not customer_is_staff:
-            # Check if subscription was retrieved
-            if subscription is None:
-                msg = f"Failed to retrieve subscription for user #{user_id}\n"
-                logger.error(msg.removesuffix("\n"))
-                return HttpResponse(msg.encode("utf-8"), status=400)
-            # Check if subscription status is active
-            if subscription.status != "active":
-                msg = f"Invalid subscription status for user #{user_id}: '{subscription.status}'\n"
-                logger.error(msg.removesuffix("\n"))
-                return HttpResponse(msg.encode("utf-8"), status=403)
-            if customer.messages_count >= customer.messages_limit:
-                if await customer.packages.acount() == 0:
-                    msg = f"Invalid messages count for user #{user_id}: {customer.messages_count}/{customer.messages_limit}\n"
-                    logger.error(msg.removesuffix("\n"))
-                    return HttpResponse(msg.encode("utf-8"), status=403)
-                else:
-                    async for package in customer.packages.all():
-                        if package.count >= package.limit:
-                            continue
-                        else:
-                            break
-
         # Retrieve target phone numbers from Wialon api
-        with WialonSession(token=token.name) as session:
+        with WialonSession(token=settings.WIALON_TOKEN) as session:
             phones = await get_phone_numbers(form, session)
             # Early 200 if no phones were returned from Wialon api
             if not phones:
-                msg = f"No phones retrieved for unit #{unit_id}\n"
+                msg = f"No phones retrieved for unit #{form.cleaned_data['unit_id']}\n"
                 logger.info(msg.removesuffix("\n"))
                 return HttpResponse(msg.encode("utf-8"), status=200)
             # Clean phone numbers before passing them in boto3 api calls
@@ -183,7 +87,8 @@ class NotificationDispatchView(View):
                     phones.remove(phone)
 
         # Render end-user message
-        message = await render_notification_message(form, "%Y-%m-%d %H:%M:%S")
+        date_fmt = "%Y-%m-%d %H:%M:%S"
+        message = await render_notification_message(form, date_fmt)
         async with aioboto3.Session().client(
             "pinpoint-sms-voice-v2", region_name="us-east-1"
         ) as client:
@@ -203,9 +108,6 @@ class NotificationDispatchView(View):
 
         # Count up how many notifications were dispatched
         num_messages = len([msg.get("MessageId") for msg in responses])
-        # Increment customer limits
-        await increment_customer_messages_count(customer, num_messages)
-        await increment_message_packages_count(customer, num_messages)
         # Return 200
         msg = f"Sent {num_messages} {ngettext('message', 'messages', num_messages)}"
         logger.info(msg)

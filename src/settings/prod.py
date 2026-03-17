@@ -5,7 +5,6 @@ from pathlib import Path
 from socket import gethostbyname, gethostname
 
 from authorizenet.constants import constants
-from terminusgps.wialon.flags import TokenFlag
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -48,12 +47,14 @@ USE_I18N = True
 USE_TZ = True
 USE_X_FORWARDED_HOST = True
 WIALON_TOKEN = os.getenv("WIALON_TOKEN")
-WIALON_TOKEN_ACCESS_TYPE = (
-    TokenFlag.VIEW_ACCESS
-    | TokenFlag.MANAGE_NONSENSITIVE
-    | TokenFlag.MANAGE_SENSITIVE
-)
 WSGI_APPLICATION = "src.wsgi.application"
+NOTIFICATION_DISPATCHERS = {
+    "sms": ["terminusgps_notifier.dispatchers.AWSNotificationDispatcher"],
+    "voice": [
+        "terminusgps_notifier.dispatchers.AWSNotificationDispatcher",
+        "terminusgps_notifier.dispatchers.TwilioNotificationDispatcher",
+    ],
+}
 
 LOGGING = {
     "version": 1,

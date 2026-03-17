@@ -46,6 +46,13 @@ WIALON_TOKEN_ACCESS_TYPE = (
 )
 WIALON_RESOURCE_NAME = "Terminus GPS Notifications"
 WSGI_APPLICATION = "src.wsgi.application"
+NOTIFICATION_DISPATCHERS = {
+    "sms": ["terminusgps_notifier.dispatchers.AWSNotificationDispatcher"],
+    "voice": [
+        "terminusgps_notifier.dispatchers.AWSNotificationDispatcher",
+        "terminusgps_notifier.dispatchers.TwilioNotificationDispatcher",
+    ],
+}
 
 LOGGING = {
     "version": 1,

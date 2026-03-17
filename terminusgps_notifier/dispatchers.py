@@ -35,13 +35,17 @@ class NotificationDispatcher(ABC):
         return render_to_string(template_name, context)
 
     async def send_notification(
-        self, to_number: str, method: str, *args, **kwargs
+        self, to_number: str, method: str
     ) -> str | None:
         match method:
             case "sms":
-                return await self.send_sms(to_number, *args, **kwargs)
+                return await self.send_sms(
+                    to_number, dry_run=self.form.cleaned_data["dry_run"]
+                )
             case "voice":
-                return await self.send_voice(to_number, *args, **kwargs)
+                return await self.send_voice(
+                    to_number, dry_run=self.form.cleaned_data["dry_run"]
+                )
             case _:
                 raise ValueError(f"Invalid method: '{method}'")
 
@@ -132,12 +136,15 @@ class TwilioNotificationDispatcher(NotificationDispatcher):
         to_number: str,
         voice: str = "woman",
         from_number: str | None = None,
+        dry_run: bool = False,
     ):
-        raw_message = await self.render_message(
+        if dry_run:
+            return
+        raw = await self.render_message(
             "terminusgps_notifier/message_voice.txt"
         )
         message = VoiceResponse()
-        message.say(raw_message, voice=voice)
+        message.say(raw, voice=voice)
         client = Client(http_client=AsyncTwilioHttpClient())
         return await client.calls.create_async(
             to=to_number,
@@ -145,7 +152,14 @@ class TwilioNotificationDispatcher(NotificationDispatcher):
             twiml=message,
         )
 
-    async def send_sms(self, to_number: str, from_number: str | None = None):
+    async def send_sms(
+        self,
+        to_number: str,
+        from_number: str | None = None,
+        dry_run: bool = False,
+    ):
+        if dry_run:
+            return
         message = await self.render_message(
             "terminusgps_notifier/message_sms.txt"
         )

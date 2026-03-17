@@ -51,6 +51,8 @@ class NotificationDispatchView(View):
 
         Returns 200 if notifications were successfully dispatched or the unit didn't have phone numbers.
 
+        Returns 502 if all notification dispatchers fail to deliver notifications.
+
         Returns 4XX in any other case.
 
         """

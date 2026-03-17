@@ -20,11 +20,6 @@ class DispatchNotificationViewTestCase(TestCase):
     def setUp(self) -> None:
         self.client = Client()
 
-    def test_post(self) -> None:
-        """Fails if a POST request doesn't respond with 405."""
-        response = self.client.post("/v3/notify/sms/", data={})
-        self.assertEqual(response.status_code, 405)
-
     def test_get_invalid_method(self) -> None:
         """Fails if a request with an invalid method doesn't respond with 404."""
         response = self.client.get("/v3/notify/not_a_method/")

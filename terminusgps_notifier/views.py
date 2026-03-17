@@ -4,7 +4,7 @@ import warnings
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.csrf import csrf_exempt
@@ -93,7 +93,7 @@ class NotificationDispatchView(View):
         except ImportError as e:
             raise ImproperlyConfigured(e)
         except ValueError as e:
-            raise ImproperlyConfigured(e)
+            raise Http404(e)
 
     async def post(
         self, request: HttpRequest, *args, **kwargs

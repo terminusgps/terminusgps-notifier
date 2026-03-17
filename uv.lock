@@ -142,6 +142,18 @@ wheels = [
 ]
 
 [[package]]
+name = "aiohttp-retry"
+version = "2.9.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9d/61/ebda4d8e3d8cfa1fd3db0fb428db2dd7461d5742cea35178277ad180b033/aiohttp_retry-2.9.1.tar.gz", hash = "sha256:8eb75e904ed4ee5c2ec242fefe85bf04240f685391c4879d8f541d6028ff01f1", size = 13608, upload-time = "2024-11-06T10:44:54.574Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/99/84ba7273339d0f3dfa57901b846489d2e5c2cd731470167757f1935fffbd/aiohttp_retry-2.9.1-py3-none-any.whl", hash = "sha256:66d2759d1921838256a05a3f80ad7e724936f083e35be5abb5e16eed6be6dc54", size = 9981, upload-time = "2024-11-06T10:44:52.917Z" },
+]
+
+[[package]]
 name = "aioitertools"
 version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1022,6 +1034,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyjwt"
+version = "2.12.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c2/27/a3b6e5bf6ff856d2509292e95c8f57f0df7017cf5394921fc4e4ef40308a/pyjwt-2.12.1.tar.gz", hash = "sha256:c74a7a2adf861c04d002db713dd85f84beb242228e671280bf709d765b03672b", size = 102564, upload-time = "2026-03-13T19:27:37.25Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/7a/8dd906bd22e79e47397a61742927f6747fe93242ef86645ee9092e610244/pyjwt-2.12.1-py3-none-any.whl", hash = "sha256:28ca37c070cad8ba8cd9790cd940535d40274d22f80ab87f3ac6a713e6e8454c", size = 29726, upload-time = "2026-03-13T19:27:35.677Z" },
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -1299,6 +1320,7 @@ dependencies = [
     { name = "django" },
     { name = "python-terminusgps" },
     { name = "terminusgps-payments" },
+    { name = "twilio" },
     { name = "types-aioboto3", extra = ["pinpoint-sms-voice-v2"] },
 ]
 
@@ -1320,6 +1342,7 @@ requires-dist = [
     { name = "django", specifier = ">=6.0.2" },
     { name = "python-terminusgps", specifier = ">=51.0.0" },
     { name = "terminusgps-payments", specifier = ">=8.3.0" },
+    { name = "twilio", specifier = ">=9.10.3" },
     { name = "types-aioboto3", extras = ["pinpoint-sms-voice-v2"], specifier = ">=15.5.0" },
 ]
 
@@ -1350,6 +1373,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/61/57/732986858ff608d081da92c80fd25b0dfc8cf637cc1de02e4245b5536eb9/terminusgps_payments-8.3.0.tar.gz", hash = "sha256:7f0189dde6887a80b8e66e70925d0e80cbd7fcd5cc5762a508cd0fc2301a2e86", size = 123774, upload-time = "2026-02-13T19:54:14.493Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/d3/4ad827f552f9aa594c48c94b6715ac6f9c5c9c525fd5b3a33ea8cfd26599/terminusgps_payments-8.3.0-py3-none-any.whl", hash = "sha256:5bf17586c607c6908b00bce1252ba6c7c1be2eab101436d775023d76a7e04c79", size = 52755, upload-time = "2026-02-13T19:54:15.365Z" },
+]
+
+[[package]]
+name = "twilio"
+version = "9.10.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "aiohttp-retry" },
+    { name = "pyjwt" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/14/b3/471b479b855c0126bc5352da6335281441233364047bad030718547283bd/twilio-9.10.3.tar.gz", hash = "sha256:205df912bb56b4b905c89f1abf6684c6ebe0c2618dec6bfd49b247ba80f4f25d", size = 1619755, upload-time = "2026-03-10T08:53:56.086Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/31/22e1026670520ab66b746691cb491b9f4205c8603ee8b86795ff0c35e193/twilio-9.10.3-py2.py3-none-any.whl", hash = "sha256:b17a001dc0a57ef0c52d1e7ffa5e353f9b26e761fa151d11347aec530231345f", size = 2257700, upload-time = "2026-03-10T08:53:54.174Z" },
 ]
 
 [[package]]

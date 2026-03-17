@@ -18,14 +18,6 @@ class NotificationDispatcher(ABC):
             raise ValueError("Form must be valid")
         self.form = form
 
-    @abstractmethod
-    async def send_voice(self, *args, **kwargs) -> str | None:
-        raise NotImplementedError("Subclasses must implement this method.")
-
-    @abstractmethod
-    async def send_sms(self, *args, **kwargs) -> str | None:
-        raise NotImplementedError("Subclasses must implement this method.")
-
     @sync_to_async
     def render_message(self, template_name: str) -> str:
         msg_time_int = self.form.cleaned_data["msg_time_int"]
@@ -34,20 +26,27 @@ class NotificationDispatcher(ABC):
         context.update({"date": date})
         return render_to_string(template_name, context)
 
+    @abstractmethod
+    async def send_voice(
+        self, to_number: str, dry_run: bool = False, **kwargs
+    ) -> str | None:
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    @abstractmethod
+    async def send_sms(
+        self, to_number: str, dry_run: bool = False, **kwargs
+    ) -> str | None:
+        raise NotImplementedError("Subclasses must implement this method.")
+
     async def send_notification(
         self, to_number: str, method: str
     ) -> str | None:
+        dry_run = self.form.cleaned_data.get("dry_run", False)
         match method:
             case "sms":
-                return await self.send_sms(
-                    to_number,
-                    dry_run=self.form.cleaned_data.get("dry_run", False),
-                )
+                return await self.send_sms(to_number, dry_run)
             case "voice":
-                return await self.send_voice(
-                    to_number,
-                    dry_run=self.form.cleaned_data.get("dry_run", False),
-                )
+                return await self.send_voice(to_number, dry_run)
             case _:
                 raise ValueError(f"Invalid method: '{method}'")
 
@@ -64,10 +63,10 @@ class AWSNotificationDispatcher(NotificationDispatcher):
     async def send_voice(
         self,
         to_number: str,
+        dry_run: bool = False,
         *,
         message_type: str = "TEXT",
         voice_id: str = "MATTHEW",
-        dry_run: bool = False,
         pool_arn: str | None = None,
         config_arn: str | None = None,
         mppm: str | None = None,
@@ -100,9 +99,9 @@ class AWSNotificationDispatcher(NotificationDispatcher):
     async def send_sms(
         self,
         to_number: str,
+        dry_run: bool = False,
         *,
         ttl: int = 300,
-        dry_run: bool = False,
         pool_arn: str | None = None,
         config_arn: str | None = None,
         mpps: str | None = None,
@@ -136,9 +135,10 @@ class TwilioNotificationDispatcher(NotificationDispatcher):
     async def send_voice(
         self,
         to_number: str,
+        dry_run: bool = False,
+        *,
         voice: str = "woman",
         from_number: str | None = None,
-        dry_run: bool = False,
     ):
         if dry_run:
             return
@@ -157,8 +157,9 @@ class TwilioNotificationDispatcher(NotificationDispatcher):
     async def send_sms(
         self,
         to_number: str,
-        from_number: str | None = None,
         dry_run: bool = False,
+        *,
+        from_number: str | None = None,
     ):
         if dry_run:
             return

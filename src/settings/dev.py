@@ -2,7 +2,7 @@ import base64
 import os
 from pathlib import Path
 
-from terminusgps.authorizenet.constants import Environment, ValidationMode
+from authorizenet.constants import constants
 from terminusgps.wialon.flags import TokenFlag
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,11 +21,11 @@ CSRF_COOKIE_SECURE = False
 DEBUG = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LANGUAGE_CODE = "en-us"
-MERCHANT_AUTH_ENVIRONMENT = Environment.SANDBOX
+MERCHANT_AUTH_ENVIRONMENT = constants.SANDBOX
 WIALON_TOKEN = os.getenv("WIALON_TOKEN")
 MERCHANT_AUTH_LOGIN_ID = os.getenv("MERCHANT_AUTH_LOGIN_ID")
 MERCHANT_AUTH_TRANSACTION_KEY = os.getenv("MERCHANT_AUTH_TRANSACTION_KEY")
-MERCHANT_AUTH_VALIDATION_MODE = ValidationMode.TEST
+MERCHANT_AUTH_VALIDATION_MODE = "testMode"
 DJANGO_ENCRYPTED_FIELD_ALGORITHM = os.getenv(
     "DJANGO_ENCRYPTED_FIELD_ALGORITHM", "SS20"
 )

@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from socket import gethostbyname, gethostname
 
-from terminusgps.authorizenet.constants import Environment, ValidationMode
+from authorizenet.constants import constants
 from terminusgps.wialon.flags import TokenFlag
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,10 +27,10 @@ CSRF_COOKIE_SECURE = True
 DEBUG = False
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LANGUAGE_CODE = "en-us"
-MERCHANT_AUTH_ENVIRONMENT = Environment.PRODUCTION
+MERCHANT_AUTH_ENVIRONMENT = constants.PRODUCTION
 MERCHANT_AUTH_LOGIN_ID = os.getenv("MERCHANT_AUTH_LOGIN_ID")
 MERCHANT_AUTH_TRANSACTION_KEY = os.getenv("MERCHANT_AUTH_TRANSACTION_KEY")
-MERCHANT_AUTH_VALIDATION_MODE = ValidationMode.LIVE
+MERCHANT_AUTH_VALIDATION_MODE = "liveMode"
 DJANGO_ENCRYPTED_FIELD_ALGORITHM = os.getenv(
     "DJANGO_ENCRYPTED_FIELD_ALGORITHM", "SS20"
 )

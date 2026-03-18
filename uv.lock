@@ -1356,7 +1356,7 @@ dev = [
 requires-dist = [
     { name = "aioboto3", specifier = ">=15.5.0" },
     { name = "django", specifier = ">=6.0.2" },
-    { name = "python-terminusgps", specifier = ">=51.0.0" },
+    { name = "python-terminusgps", specifier = ">=54.1.0" },
     { name = "terminusgps-payments", specifier = ">=8.3.0" },
     { name = "twilio", specifier = ">=9.10.3" },
     { name = "types-aioboto3", extras = ["pinpoint-sms-voice-v2"], specifier = ">=15.5.0" },

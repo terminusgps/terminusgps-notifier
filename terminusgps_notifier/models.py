@@ -6,7 +6,6 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import F
 from django.utils.translation import gettext_lazy as _
-from encrypted_field import EncryptedField
 from terminusgps.wialon.session import WialonSession
 
 
@@ -48,15 +47,6 @@ class TerminusGPSNotifierCustomer(models.Model):
         blank=True,
         default=None,
         help_text=_("Select an Authorizenet subscription from the list."),
-        null=True,
-        on_delete=models.CASCADE,
-        related_name="notifier_customer",
-    )
-    token = models.OneToOneField(
-        "terminusgps_notifier.WialonToken",
-        blank=True,
-        default=None,
-        help_text=_("Select a Wialon API token from the list."),
         null=True,
         on_delete=models.CASCADE,
         related_name="notifier_customer",
@@ -104,17 +94,6 @@ class MessagePackage(models.Model):
 
     def __str__(self) -> str:
         return f"MessagePackage #{self.pk}"
-
-
-class WialonToken(models.Model):
-    name = EncryptedField(max_length=72)
-
-    class Meta:
-        verbose_name = _("wialon token")
-        verbose_name_plural = _("wialon tokens")
-
-    def __str__(self) -> str:
-        return f"WialonToken #{self.pk}"
 
 
 class WialonNotification(models.Model):

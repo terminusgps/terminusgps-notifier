@@ -16,7 +16,7 @@ requires-python = ">=3.12"
 dependencies = [
     "aioboto3>=15.5.0",
     "django>=6.0.2",
-    "python-terminusgps>=51.0.0",
+    "python-terminusgps>=54.1.0",
     "terminusgps-payments>=8.3.0",
     "twilio>=9.10.3",
     "types-aioboto3[pinpoint-sms-voice-v2]>=15.5.0",

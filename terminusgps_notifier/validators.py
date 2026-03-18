@@ -6,6 +6,12 @@ __all__ = ["validate_e164_phone_number"]
 
 def validate_e164_phone_number(value: str) -> None:
     """Raises :py:exec:`~django.core.exceptions.ValidationError` if the value wasn't a properly formatted E.164 phone number."""
+    if not value:
+        raise ValidationError(
+            "Invalid E.164 phone number: '%(value)s'",
+            code="invalid",
+            params={"value": value},
+        )
     if not value.startswith("+"):
         raise ValidationError(
             _("E.164 phone number must start with a '+', got '%(char)s'"),

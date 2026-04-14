@@ -36,7 +36,7 @@ ROOT_URLCONF = "src.urls"
 SECRET_KEY = "k_il7ce@&k-=n9zo+7_^^b4kb+k$7##aa&z#=3(s7jkc_w5j9l"
 SESSION_COOKIE_SECURE = False
 STATIC_URL = "static/"
-TIME_ZONE = "US/Central"
+TIME_ZONE = "America/Chicago"
 USE_I18N = True
 USE_TZ = True
 WIALON_TOKEN_ACCESS_TYPE = (

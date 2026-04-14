@@ -1,10 +1,8 @@
-import decimal
 import typing
 from collections.abc import Sequence
 
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import F
 from django.utils.translation import gettext_lazy as _
 from terminusgps.wialon.session import WialonSession
 
@@ -18,35 +16,10 @@ class TerminusGPSNotifierCustomer(models.Model):
         on_delete=models.CASCADE,
         related_name="notifier_customer",
     )
-    tax_rate = models.DecimalField(
-        decimal_places=4,
-        default=decimal.Decimal("0.0825"),
-        help_text=_("Enter a tax rate as a decimal."),
-        max_digits=12,
-    )
-    sub_total = models.DecimalField(
-        decimal_places=2,
-        default=decimal.Decimal("60.00"),
-        help_text=_("Enter a sub total as a decimal."),
-        max_digits=12,
-    )
-    tax_total = models.GeneratedField(
-        db_persist=True,
-        expression=(F("sub_total") * (F("tax_rate") + 1)) - F("sub_total"),
-        help_text=_("Automatically generated tax amount."),
-        output_field=models.DecimalField(decimal_places=2, max_digits=12),
-    )
-    grand_total = models.GeneratedField(
-        db_persist=True,
-        expression=F("sub_total") * (F("tax_rate") + 1),
-        help_text=_("Automatically generated grand total amount (sub+tax)."),
-        output_field=models.DecimalField(decimal_places=2, max_digits=12),
-    )
     subscription = models.ForeignKey(
         "terminusgps_payments.Subscription",
         blank=True,
         default=None,
-        help_text=_("Select an Authorizenet subscription from the list."),
         null=True,
         on_delete=models.CASCADE,
         related_name="notifier_customer",
@@ -58,24 +31,6 @@ class TerminusGPSNotifierCustomer(models.Model):
 
     def __str__(self) -> str:
         return str(self.user)
-
-    def get_resources_from_wialon(
-        self, session: WialonSession, force: bool = False
-    ) -> list[dict[str, typing.Any]]:
-        params = {
-            "spec": {
-                "itemsType": "avl_resource",
-                "propName": "sys_name",
-                "propValueMask": "*",
-                "sortType": "sys_name",
-                "propType": "property",
-            },
-            "flags": 1,
-            "force": int(force),
-            "from": 0,
-            "to": 0,
-        }
-        return session.wialon_api.core_search_items(**params).get("items", [])
 
 
 class MessagePackage(models.Model):
@@ -140,13 +95,6 @@ class WialonNotification(models.Model):
     def __str__(self) -> str:
         return f"{self.n or self.wialon_id}"
 
-    def save(self, **kwargs) -> None:
-        if session := kwargs.pop("session", None):
-            if self.wialon_id is not None:
-                data = self.pull(session)[0]
-                self.sync(data)
-        return super().save(**kwargs)
-
     def pull(self, session: WialonSession) -> list[dict[str, typing.Any]]:
         return session.wialon_api.resource_get_notification_data(
             **{"itemId": self.resource.pk, "col": [self.wialon_id]}
@@ -189,13 +137,6 @@ class WialonObject(models.Model):
     def __str__(self) -> str:
         return f"{self.nm or self.id}"
 
-    def save(self, **kwargs) -> None:
-        if session := kwargs.pop("session", None):
-            if self.pk:
-                data = self.pull(session)
-                self.sync(data)
-        return super().save(**kwargs)
-
     def pull(
         self, session: WialonSession, flags: int = 1
     ) -> dict[str, typing.Any]:
@@ -214,7 +155,7 @@ class WialonResource(WialonObject):
         verbose_name = _("wialon resource")
         verbose_name_plural = _("wialon resources")
 
-    def get_notification_data(
+    def get_notifications(
         self, session: WialonSession, ids: Sequence[str] | None = None
     ) -> list[dict[str, typing.Any]]:
         params = {"itemId": self.pk}

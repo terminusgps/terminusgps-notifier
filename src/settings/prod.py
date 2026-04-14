@@ -42,7 +42,7 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
 STATIC_URL = "static/"
-TIME_ZONE = "US/Central"
+TIME_ZONE = "America/Chicago"
 USE_I18N = True
 USE_TZ = True
 USE_X_FORWARDED_HOST = True
@@ -124,6 +124,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "django.forms",
+    "terminusgps_payments.apps.TerminusgpsPaymentsConfig",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
 

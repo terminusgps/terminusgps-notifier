@@ -1,9 +1,9 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% partialdef main %}
-<form method="post" action="{% url 'terminusgps_notifier:create notification' %}">
+<form method="post" action="{% url 'terminusgps_notifier:create notifications' %}">
     {% csrf_token %}
     {% for form in forms %}
-    {{ form.as_div }}
+    <div class="**:[&_select]:p-2 **:[&_select]:border **:[&_select]:rounded **:[&_select]:bg-stone-50">{{ form.as_div }}</div>
     {% endfor %}
     <button type="submit">Submit</button>
 </form>

@@ -176,7 +176,21 @@ class WialonCallbackView(HtmxTemplateResponseMixin, TemplateView):
 class WialonNotificationCreateView(HtmxTemplateResponseMixin, MultiFormView):
     content_type = "text/html"
     http_method_names = ["get", "post"]
-    form_classes = (forms.WialonResourceSelectForm,)
+    form_classes = (
+        forms.WialonResourceSelectForm,
+        forms.WialonUnitSelectForm,
+        forms.WialonUnitGroupSelectForm,
+    )
+
+    def get_form_kwargs(self, form_class=None) -> dict:
+        kwargs = super().get_form_kwargs(form_class=form_class)
+        kwargs["user"] = self.request.user
+        return kwargs
+
+
+class WialonNotificationUpdateView(HtmxTemplateResponseMixin, MultiFormView):
+    content_type = "text/html"
+    http_method_names = ["get", "post"]
 
 
 class WialonNotificationListView(HtmxTemplateResponseMixin, TemplateView):

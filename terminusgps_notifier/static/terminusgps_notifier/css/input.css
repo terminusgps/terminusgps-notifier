@@ -1,0 +1,45 @@
+@import "tailwindcss" source("../../../../");
+@source "../../../../.venv/lib/python3.12/site-packages/terminusgps_payments";
+
+@theme {
+    --color-terminus-black: oklch(14.29% 0.0041 345.44);
+    --color-terminus-gray-900: oklch(21.49% 0.0085 240.3);
+    --color-terminus-gray-800: oklch(29.23% 0.0061 258.36);
+    --color-terminus-gray-700: oklch(36.36% 0.0037 264.52);
+    --color-terminus-gray-600: oklch(49.57% 0.0041 354.83);
+    --color-terminus-gray-500: oklch(61.95% 0.0085 17.38);
+    --color-terminus-gray-400: oklch(73.65% 0.0117 24.36);
+    --color-terminus-gray-300: oklch(86.69% 0 0);
+    --color-terminus-gray-200: oklch(91.69% 0.0017 325.59);
+    --color-terminus-gray-100: oklch(96.6% 0.0025 345.21);
+    --color-terminus-red-900: oklch(32.58% 0.1261 27.65);
+    --color-terminus-red-800: oklch(36.22% 0.1389 27.24);
+    --color-terminus-red-700: oklch(39.55% 0.1506 27.16);
+    --color-terminus-red-600: oklch(43.02% 0.163 26.83);
+    --color-terminus-red-500: oklch(46.16% 0.1749 26.64);
+    --color-terminus-red-400: oklch(50.51% 0.1936 27.24);
+    --color-terminus-red-300: oklch(53.09% 0.1984 26.71);
+    --color-terminus-red-200: oklch(55.71% 0.2026 26.2);
+    --color-terminus-red-100: oklch(58.34% 0.2065 25.73);
+    --color-terminus-red-50: oklch(60.82% 0.209 25.26);
+
+    --animate-jiggle: jiggle 0.5s ease 1;
+    --animate-coin: coin 1s linear infinite;
+    --animate-coin-fast: coin 0.5s linear infinite;
+    --animate-coin-slow: coin 4s linear infinite;
+}
+
+@keyframes jiggle {
+    0% {transform: translateX(0%);}
+    20% {transform: translateX(-.4%);}
+    40% {transform: translateX(.4%);}
+    60% {transform: translateX(-.4%);}
+    80% {transform: translateX(.4%);}
+    100% {transform: translateX(0%);}
+}
+
+@keyframes coin {
+    0% {transform: rotateY(0deg);}
+    50% {transform: rotateY(90deg);}
+    100% {transform: rotateY(0deg);}
+}

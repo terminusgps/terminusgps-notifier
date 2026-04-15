@@ -7,6 +7,7 @@ from terminusgps.wialon.flags import TokenFlag
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+AUTHORIZENET_SERVICE = "terminusgps.authorizenet.service.AuthorizenetService"
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 ASGI_APPLICATION = "src.asgi.application"
 AWS_PINPOINT_CONFIGURATION_ARN = os.getenv("AWS_PINPOINT_CONFIGURATION_ARN")
@@ -85,16 +86,37 @@ LOGGING = {
     },
 }
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "HOST": os.getenv("DB_HOST"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "PORT": os.getenv("DB_PORT", 5432),
+        "OPTIONS": {"client_encoding": "UTF8"},
+        "CONN_MAX_AGE": None,
     }
 }
 
 CACHES = {
     "default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}
 }
+
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django.core.cache.backends.redis.RedisCache",
+#         "LOCATION": "redis://127.0.0.1:6379",
+#         "TIMEOUT": 60 * 15,
+#     }
+# }
 
 INSTALLED_APPS = [
     "django.contrib.admin",

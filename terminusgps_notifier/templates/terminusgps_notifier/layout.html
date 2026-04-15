@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width,initial-scale=1"/>
+        <link rel="icon" href="{% static 'terminusgps_notifier/favicon.ico' %}">
+        <link rel="stylesheet" href="{% static 'terminusgps_notifier/css/output.css' %}">
+        <script src="{% static 'terminusgps_notifier/js/htmx.min.js' %}" defer></script>
+        <title>{% block title %}{% endblock title %} | Terminus GPS Notifier</title>
+    </head>
+    <body class="text-gray-800 dark:text-gray-100" style='background-image: url("{% static 'terminusgps_notifier/img/background-light.png' %}");'>
+        <nav class="flex justify-between bg-stone-100 text-gray-800 drop-shadow dark:bg-gray-800">
+            <a href="{% url 'terminusgps_notifier:home' %}" class="group flex items-center space-x-1">
+                <img src="{% static 'terminusgps_notifier/icon/logo-waypoint.svg' %}" class="size-16 animate-coin-slow group-hover:animate-none">
+                <img src="{% static 'terminusgps_notifier/icon/logo-text.svg' %}" class="size-24">
+            </a>
+        </nav>
+        <main class="container mx-auto -mt-2 ">
+            <div class="border-lr mx-8 border-gray-600 bg-stone-100 dark:bg-gray-800">
+                <section class="p-8">
+                    {% block content %}{% endblock content %}
+                </section>
+            </div>
+        </main>
+        <footer class="bottom-0 left-0 z-20 w-full p-4 bg-stone-100 border-t border-stone-300 shadow-sm md:flex md:items-center md:justify-between md:p-6">
+            <span class="text-sm sm:text-center">© 2026 <a href="https://terminusgps.com/" class="hover:underline">Terminus GPS</a>. All Rights Reserved.</span>
+            <ul class="flex flex-wrap items-center mt-3 text-sm sm:mt-0">
+                <li>
+                    <a href="#" class="hover:underline me-4 md:me-6">About</a>
+                </li>
+                <li>
+                    <a href="#" class="hover:underline me-4 md:me-6">Contact</a>
+                </li>
+                <li>
+                    <a href="#" class="hover:underline me-4 md:me-6">Privacy</a>
+                </li>
+                <li>
+                    <a href="#" class="hover:underline me-4 md:me-6">Terms</a>
+                </li>
+            </ul>
+        </footer>
+    </body>
+</html>
+

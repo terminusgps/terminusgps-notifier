@@ -8,6 +8,7 @@ from authorizenet.constants import constants
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+AUTHORIZENET_SERVICE = "terminusgps.authorizenet.service.AuthorizenetService"
 ALLOWED_HOSTS = [
     ".terminusgps.com",
     ".elb.amazonaws.com",

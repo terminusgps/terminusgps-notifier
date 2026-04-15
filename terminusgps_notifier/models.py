@@ -1,16 +1,15 @@
-import typing
-from collections.abc import Sequence
+from functools import cached_property
 
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from terminusgps.wialon.session import WialonSession
+from encrypted_field import EncryptedField
 
 
 class TerminusGPSNotifierCustomer(models.Model):
     messages_count = models.PositiveIntegerField(default=0)
     messages_limit = models.PositiveIntegerField(default=500)
-
+    token = EncryptedField(blank=True, null=True, default=None)
     user = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,
@@ -32,145 +31,6 @@ class TerminusGPSNotifierCustomer(models.Model):
     def __str__(self) -> str:
         return str(self.user)
 
-
-class MessagePackage(models.Model):
-    price = models.DecimalField(decimal_places=2, max_digits=12)
-    count = models.IntegerField(default=0)
-    limit = models.IntegerField(default=500)
-    customer = models.ForeignKey(
-        "terminusgps_notifier.TerminusGPSNotifierCustomer",
-        on_delete=models.CASCADE,
-        related_name="packages",
-    )
-
-    class Meta:
-        verbose_name = _("message package")
-        verbose_name_plural = _("message packages")
-
-    def __str__(self) -> str:
-        return f"MessagePackage #{self.pk}"
-
-
-class WialonNotification(models.Model):
-    class NotificationFlag(models.IntegerChoices):
-        FIRST_MESSAGE = 0x0
-        EVERY_MESSAGE = 0x1
-        DISABLED = 0x2
-
-    resource = models.ForeignKey(
-        "terminusgps_notifier.WialonResource",
-        on_delete=models.CASCADE,
-        related_name="notifications",
-    )
-
-    wialon_id = models.IntegerField(blank=True)
-    e = models.IntegerField(blank=True, default=1, verbose_name=_("enabled"))
-    n = models.CharField(blank=True, max_length=50)
-    txt = models.CharField(blank=True, max_length=1024)
-    ta = models.IntegerField(blank=True, default=0)
-    td = models.IntegerField(blank=True, default=0)
-    ma = models.IntegerField(blank=True, default=0)
-    mmtd = models.IntegerField(blank=True, default=0)
-    cdt = models.IntegerField(blank=True, default=0)
-    mast = models.IntegerField(blank=True, default=0)
-    mpst = models.IntegerField(blank=True, default=0)
-    cp = models.IntegerField(blank=True, default=0)
-    fl = models.IntegerField(choices=NotificationFlag.choices, default=0x0)
-    tz = models.IntegerField(blank=True, default=0)
-    la = models.CharField(blank=True, default="en", max_length=2)
-    ac = models.IntegerField(blank=True, default=0)
-    un = models.JSONField(blank=True, default=list)
-    d = models.CharField(blank=True)
-    sch = models.JSONField(blank=True, default=dict)
-    ctrl_sch = models.JSONField(blank=True, default=dict)
-    trg = models.JSONField(blank=True, default=dict)
-    act = models.JSONField(blank=True, default=list)
-    ct = models.IntegerField(blank=True, default=0)
-    mt = models.IntegerField(blank=True, default=0)
-
-    class Meta:
-        verbose_name = _("wialon notification")
-        verbose_name_plural = _("wialon notifications")
-
-    def __str__(self) -> str:
-        return f"{self.n or self.wialon_id}"
-
-    def pull(self, session: WialonSession) -> list[dict[str, typing.Any]]:
-        return session.wialon_api.resource_get_notification_data(
-            **{"itemId": self.resource.pk, "col": [self.wialon_id]}
-        )
-
-    def sync(self, data: dict[str, typing.Any]) -> None:
-        self.n = data["n"]
-        self.txt = data["txt"]
-        self.ta = data["ta"]
-        self.td = data["td"]
-        self.ma = data["ma"]
-        self.mmtd = data["mmtd"]
-        self.cdt = data["cdt"]
-        self.mast = data["mast"]
-        self.mpst = data["mpst"]
-        self.cp = data["cp"]
-        self.fl = data["fl"]
-        self.tz = data["tz"]
-        self.la = data["la"]
-        self.ac = data["ac"]
-        self.d = data["d"]
-        self.sch = data["sch"]
-        self.ctrl_sch = data["ctrl_sch"]
-        self.un = data["un"]
-        self.act = data["act"]
-        self.trg = data["trg"]
-        self.ct = data["ct"]
-        self.mt = data["mt"]
-
-
-class WialonObject(models.Model):
-    id = models.PositiveBigIntegerField(primary_key=True)
-    nm = models.CharField(blank=True, max_length=50)
-    mu = models.IntegerField(blank=True, default=0)
-    uacl = models.IntegerField(blank=True, default=0)
-
-    class Meta:
-        abstract = True
-
-    def __str__(self) -> str:
-        return f"{self.nm or self.id}"
-
-    def pull(
-        self, session: WialonSession, flags: int = 1
-    ) -> dict[str, typing.Any]:
-        return session.wialon_api.core_search_item(
-            **{"id": self.pk, "flags": flags}
-        )
-
-    def sync(self, data: dict[str, typing.Any]) -> None:
-        self.nm = data["item"]["nm"]
-        self.mu = data["item"]["mu"]
-        self.uacl = data["item"]["uacl"]
-
-
-class WialonResource(WialonObject):
-    class Meta:
-        verbose_name = _("wialon resource")
-        verbose_name_plural = _("wialon resources")
-
-    def get_notifications(
-        self, session: WialonSession, ids: Sequence[str] | None = None
-    ) -> list[dict[str, typing.Any]]:
-        params = {"itemId": self.pk}
-        if ids is not None:
-            params["col"] = ids
-        return session.wialon_api.resource_get_notification_data(**params)
-
-
-class WialonUnit(WialonObject):
-    class Meta:
-        verbose_name = _("wialon unit")
-        verbose_name_plural = _("wialon units")
-
-
-class WialonUnitGroup(WialonObject):
-    class Meta:
-        verbose_name = _("wialon unit group")
-        verbose_name_plural = _("wialon unit groups")
+    @cached_property
+    def has_token(self) -> bool:
+        return self.token is not None

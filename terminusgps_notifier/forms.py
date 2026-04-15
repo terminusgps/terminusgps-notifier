@@ -1,6 +1,9 @@
 from django import forms
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from terminusgps.wialon.session import WialonSession
+
+from terminusgps_notifier.models import TerminusGPSNotifierCustomer
 
 
 class WialonNotificationTrigger(models.TextChoices):
@@ -75,33 +78,47 @@ class NotificationDispatchForm(forms.Form):
     date_format = forms.CharField(required=False, initial="%Y-%m-%d %H:%M:%S")
 
 
-class WialonNotificationScheduleForm(forms.Form):
-    f1 = forms.IntegerField(min_value=0)
-    f2 = forms.IntegerField(min_value=0)
-    t1 = forms.IntegerField(min_value=0)
-    t2 = forms.IntegerField(min_value=0)
-    m = forms.IntegerField(min_value=0)
-    y = forms.IntegerField(min_value=0)
-    w = forms.IntegerField(min_value=0)
+class WialonTokenForm(forms.Form):
+    access_token = forms.CharField()
 
 
-class WialonNotificationTriggerForm(forms.Form):
-    t = forms.ChoiceField(choices=WialonNotificationTrigger.choices)
-    p = forms.JSONField(required=False)
+class WialonResourceSelectForm(forms.Form):
+    resource = forms.ChoiceField(choices=[])
 
-    def clean(self):
-        cleaned_data = super().clean()
-        if cleaned_data:
-            if cleaned_data["p"] is None:
-                cleaned_data["p"] = {}
+    def __init__(
+        self,
+        customer: TerminusGPSNotifierCustomer | None = None,
+        *args,
+        **kwargs,
+    ) -> None:
+        if customer is None:
+            raise ValueError("'customer' is required")
+        if customer.token is None:
+            raise ValueError("customer token is required")
+        choices = self.get_resources_from_wialon(customer)
+        self.base_fields["resource"].choices = choices
+        super().__init__(*args, **kwargs)
 
-
-class WialonNotificationActionForm(forms.Form):
-    t = forms.ChoiceField(choices=WialonNotificationAction.choices)
-    p = forms.JSONField(required=False)
-
-    def clean(self):
-        cleaned_data = super().clean()
-        if cleaned_data:
-            if cleaned_data["p"] is None:
-                cleaned_data["p"] = {}
+    @staticmethod
+    def get_resources_from_wialon(
+        customer: TerminusGPSNotifierCustomer,
+    ) -> list[tuple]:
+        with WialonSession(token=customer.token) as session:
+            response = session.wialon_api.core_search_items(
+                **{
+                    "spec": {
+                        "itemsType": "avl_resource",
+                        "propName": "sys_name",
+                        "propValueMask": "*",
+                        "sortType": "sys_name",
+                        "propType": "property",
+                    },
+                    "force": 0,
+                    "from": 0,
+                    "to": 0,
+                    "flags": 1,
+                }
+            )
+            return [
+                (int(item["id"]), item["nm"]) for item in response["items"]
+            ]

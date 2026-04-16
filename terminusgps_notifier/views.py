@@ -1,22 +1,23 @@
 import asyncio
 import logging
-import typing
 import warnings
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, HttpRequest, HttpResponse
+from django.shortcuts import render
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import TemplateView, View
-from shapeshifter.views import MultiFormView
+from django.views.generic import FormView, RedirectView, TemplateView, View
 from terminusgps.mixins import HtmxTemplateResponseMixin
-from terminusgps.wialon.session import WialonAPIError, WialonSession
+from terminusgps.wialon.session import WialonSession
 
 from terminusgps_notifier import forms
 from terminusgps_notifier.dispatchers import NotificationDispatcher
+from terminusgps_notifier.mixins import CustomerContextMixin
 from terminusgps_notifier.models import TerminusGPSNotifierCustomer
 from terminusgps_notifier.validators import validate_e164_phone_number
 from terminusgps_notifier.wialon import get_phone_numbers
@@ -24,7 +25,9 @@ from terminusgps_notifier.wialon import get_phone_numbers
 logger = logging.getLogger(__name__)
 
 
-class HtmxTemplateView(HtmxTemplateResponseMixin, TemplateView):
+class HtmxTemplateView(
+    HtmxTemplateResponseMixin, CustomerContextMixin, TemplateView
+):
     """A view which renders a partial template on htmx request."""
 
     content_type = "text/html"
@@ -32,7 +35,10 @@ class HtmxTemplateView(HtmxTemplateResponseMixin, TemplateView):
 
 
 class ProtectedHtmxTemplateView(
-    LoginRequiredMixin, HtmxTemplateResponseMixin, TemplateView
+    LoginRequiredMixin,
+    HtmxTemplateResponseMixin,
+    CustomerContextMixin,
+    TemplateView,
 ):
     """A view which renders a partial template on htmx request, behind authentication."""
 
@@ -157,98 +163,39 @@ class NotificationDispatchView(View):
         return await self.send_notifications(phones, dispatchers)
 
 
-class WialonCallbackView(HtmxTemplateResponseMixin, TemplateView):
-    content_type = "text/html"
-    http_method_names = ["get"]
+async def wialon_login(request: HttpRequest) -> HttpResponse:
+    return RedirectView.as_view(
+        url="https://hosting.terminusgps.com/login.html",
+        permanent=True,
+        query_string=True,
+    )(request)
 
-    async def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        form = forms.WialonTokenForm(request.GET)
-        if not form.is_valid():
-            return HttpResponse(status=406)
+
+@never_cache
+async def wialon_callback(request: HttpRequest) -> HttpResponse:
+    token_saved = False
+    form = forms.WialonTokenForm(request.GET)
+    if form.is_valid():
         customer, _ = await TerminusGPSNotifierCustomer.objects.aget_or_create(
             user=request.user
         )
         customer.token = form.cleaned_data["access_token"]
         await customer.asave(update_fields=["token"])
-        return super().get(request, *args, **kwargs)
+        token_saved = True
+    template_name = "terminusgps_notifier/wialon_callback.html"
+    return render(request, template_name, context={"token_saved": token_saved})
 
 
-class WialonNotificationCreateView(HtmxTemplateResponseMixin, MultiFormView):
+class WialonNotificationCreateView(
+    HtmxTemplateResponseMixin, CustomerContextMixin, FormView
+):
     content_type = "text/html"
+    form_class = forms.WialonNotificationCreateForm
     http_method_names = ["get", "post"]
-    form_classes = (
-        forms.WialonResourceSelectForm,
-        forms.WialonUnitSelectForm,
-        forms.WialonUnitGroupSelectForm,
-    )
+    template_name = "terminusgps_notifier/wialonnotification_create.html"
 
-    def get_form_kwargs(self, form_class=None) -> dict:
-        kwargs = super().get_form_kwargs(form_class=form_class)
-        kwargs["user"] = self.request.user
-        return kwargs
-
-
-class WialonNotificationUpdateView(HtmxTemplateResponseMixin, MultiFormView):
-    content_type = "text/html"
-    http_method_names = ["get", "post"]
-
-
-class WialonNotificationListView(HtmxTemplateResponseMixin, TemplateView):
-    content_type = "text/html"
-    http_method_names = ["get"]
-    template_name = "terminusgps_notifier/wialonnotification_list.html"
-
-    def get_resources(self) -> list[dict]:
-        try:
-            customer = TerminusGPSNotifierCustomer.objects.get(
-                user=self.request.user
-            )
-        except TerminusGPSNotifierCustomer.DoesNotExist:
-            return []
-        try:
-            with WialonSession(token=customer.token) as session:
-                response = session.wialon_api.core_search_items(
-                    **{
-                        "spec": {
-                            "itemsType": "avl_resource",
-                            "propName": "sys_name",
-                            "propValueMask": "*",
-                            "propType": "property",
-                            "sortType": "sys_name",
-                        },
-                        "force": 0,
-                        "from": 0,
-                        "to": 0,
-                        "flags": 1025,
-                    }
-                )
-                return response["items"]
-        except WialonAPIError:
-            # TODO: Error handling
-            return []
-
-    def get_context_data(self, **kwargs) -> dict[str, typing.Any]:
-        context = super().get_context_data(**kwargs)
-        context["resource_list"] = self.get_resources()
-        return context
-
-
-class CustomerMessageCountView(HtmxTemplateResponseMixin, TemplateView):
-    content_type = "text/html"
-    http_method_names = ["get"]
-
-    def get_messages_count_and_limit(self) -> tuple[int | None, int | None]:
-        try:
-            customer = TerminusGPSNotifierCustomer.objects.get(
-                user=self.request.user
-            )
-            return (customer.messages_count, customer.messages_limit)
-        except TerminusGPSNotifierCustomer.DoesNotExist:
-            return (None, None)
-
-    def get_context_data(self, **kwargs) -> dict[str, typing.Any]:
-        value, max = self.get_messages_count_and_limit()
-        context = super().get_context_data(**kwargs)
-        context["value"] = value
-        context["max"] = max
-        return context
+    def get_form(self, form_class=None) -> forms.WialonNotificationCreateForm:
+        form = super().get_form(form_class=form_class)
+        form.fields["resource"].choices = []
+        form.fields["units"].choices = []
+        return form

@@ -1,8 +1,19 @@
 {% extends "terminusgps_notifier/layout.html" %}
-{% block title %}Wialon Account Connected Successfully!{% endblock title %}
+{% block title %}
+{% if token_saved %}
+Wialon Account Connection Success
+{% else %}
+Wialon Account Connection Fail
+{% endif %}
+{% endblock title %}
 {% partialdef main %}
+{% if token_saved %}
 <p>Your Wialon account was successfully connected!</p>
 <p>You may safely close this page at any time.</p>
+{% else %}
+<p>Whoops, something went wrong trying to connect your Wialon account.</p>
+<a class="underline text-blue-500 hover:text-blue-300" href="{% url 'terminusgps_notifier:wialon login' %}{% querystring access_type=-1 activation_time=0 redirect_uri='http://127.0.0.1:8000/wialon/callback/' %}">Click here to try again.</a>
+{% endif %}
 {% endpartialdef main %}
 {% block content %}
 {% partial main %}

@@ -4,7 +4,7 @@
 <div class="flex flex-col gap-8">
     <div class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
         <label for="id_messages_count">Message Count</label>
-        <div class="flex gap-2 items-center" hx-get="{% url 'terminusgps_notifier:messages count' %}" hx-target="this" hx-trigger="load once, every 3s">
+        <div class="flex gap-2 items-center">
             <meter class="w-full" name="messages_count" id="id_messages_count" min="0" value="{{ customer.messages_count }}" max="{{ customer.messages_limit }}">{{ customer.messages_count }}/{{ customer.messages_limit }}</meter>
             <p>{{ customer.messages_count }}/{{ customer.messages_limit }}</p>
         </div>

@@ -1,7 +1,7 @@
 from django import forms
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from terminusgps.wialon.session import WialonAPIError, WialonSession
+from terminusgps.wialon.session import WialonSession
 
 from terminusgps_notifier.models import TerminusGPSNotifierCustomer
 
@@ -104,64 +104,24 @@ class NotificationDispatchForm(forms.Form):
 
 
 class WialonTokenForm(forms.Form):
-    access_token = forms.CharField()
+    access_token = forms.CharField(min_length=72, max_length=72)
 
 
-class WialonResourceSelectForm(forms.Form):
+class WialonNotificationCreateForm(forms.Form):
     resource = forms.ChoiceField(choices=[])
-
-    def __init__(self, **kwargs) -> None:
-        try:
-            user = kwargs.pop("user")
-        except KeyError:
-            raise ValueError("'user' kwarg is required")
-        try:
-            items = get_items_from_wialon(
-                customer=user.notifier_customer, items_type="avl_resource"
-            )
-            choices = [(int(item["id"]), str(item["nm"])) for item in items]
-        except WialonAPIError as error:
-            print(error)
-            choices = []
-        self.base_fields["resource"].choices = choices
-        super().__init__(**kwargs)
-
-
-class WialonUnitSelectForm(forms.Form):
     units = forms.MultipleChoiceField(choices=[])
+    message = forms.CharField(max_length=256)
+    method = forms.ChoiceField(
+        choices=[("sms", _("SMS")), ("voice", _("Voice"))]
+    )
+    trigger = forms.JSONField()
+    actions = forms.JSONField()
 
-    def __init__(self, **kwargs) -> None:
-        try:
-            user = kwargs.pop("user")
-        except KeyError:
-            raise ValueError("'user' kwarg is required")
-        try:
-            items = get_items_from_wialon(
-                customer=user.notifier_customer, items_type="avl_unit"
-            )
-            choices = [(int(item["id"]), str(item["nm"])) for item in items]
-        except WialonAPIError as error:
-            print(error)
-            choices = []
-        self.base_fields["units"].choices = choices
-        super().__init__(**kwargs)
+    def get_resource_choices(self) -> list[tuple]:
+        return []
 
+    def get_unit_choices(self) -> list[tuple]:
+        return []
 
-class WialonUnitGroupSelectForm(forms.Form):
-    unit_groups = forms.MultipleChoiceField(choices=[])
-
-    def __init__(self, **kwargs) -> None:
-        try:
-            user = kwargs.pop("user")
-        except KeyError:
-            raise ValueError("'user' kwarg is required")
-        try:
-            items = get_items_from_wialon(
-                customer=user.notifier_customer, items_type="avl_unit_group"
-            )
-            choices = [(int(item["id"]), str(item["nm"])) for item in items]
-        except WialonAPIError as error:
-            print(error)
-            choices = []
-        self.base_fields["unit_groups"].choices = choices
-        super().__init__(**kwargs)
+    def get_unit_group_choices(self) -> list[tuple]:
+        return []

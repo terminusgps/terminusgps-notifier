@@ -1,10 +1,19 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractBaseUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from encrypted_field import EncryptedField
 
 
-class TerminusGPSNotifierCustomer(models.Model):
+class CustomerQuerySet(models.QuerySet):
+    async def afrom_user(self, user: AbstractBaseUser):
+        return await self.aget(user=user)
+
+    def from_user(self, user: AbstractBaseUser):
+        return self.get(user=user)
+
+
+class Customer(models.Model):
     user = models.OneToOneField(
         get_user_model(),
         on_delete=models.CASCADE,
@@ -21,6 +30,7 @@ class TerminusGPSNotifierCustomer(models.Model):
         on_delete=models.CASCADE,
         related_name="notifier_customer",
     )
+    objects = CustomerQuerySet.as_manager()
 
     class Meta:
         verbose_name = _("customer")

@@ -3,14 +3,11 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from terminusgps.wialon.session import WialonSession
 
-from terminusgps_notifier.models import TerminusGPSNotifierCustomer
+from terminusgps_notifier.models import Customer
 
 
 def get_items_from_wialon(
-    customer: TerminusGPSNotifierCustomer,
-    items_type: str,
-    flags: int = 1,
-    force: bool = False,
+    customer: Customer, items_type: str, flags: int = 1, force: bool = False
 ) -> list:
     with WialonSession(token=customer.token) as session:
         response = session.wialon_api.core_search_items(

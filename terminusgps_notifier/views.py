@@ -1,33 +1,57 @@
 import asyncio
+import functools
 import logging
 import warnings
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import Http404, HttpRequest, HttpResponse
+from django.http import (
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseRedirect,
+)
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import FormView, RedirectView, TemplateView, View
+from django.views.generic import RedirectView, TemplateView, View
 from terminusgps.mixins import HtmxTemplateResponseMixin
-from terminusgps.wialon.session import WialonSession
+from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import forms
 from terminusgps_notifier.dispatchers import NotificationDispatcher
-from terminusgps_notifier.mixins import CustomerContextMixin
-from terminusgps_notifier.models import TerminusGPSNotifierCustomer
+from terminusgps_notifier.models import Customer
 from terminusgps_notifier.validators import validate_e164_phone_number
 from terminusgps_notifier.wialon import get_phone_numbers
 
 logger = logging.getLogger(__name__)
 
 
-class HtmxTemplateView(
-    HtmxTemplateResponseMixin, CustomerContextMixin, TemplateView
-):
+def htmx_template(template_name: str):
+    def request_is_htmx(request: HttpRequest) -> bool:
+        hx_request = bool(request.headers.get("HX-Request"))
+        hx_boosted = bool(request.headers.get("HX-Boosted"))
+        return hx_request and not hx_boosted
+
+    def decorator(view_func):
+        @functools.wraps(view_func)
+        async def wrapper(request, *args, **kwargs):
+            if request_is_htmx(request):
+                kwargs["template_name"] = template_name + "#main"
+            else:
+                kwargs["template_name"] = template_name
+            return await view_func(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+class HtmxTemplateView(HtmxTemplateResponseMixin, TemplateView):
     """A view which renders a partial template on htmx request."""
 
     content_type = "text/html"
@@ -35,10 +59,7 @@ class HtmxTemplateView(
 
 
 class ProtectedHtmxTemplateView(
-    LoginRequiredMixin,
-    HtmxTemplateResponseMixin,
-    CustomerContextMixin,
-    TemplateView,
+    LoginRequiredMixin, HtmxTemplateResponseMixin, TemplateView
 ):
     """A view which renders a partial template on htmx request, behind authentication."""
 
@@ -84,9 +105,7 @@ class NotificationDispatchView(View):
     ) -> list[NotificationDispatcher]:
         return [dispatcher(form) for dispatcher in self.dispatcher_classes]
 
-    async def send_notifications(
-        self, phones: list[str], dispatchers: list[NotificationDispatcher]
-    ) -> HttpResponse:
+    async def send_notifications(self, phones, dispatchers) -> HttpResponse:
         for dispatcher in dispatchers:
             try:
                 tasks = [
@@ -172,30 +191,105 @@ async def wialon_login(request: HttpRequest) -> HttpResponse:
 
 
 @never_cache
-async def wialon_callback(request: HttpRequest) -> HttpResponse:
+@htmx_template("terminusgps_notifier/wialon_callback.html")
+async def wialon_callback(request: HttpRequest, **kwargs) -> HttpResponse:
     token_saved = False
-    form = forms.WialonTokenForm(request.GET)
-    if form.is_valid():
-        customer, _ = await TerminusGPSNotifierCustomer.objects.aget_or_create(
-            user=request.user
-        )
-        customer.token = form.cleaned_data["access_token"]
+    access_token = request.GET.get("access_token")
+    if access_token is not None:
+        customer = Customer.objects.afrom_user(request.user)
+        customer.token = access_token
         await customer.asave(update_fields=["token"])
         token_saved = True
-    template_name = "terminusgps_notifier/wialon_callback.html"
-    return render(request, template_name, context={"token_saved": token_saved})
+    return render(
+        request, kwargs["template_name"], context={"token_saved": token_saved}
+    )
 
 
-class WialonNotificationCreateView(
-    HtmxTemplateResponseMixin, CustomerContextMixin, FormView
-):
-    content_type = "text/html"
-    form_class = forms.WialonNotificationCreateForm
-    http_method_names = ["get", "post"]
-    template_name = "terminusgps_notifier/wialonnotification_create.html"
+@htmx_template("terminusgps_notifier/wialonnotification_create.html")
+async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
+    if request.method == "POST":
+        api_kwargs = {
+            "itemId": request.POST.get("resource"),
+            "id": 0,
+            "callMode": "create",
+            "n": request.POST.get("name"),
+        }
+        print(f"{api_kwargs = }")
+    return render(request, kwargs["template_name"], context={})
 
-    def get_form(self, form_class=None) -> forms.WialonNotificationCreateForm:
-        form = super().get_form(form_class=form_class)
-        form.fields["resource"].choices = []
-        form.fields["units"].choices = []
-        return form
+
+@htmx_template("terminusgps_notifier/wialonresource_select.html")
+async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
+    async def get_wialon_response(request: HttpRequest) -> dict:
+        user = await request.auser()
+        customer = await Customer.objects.afrom_user(user=user)
+        with WialonSession(token=customer.token) as session:
+            return session.wialon_api.core_search_items(
+                **{
+                    "spec": {
+                        "itemsType": "avl_resource",
+                        "propName": "sys_name",
+                        "propValueMask": "*",
+                        "propType": "property",
+                        "sortType": "sys_name",
+                    },
+                    "force": 0,
+                    "from": 0,
+                    "to": 0,
+                    "flags": 1,
+                }
+            )
+
+    try:
+        response = await get_wialon_response(request)
+        choices = response["items"]
+    except WialonAPIError as error:
+        response = error
+        choices = []
+    if request.POST:
+        return HttpResponseRedirect(
+            reverse(
+                "terminusgps_notifier:select units",
+                kwargs={"resource_id": request.POST["resource_id"]},
+            )
+        )
+    return render(
+        request, kwargs["template_name"], context={"choices": choices}
+    )
+
+
+@htmx_template("terminusgps_notifier/wialonunit_select.html")
+async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
+    async def get_wialon_response(request: HttpRequest) -> dict:
+        user = await request.auser()
+        customer = await Customer.objects.aget(user=user)
+        with WialonSession(token=customer.token) as session:
+            return session.wialon_api.core_search_items(
+                **{
+                    "spec": {
+                        "itemsType": request.POST.get(
+                            "items_type", "avl_unit"
+                        ),
+                        "propName": "sys_name",
+                        "propValueMask": "*",
+                        "propType": "property",
+                        "sortType": "sys_name",
+                    },
+                    "force": 0,
+                    "from": 0,
+                    "to": 0,
+                    "flags": 1,
+                }
+            )
+
+    return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/wialonaction_select.html")
+async def select_action(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/wialontrigger_select.html")
+async def select_trigger(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(request, kwargs["template_name"], context={})

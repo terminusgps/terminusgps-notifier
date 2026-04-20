@@ -24,6 +24,58 @@ class WialonNotificationTrigger(models.TextChoices):
     HEALTH = "health_check", _("Health check")
 
 
+class WialonSensorType(models.TextChoices):
+    ANY = "", _("Any")
+    # Mileage
+    MILEAGE = "mileage", _("Mileage sensor")
+    ODOMETER = "odometer", _("Relative odometer")
+    # Digital
+    IGNITION = "engine operation", _("Engine ignition sensor")
+    ALARM = "alarm trigger", _("Alarm trigger")
+    PRIVATE = "private mode", _("Private mode")
+    RTMOTION = "real-time motion sensor", _("Real-time motion sensor")
+    DIGITAL = "digital", _("Custom digital sensor")
+    # Gauges
+    VOLTAGE = "voltage", _("Voltage sensor")
+    WEIGHT = "weight", _("Weight sensor")
+    ACCELEROMETER = "accelerometer", _("Accelerometer")
+    TEMPERATURE = "temperature", _("Temperature sensor")
+
+    TEMPERATURE_COEF = "temperature coefficient", _("Temperature coefficient")
+    # Engine
+    ENGINE_RPM = "engine rpm", _("Engine revolution sensor")
+    ENGINE_EFF = "engine efficiency", _("Engine efficiency sensor")
+    ENGINE_HOURS_ABS = "engine hours", _("Absolute engine hours")
+    ENGINE_HOURS_REL = "relative engine hours", _("Relative engine hours")
+    # Fuel
+    FUEL_CONS_IMP = (
+        "impulse fuel consumption",
+        _("Impulse fuel consumption sensor"),
+    )
+    FUEL_CONS_ABS = (
+        "absolute fuel consumption",
+        _("Absolute fuel consumption sensor"),
+    )
+    FUEL_CONS_INT = (
+        "instant fuel consumption",
+        _("Instant fuel consumption sensor"),
+    )
+    FUEL_LEVEL = "fuel level", _("Fuel level sensor")
+    FUEL_LEVEL_IMP = (
+        "fuel level impulse sensor",
+        _("Impulse fuel level sensor"),
+    )
+    BATTERY_LEVEL = "battery level", _("Battery level sensor")
+    # Other
+    COUNTER = "counter", _("Counter sensor")
+
+    CUSTOM = "custom", _("Custom sensor")
+    DRIVER = "driver", _("Driver assignment")
+
+    TRAILER = "trailer", _("Trailer assignment")
+    TAG = "tag", _("Passenger sensor")
+
+
 class NotificationDispatchForm(forms.Form):
     """
     A form for dispatching Wialon unit notifications.
@@ -54,19 +106,51 @@ class NotificationDispatchForm(forms.Form):
 
 
 class GeofenceTriggerForm(forms.Form):
-    sensor_type = forms.CharField()
-    sensor_name_mask = forms.CharField()
+    sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
+    sensor_name_mask = forms.CharField(min_length=1)
     lower_bound = forms.FloatField()
     upper_bound = forms.FloatField()
-    prev_msg_diff = forms.TypedChoiceField()
-    merge = forms.TypedChoiceField()
-    reversed = forms.TypedChoiceField()
+    prev_msg_diff = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Form boundaries for current value")),
+            ("1", _("Form boundaries for previous value")),
+        ],
+    )
+    merge = (
+        forms.TypedChoiceField(
+            coerce=int,
+            choices=[
+                ("0", _("Calculate separately")),
+                ("1", _("Sum up values")),
+            ],
+        ),
+    )
+    reversed = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Trigger within range")),
+            ("1", _("Trigger outside range")),
+        ],
+    )
     geozone_ids = forms.CharField()
-    type = forms.TypedChoiceField()
-    min_speed = forms.IntegerField()
-    max_speed = forms.IntegerField()
-    include_lbs = forms.TypedChoiceField()
-    lo = forms.ChoiceField()
+    type = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Trigger on geofence entry")),
+            ("1", _("Trigger on geofence exit")),
+        ],
+    )
+    min_speed = forms.IntegerField(min_value=0, max_value=255)
+    max_speed = forms.IntegerField(min_value=0, max_value=255)
+    include_lbs = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Do not process LBS messages")),
+            ("1", _("Process LBS messages")),
+        ],
+    )
+    lo = forms.ChoiceField(choices=[("AND", _("AND")), ("OR", _("OR"))])
 
 
 class AddressTriggerForm(forms.Form):

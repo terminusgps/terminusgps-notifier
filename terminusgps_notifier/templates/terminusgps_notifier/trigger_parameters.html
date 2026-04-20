@@ -1,0 +1,10 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% partialdef main %}
+<form id="id_trigger_parameters" name="trigger_parameters">
+    {% csrf_token %}
+    {{ form }}
+</form>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

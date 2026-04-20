@@ -188,7 +188,7 @@ async def wialon_callback(request: HttpRequest, **kwargs) -> HttpResponse:
         )
 
 
-@htmx_template("terminusgps_notifier/wialonnotification_create.html")
+@htmx_template("terminusgps_notifier/create_notification.html")
 async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
     async def get_resources_from_wialon(request: HttpRequest) -> list[dict]:
         user = await request.auser()
@@ -245,8 +245,23 @@ async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
 
 
 @htmx_template("terminusgps_notifier/trigger_parameters.html")
-def trigger_parameters(request: HttpRequest, **kwargs) -> HttpResponse:
-    return render(request, kwargs["template_name"], context={})
+async def trigger_parameters(request: HttpRequest, **kwargs) -> HttpResponse:
+    async def get_trigger_form(trigger: str | None = None):
+        if trigger is None:
+            return
+        forms_map = forms.TRIGGER_FORMS_MAP
+        if trigger not in forms_map:
+            return
+        return forms_map[trigger]
+
+    if request.method == "GET":
+        trigger = request.GET.get("trigger")
+        form = await get_trigger_form(trigger)
+        return render(request, kwargs["template_name"], context={"form": form})
+    elif request.method == "POST":
+        trigger = request.POST.get("trigger")
+        form = await get_trigger_form(trigger)
+        return render(request, kwargs["template_name"], context={"form": form})
 
 
 @htmx_template("terminusgps_notifier/home.html")

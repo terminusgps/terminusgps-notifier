@@ -2,9 +2,9 @@
 {% partialdef main %}
 <form class="@container flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification' %}" hx-target="this" hx-swap="outerHTML" hx-include="*">
     {% csrf_token %}
-    <div class="flex items-center gap-4">
-        <div class="flex flex-col gap-2">
-            <select class="peer p-2 border rounded bg-stone-50" id="id_resource" name="resource" hx-get="{% url 'terminusgps_notifier:create notification' %}" hx-target="#id_units" hx-select="#id_units" hx-indicator="#unit-indicator" hx-trigger="revealed, change" aria-described-by="#id_resource_helptext">
+    <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
+        <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_resource" name="resource" hx-get="{% url 'terminusgps_notifier:create notification' %}" hx-target="#id_units" hx-select="#id_units" hx-indicator="#unit-indicator" hx-trigger="revealed, change" aria-described-by="#id_resource_helptext">
                 {% for resource in resources %}
                 <option value="{{ resource.id }}">{{ resource.nm }}</option>
                 {% endfor %}
@@ -14,8 +14,8 @@
                 <p>Select a Wialon resource from the list.</p>
             </div>
         </div>
-        <div class="flex flex-col gap-2">
-            <select class="peer p-2 border rounded bg-stone-50" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:create notification' %}" hx-target="#id_units" hx-select="#id_units" hx-indicator="#unit-indicator" aria-described-by="#id_items_type_helptext">
+        <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:create notification' %}" hx-target="#id_units" hx-select="#id_units" hx-indicator="#unit-indicator" aria-described-by="#id_items_type_helptext">
                 <option value="avl_unit">Units</option>
                 <option value="avl_unit_group">Unit Groups</option>
             </select>
@@ -50,25 +50,23 @@
         </select>
         <label class="order-first font-semibold" for="id_trigger">Trigger</label>
     </div>
-    <div class="flex flex-col gap-2">
-        <input class="peer" type="text" id="id_trigger_parameters" name="trigger_parameters">
-        <label class="order-first font-semibold" for="id_trigger_parameters">Trigger Parameters</label>
-    </div>
-    <div class="flex flex-col gap-2">
-        <input class="peer p-2 border rounded bg-stone-50" type="text" id="id_name" name="name" placeholder="New Notification">
-        <label class="order-first font-semibold" for="id_name">Notification Name</label>
-        <div id="id_name_helptext">
-            <p>Provide a memorable notification name.</p>
+    <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
+        <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <input class="peer p-2 border rounded bg-stone-50 w-full" type="text" id="id_name" name="name" placeholder="New Notification">
+            <label class="order-first font-semibold" for="id_name">Notification Name</label>
+            <div id="id_name_helptext">
+                <p>Provide a memorable notification name.</p>
+            </div>
         </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <select class="peer p-2 border rounded bg-stone-50" id="id_method" name="method">
-            <option value="sms" selected>SMS</option>
-            <option value="voice">Voice</option>
-        </select>
-        <label class="order-first font-semibold" for="id_method">Notification Method</label>
-        <div id="id_method_helptext">
-            <p>Select whether to send a notification via text (SMS) or text-to-speech call (Voice).</p>
+        <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_method" name="method">
+                <option value="sms" selected>SMS</option>
+                <option value="voice">Voice</option>
+            </select>
+            <label class="order-first font-semibold" for="id_method">Notification Method</label>
+            <div id="id_method_helptext">
+                <p>Select whether to send a notification via text (SMS) or text-to-speech call (Voice).</p>
+            </div>
         </div>
     </div>
     <div class="flex flex-col gap-2">

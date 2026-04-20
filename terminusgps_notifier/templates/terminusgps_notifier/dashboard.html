@@ -13,7 +13,7 @@
             <a class="py-2 px-4 border border-terminus-red-600 rounded bg-terminus-red-800 text-white text-center ease-in-out duration-300 transition-colors hover:bg-terminus-red-400" href="{% url 'terminusgps_notifier:wialon login' %}{% querystring access_type=-1 activation_time=0 redirect_uri='http://127.0.0.1:8000/v3/wialon/callback/' %}">Connect Wialon Account</a>
         </div>
         <div class="flex flex-col gap-4">
-            <p>You are <span class="font-semibold">{{ customer.subscription|yesno:'subscribed, not subscribed'  }}</span>.</p>
+            <p>You are <span class="font-semibold"></span>.</p>
             <a class="py-2 px-4 border border-terminus-red-600 rounded bg-terminus-red-800 text-white text-center ease-in-out duration-300 transition-colors hover:bg-terminus-red-400" href="{% url 'terminusgps_payments:create subscription' %}">Subscribe</a>
         </div>
     </div>

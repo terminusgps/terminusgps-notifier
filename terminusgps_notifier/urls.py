@@ -11,6 +11,11 @@ urlpatterns = [
         views.create_notification,
         name="create notification",
     ),
+    path(
+        "notifications/triggers/",
+        views.trigger_parameters,
+        name="trigger parameters",
+    ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),
     path("v3/health/", views.HealthCheckView.as_view(), name="health check"),

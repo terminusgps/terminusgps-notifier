@@ -256,4 +256,10 @@ async def home(request: HttpRequest, **kwargs) -> HttpResponse:
 
 @htmx_template("terminusgps_notifier/dashboard.html")
 async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
-    return render(request, kwargs["template_name"], context={})
+    try:
+        customer = await Customer.objects.afrom_user(request.user)
+    except Customer.DoesNotExist:
+        customer = None
+    return render(
+        request, kwargs["template_name"], context={"customer": customer}
+    )

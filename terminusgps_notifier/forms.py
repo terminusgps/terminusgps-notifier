@@ -1,31 +1,6 @@
 from django import forms
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from terminusgps.wialon.session import WialonSession
-
-from terminusgps_notifier.models import Customer
-
-
-def get_items_from_wialon(
-    customer: Customer, items_type: str, flags: int = 1, force: bool = False
-) -> list:
-    with WialonSession(token=customer.token) as session:
-        response = session.wialon_api.core_search_items(
-            **{
-                "spec": {
-                    "itemsType": items_type,
-                    "propName": "sys_name",
-                    "propValueMask": "*",
-                    "propType": "property",
-                    "sortType": "sys_name",
-                },
-                "force": int(force),
-                "from": 0,
-                "to": 0,
-                "flags": flags,
-            }
-        )
-        return response["items"]
 
 
 class WialonNotificationTrigger(models.TextChoices):
@@ -47,28 +22,6 @@ class WialonNotificationTrigger(models.TextChoices):
     FUEL_FILL = "fuel_filling", _("Fuel filling")
     FUEL_DRAIN = "fuel_theft", _("Fuel draining")
     HEALTH = "health_check", _("Health check")
-    COMBO = "expression", _("Combination")
-
-
-class WialonNotificationAction(models.TextChoices):
-    EMAIL = "email", _("Email")
-    SMS = "sms", _("SMS")
-    MESSAGE = "message", _("Message")
-    MOBILE = "mobile_apps", _("Send mobile notification")
-    REQUEST = "push_messages", _("Send a request")
-    TELEGRAM = "messenger_messages", _("Send notification to Telegram")
-    EVENT = "event", _("Register event for unit")
-    COMMAND = "exec_cmd", _("Send a command")
-    ACCESS = "user_access", _("Change access to units")
-    SET_COUNTER = "counter", _("Set counter value")
-    STORE_COUNTER = "store_counter", _("Store counter value as a parameter")
-    STATUS = "status", _("Register unit status")
-    GROUPS = "group_manipulation", _("Add or remove units from groups")
-    REPORT = "email_report", _("Send a report by email")
-    RIDE = "route_control", _("Create a ride")
-    SEPARATE_DRIVER = "drivers_reset", _("Separate driver")
-    SEPARATE_TRAILER = "trailers_reset", _("Separate trailer")
-    TASK = "create_task", _("Create task")
 
 
 class NotificationDispatchForm(forms.Form):
@@ -100,25 +53,183 @@ class NotificationDispatchForm(forms.Form):
     date_format = forms.CharField(required=False, initial="%Y-%m-%d %H:%M:%S")
 
 
-class WialonTokenForm(forms.Form):
-    access_token = forms.CharField(min_length=72, max_length=72)
+class GeofenceTriggerForm(forms.Form):
+    sensor_type = forms.CharField()
+    sensor_name_mask = forms.CharField()
+    lower_bound = forms.FloatField()
+    upper_bound = forms.FloatField()
+    prev_msg_diff = forms.TypedChoiceField()
+    merge = forms.TypedChoiceField()
+    reversed = forms.TypedChoiceField()
+    geozone_ids = forms.CharField()
+    type = forms.TypedChoiceField()
+    min_speed = forms.IntegerField()
+    max_speed = forms.IntegerField()
+    include_lbs = forms.TypedChoiceField()
+    lo = forms.ChoiceField()
 
 
-class WialonNotificationCreateForm(forms.Form):
-    resource = forms.ChoiceField(choices=[])
-    units = forms.MultipleChoiceField(choices=[])
-    message = forms.CharField(max_length=256)
-    method = forms.ChoiceField(
-        choices=[("sms", _("SMS")), ("voice", _("Voice"))]
-    )
-    trigger = forms.JSONField()
-    actions = forms.JSONField()
+class AddressTriggerForm(forms.Form):
+    sensor_type = forms.CharField()
+    sensor_name_mask = forms.CharField()
+    lower_bound = forms.FloatField()
+    upper_bound = forms.FloatField()
+    prev_msg_diff = forms.TypedChoiceField()
+    merge = forms.TypedChoiceField()
+    reversed = forms.TypedChoiceField()
+    radius = forms.IntegerField()
+    type = forms.TypedChoiceField()
+    min_speed = forms.IntegerField()
+    max_speed = forms.IntegerField()
+    country = forms.CharField()
+    region = forms.CharField()
+    city = forms.CharField()
+    street = forms.CharField()
+    house = forms.CharField()
+    include_lbs = forms.TypedChoiceField()
 
-    def get_resource_choices(self) -> list[tuple]:
-        return []
 
-    def get_unit_choices(self) -> list[tuple]:
-        return []
+class SpeedTriggerForm(forms.Form):
+    lower_bound = forms.FloatField()
+    max_speed = forms.IntegerField()
+    merge = forms.TypedChoiceField()
+    min_speed = forms.IntegerField()
+    prev_msg_diff = forms.TypedChoiceField()
+    reversed = forms.TypedChoiceField()
+    sensor_name_mask = forms.CharField()
+    sensor_type = forms.CharField()
+    upper_bound = forms.FloatField()
+    driver = forms.TypedChoiceField()
 
-    def get_unit_group_choices(self) -> list[tuple]:
-        return []
+
+class AlarmTriggerForm(forms.Form):
+    pass
+
+
+class DigitalInputTriggerForm(forms.Form):
+    input_index = forms.IntegerField()
+    type = forms.TypedChoiceField()
+
+
+class ParameterInAMessageTriggerForm(forms.Form):
+    kind = forms.TypedChoiceField()
+    lower_bound = forms.FloatField()
+    param = forms.CharField()
+    text_mask = forms.CharField()
+    type = forms.TypedChoiceField()
+    upper_bound = forms.FloatField()
+
+
+class SensorValueTriggerForm(forms.Form):
+    lower_bound = forms.FloatField()
+    merge = forms.TypedChoiceField()
+    prev_msg_diff = forms.TypedChoiceField()
+    sensor_name_mask = forms.CharField()
+    sensor_type = forms.CharField()
+    type = forms.TypedChoiceField()
+    upper_bound = forms.FloatField()
+
+
+class ConnectionLossTriggerForm(forms.Form):
+    time = forms.IntegerField()
+    type = forms.TypedChoiceField()
+    include_lbs = forms.TypedChoiceField()
+    check_restore = forms.TypedChoiceField()
+    geozones_type = forms.TypedChoiceField()
+    geozones_list = forms.CharField()
+
+
+class SMSTriggerForm(forms.Form):
+    mask = forms.CharField()
+
+
+class InterpositionTriggerForm(forms.Form):
+    sensor_name_mask = forms.CharField()
+    sensor_type = forms.CharField()
+    lower_bound = forms.FloatField()
+    upper_bound = forms.FloatField()
+    merge = forms.TypedChoiceField()
+    max_speed = forms.IntegerField()
+    min_speed = forms.IntegerField()
+    reversed = forms.TypedChoiceField()
+    prev_msg_diff = forms.TypedChoiceField()
+    radius = forms.IntegerField()
+    type = forms.TypedChoiceField()
+    unit_guids = forms.CharField()
+    include_lbs = forms.TypedChoiceField()
+    lo = forms.ChoiceField()
+
+
+class ExcessOfMessagesTriggerForm(forms.Form):
+    flags = forms.TypedChoiceField()
+    msgs_limit = forms.IntegerField()
+    time_offset = forms.IntegerField(max_value=86400)
+
+
+class RouteProgressTriggerForm(forms.Form):
+    mask = forms.CharField()
+    round_mask = forms.CharField()
+    schedule_mask = forms.CharField()
+    types = forms.CharField()
+
+
+class DriverTriggerForm(forms.Form):
+    driver_code_mask = forms.CharField()
+    flags = forms.TypedChoiceField()
+
+
+class TrailerTriggerForm(forms.Form):
+    driver_code_mask = forms.CharField()
+    flags = forms.TypedChoiceField()
+
+
+class MaintenanceTriggerForm(forms.Form):
+    days = forms.IntegerField()
+    engine_hours = forms.IntegerField()
+    flags = forms.IntegerField()
+    mask = forms.CharField()
+    mileage = forms.IntegerField()
+    val = forms.TypedChoiceField()
+
+
+class FuelFillingTriggerForm(forms.Form):
+    sensor_name_mask = forms.CharField()
+    geozones_type = forms.TypedChoiceField()
+    geozones_list = forms.CharField()
+    realtime_only = forms.TypedChoiceField()
+
+
+class FuelDrainingTriggerForm(forms.Form):
+    sensor_name_mask = forms.CharField()
+    geozones_type = forms.TypedChoiceField()
+    geozones_list = forms.CharField()
+    realtime_only = forms.TypedChoiceField()
+
+
+class HealthCheckTriggerForm(forms.Form):
+    healthy = forms.TypedChoiceField()
+    unhealthy = forms.TypedChoiceField()
+    needAttention = forms.TypedChoiceField()
+    triggerForEachIncident = forms.TypedChoiceField()
+
+
+TRIGGER_FORMS_MAP = {
+    WialonNotificationTrigger.GEOFENCE: GeofenceTriggerForm,
+    WialonNotificationTrigger.ADDRESS: AddressTriggerForm,
+    WialonNotificationTrigger.SPEED: SpeedTriggerForm,
+    WialonNotificationTrigger.ALARM: AlarmTriggerForm,
+    WialonNotificationTrigger.DIGITAL_INPUT: DigitalInputTriggerForm,
+    WialonNotificationTrigger.PARAMETER: ParameterInAMessageTriggerForm,
+    WialonNotificationTrigger.SENSOR: SensorValueTriggerForm,
+    WialonNotificationTrigger.OUTAGE: ConnectionLossTriggerForm,
+    WialonNotificationTrigger.SMS: SMSTriggerForm,
+    WialonNotificationTrigger.INTERPOSITION: InterpositionTriggerForm,
+    WialonNotificationTrigger.EXCESS: ExcessOfMessagesTriggerForm,
+    WialonNotificationTrigger.ROUTE: RouteProgressTriggerForm,
+    WialonNotificationTrigger.DRIVER: DriverTriggerForm,
+    WialonNotificationTrigger.TRAILER: TrailerTriggerForm,
+    WialonNotificationTrigger.MAINTENANCE: MaintenanceTriggerForm,
+    WialonNotificationTrigger.FUEL_FILL: FuelFillingTriggerForm,
+    WialonNotificationTrigger.FUEL_DRAIN: FuelDrainingTriggerForm,
+    WialonNotificationTrigger.HEALTH: HealthCheckTriggerForm,
+}

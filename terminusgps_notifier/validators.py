@@ -34,3 +34,19 @@ def validate_e164_phone_number(value: str) -> None:
             code="invalid",
             params={"len": len(value.removeprefix("+"))},
         )
+
+
+def validate_wialon_access_token(value: str) -> None:
+    """Raises :py:exec:`~django.core.exceptions.ValidationError` if the Wialon access token was invalid."""
+    if not value:
+        raise ValidationError(
+            _("Invalid access token: '%(value)s'"),
+            code="invalid",
+            params={"value": value},
+        )
+    if len(value) != 72:
+        raise ValidationError(
+            _("Access token must be 72 characters in length, got %(len)s"),
+            code="invalid",
+            params={"len": len(value)},
+        )

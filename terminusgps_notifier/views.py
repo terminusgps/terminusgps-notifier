@@ -4,23 +4,15 @@ import logging
 import warnings
 
 from django.conf import settings
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import (
-    Http404,
-    HttpRequest,
-    HttpResponse,
-    HttpResponseRedirect,
-)
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
-from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import RedirectView, TemplateView, View
-from terminusgps.mixins import HtmxTemplateResponseMixin
-from terminusgps.wialon.session import WialonAPIError, WialonSession
+from django.views.generic import RedirectView, View
+from terminusgps.wialon.session import WialonSession
 
 from terminusgps_notifier import forms
 from terminusgps_notifier.dispatchers import NotificationDispatcher
@@ -37,34 +29,18 @@ def htmx_template(template_name: str):
         hx_boosted = bool(request.headers.get("HX-Boosted"))
         return hx_request and not hx_boosted
 
-    def decorator(view_func):
+    def outer_wrapper(view_func):
         @functools.wraps(view_func)
-        async def wrapper(request, *args, **kwargs):
+        async def inner_wrapper(request, *args, **kwargs):
             if request_is_htmx(request):
                 kwargs["template_name"] = template_name + "#main"
             else:
                 kwargs["template_name"] = template_name
             return await view_func(request, *args, **kwargs)
 
-        return wrapper
+        return inner_wrapper
 
-    return decorator
-
-
-class HtmxTemplateView(HtmxTemplateResponseMixin, TemplateView):
-    """A view which renders a partial template on htmx request."""
-
-    content_type = "text/html"
-    http_method_names = ["get"]
-
-
-class ProtectedHtmxTemplateView(
-    LoginRequiredMixin, HtmxTemplateResponseMixin, TemplateView
-):
-    """A view which renders a partial template on htmx request, behind authentication."""
-
-    content_type = "text/html"
-    http_method_names = ["get"]
+    return outer_wrapper
 
 
 class HealthCheckView(View):
@@ -193,38 +169,32 @@ async def wialon_login(request: HttpRequest) -> HttpResponse:
 @never_cache
 @htmx_template("terminusgps_notifier/wialon_callback.html")
 async def wialon_callback(request: HttpRequest, **kwargs) -> HttpResponse:
-    token_saved = False
-    access_token = request.GET.get("access_token")
-    if access_token is not None:
-        customer = Customer.objects.afrom_user(request.user)
-        customer.token = access_token
-        await customer.asave(update_fields=["token"])
-        token_saved = True
-    return render(
-        request, kwargs["template_name"], context={"token_saved": token_saved}
-    )
+    try:
+        access_token = request.GET.get("access_token")
+        if access_token is not None:
+            customer = await Customer.objects.aget(user=request.user)
+            customer.token = access_token
+            customer.save(update_fields=["access_token"])
+        return render(
+            request,
+            kwargs["template_name"],
+            context={"error": None, "token_saved": True},
+        )
+    except ValidationError as error:
+        return render(
+            request,
+            kwargs["template_name"],
+            context={"error": error, "token_saved": False},
+        )
 
 
 @htmx_template("terminusgps_notifier/wialonnotification_create.html")
 async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
-    if request.method == "POST":
-        api_kwargs = {
-            "itemId": request.POST.get("resource"),
-            "id": 0,
-            "callMode": "create",
-            "n": request.POST.get("name"),
-        }
-        print(f"{api_kwargs = }")
-    return render(request, kwargs["template_name"], context={})
-
-
-@htmx_template("terminusgps_notifier/wialonresource_select.html")
-async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_wialon_response(request: HttpRequest) -> dict:
+    async def get_resources_from_wialon(request: HttpRequest) -> list[dict]:
         user = await request.auser()
-        customer = await Customer.objects.afrom_user(user=user)
+        customer = await Customer.objects.aget(user=user)
         with WialonSession(token=customer.token) as session:
-            return session.wialon_api.core_search_items(
+            response = session.wialon_api.core_search_items(
                 **{
                     "spec": {
                         "itemsType": "avl_resource",
@@ -239,40 +209,21 @@ async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
                     "flags": 1,
                 }
             )
+        return response["items"]
 
-    try:
-        response = await get_wialon_response(request)
-        choices = response["items"]
-    except WialonAPIError as error:
-        response = error
-        choices = []
-    if request.POST:
-        return HttpResponseRedirect(
-            reverse(
-                "terminusgps_notifier:select units",
-                kwargs={"resource_id": request.POST["resource_id"]},
-            )
-        )
-    return render(
-        request, kwargs["template_name"], context={"choices": choices}
-    )
-
-
-@htmx_template("terminusgps_notifier/wialonunit_select.html")
-async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_wialon_response(request: HttpRequest) -> dict:
+    async def get_units_from_wialon(
+        request: HttpRequest, items_type: str, resource_id: str
+    ) -> list[dict]:
         user = await request.auser()
         customer = await Customer.objects.aget(user=user)
         with WialonSession(token=customer.token) as session:
-            return session.wialon_api.core_search_items(
+            response = session.wialon_api.core_search_items(
                 **{
                     "spec": {
-                        "itemsType": request.POST.get(
-                            "items_type", "avl_unit"
-                        ),
-                        "propName": "sys_name",
-                        "propValueMask": "*",
-                        "propType": "property",
+                        "itemsType": items_type,
+                        "propName": "sys_name,sys_billing_account_guid",
+                        "propValueMask": f"*,{resource_id}",
+                        "propType": "property,property",
                         "sortType": "sys_name",
                     },
                     "force": 0,
@@ -281,15 +232,31 @@ async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
                     "flags": 1,
                 }
             )
+        return response["items"]
 
+    context = {
+        "triggers": forms.WialonNotificationTrigger.choices,
+        "resources": await get_resources_from_wialon(request),
+        "units": [],
+    }
+    if resource_id := request.GET.get("resource"):
+        if items_type := request.GET.get("items_type"):
+            context["units"] = await get_units_from_wialon(
+                request, items_type, resource_id
+            )
+    return render(request, kwargs["template_name"], context=context)
+
+
+@htmx_template("terminusgps_notifier/trigger_parameters.html")
+def trigger_parameters(request: HttpRequest, **kwargs) -> HttpResponse:
     return render(request, kwargs["template_name"], context={})
 
 
-@htmx_template("terminusgps_notifier/wialonaction_select.html")
-async def select_action(request: HttpRequest, **kwargs) -> HttpResponse:
+@htmx_template("terminusgps_notifier/home.html")
+async def home(request: HttpRequest, **kwargs) -> HttpResponse:
     return render(request, kwargs["template_name"], context={})
 
 
-@htmx_template("terminusgps_notifier/wialontrigger_select.html")
-async def select_trigger(request: HttpRequest, **kwargs) -> HttpResponse:
+@htmx_template("terminusgps_notifier/dashboard.html")
+async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
     return render(request, kwargs["template_name"], context={})

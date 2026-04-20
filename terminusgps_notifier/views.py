@@ -234,16 +234,13 @@ async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
             )
         return response["items"]
 
+    resource_id = request.GET.get("resource")
+    items_type = request.GET.get("items_type")
     context = {
         "triggers": forms.WialonNotificationTrigger.choices,
         "resources": await get_resources_from_wialon(request),
-        "units": [],
+        "units": await get_units_from_wialon(request, items_type, resource_id),
     }
-    if resource_id := request.GET.get("resource"):
-        if items_type := request.GET.get("items_type"):
-            context["units"] = await get_units_from_wialon(
-                request, items_type, resource_id
-            )
     return render(request, kwargs["template_name"], context=context)
 
 

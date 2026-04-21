@@ -256,26 +256,23 @@ async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
 @htmx_template("terminusgps_notifier/select_units.html")
 async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
     async def get_items_from_wialon(request: HttpRequest) -> list:
-        if not all(
-            [request.GET.get("items_type"), request.GET.get("resource")]
-        ):
-            raise Http404()
         user = await request.auser()
         customer = await Customer.objects.afrom_user(user)
         with WialonSession(token=customer.token) as session:
-            items_type = request.GET.get("items_type", "avl_unit")
-            prop_value_mask = f"*,{request.GET.get('resource', '')}"
             kwargs = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
-            kwargs["spec"]["itemsType"] = items_type
+            kwargs["spec"]["itemsType"] = request.GET["items_type"]
             kwargs["spec"]["propName"] = "sys_name,sys_billing_account_guid"
-            kwargs["spec"]["propValueMask"] = prop_value_mask
+            kwargs["spec"]["propValueMask"] = f"*,{request.GET['resource']}"
             kwargs["spec"]["propType"] = "property,property"
             kwargs["spec"]["sortType"] = "sys_name"
             response = session.wialon_api.core_search_items(**kwargs)
             return response["items"]
 
     context = {}
-    context["items_list"] = await get_items_from_wialon(request)
+    if all([request.GET.get("items_type"), request.GET.get("resource")]):
+        context["items_list"] = await get_items_from_wialon(request)
+    else:
+        context["items_list"] = []
     return render(request, kwargs["template_name"], context=context)
 
 

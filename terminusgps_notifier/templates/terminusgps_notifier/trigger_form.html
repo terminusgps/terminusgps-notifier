@@ -1,11 +1,6 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% partialdef main %}
-<form method="post" action="{{ action }}">
-    {% csrf_token %}
-    {{ form }}
-    <input type="hidden" id="id_trigger" name="trigger" value="{{ trigger }}">
-    <button type="submit">Submit</button>
-</form>
+{{ form }}
 {% endpartialdef main %}
 {% block content %}
 {% partial main %}

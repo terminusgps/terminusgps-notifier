@@ -1,14 +1,13 @@
 import asyncio
 import functools
 import logging
+import urllib.parse
 import warnings
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.forms import Form
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
-from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
@@ -192,85 +191,91 @@ async def wialon_callback(request: HttpRequest, **kwargs) -> HttpResponse:
 
 @htmx_template("terminusgps_notifier/create_notification.html")
 async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_resources_from_wialon(request: HttpRequest) -> list[dict]:
-        user = await request.auser()
-        customer = await Customer.objects.aget(user=user)
-        with WialonSession(token=customer.token) as session:
-            response = session.wialon_api.core_search_items(
-                **{
-                    "spec": {
-                        "itemsType": "avl_resource",
-                        "propName": "sys_name",
-                        "propValueMask": "*",
-                        "propType": "property",
-                        "sortType": "sys_name",
-                    },
-                    "force": 0,
-                    "from": 0,
-                    "to": 0,
-                    "flags": 1,
-                }
-            )
-        return response["items"]
+    async def get_notification_txt(user_id: int, message: str) -> str:
+        return urllib.parse.urlencode(
+            {
+                "user_id": user_id,
+                "unit_id": "%UNIT_ID%",
+                "msg_time_int": "%MSG_TIME_INT%",
+                "location": "%LOCATION%",
+                "message": message,
+            }
+        )
 
-    async def get_units_from_wialon(
-        request: HttpRequest, items_type: str, resource_id: str
-    ) -> list[dict]:
+    if request.method == "POST":
         user = await request.auser()
-        customer = await Customer.objects.aget(user=user)
-        with WialonSession(token=customer.token) as session:
-            response = session.wialon_api.core_search_items(
-                **{
-                    "spec": {
-                        "itemsType": items_type,
-                        "propName": "sys_name,sys_billing_account_guid",
-                        "propValueMask": f"*,{resource_id}",
-                        "propType": "property,property",
-                        "sortType": "sys_name",
-                    },
-                    "force": 0,
-                    "from": 0,
-                    "to": 0,
-                    "flags": 1,
-                }
-            )
-        return response["items"]
+        message = request.POST["message"]
+        kwargs = {
+            "itemId": request.POST["resource"],
+            "id": 0,
+            "callMode": "create",
+            "n": request.POST["name"],
+            "txt": await get_notification_txt(user.pk, message),
+            "ta": request.POST["ta"],
+            "td": request.POST["td"],
+            "ma": request.POST["ma"],
+            "mmtd": request.POST["mmtd"],
+            "cdt": request.POST["cdt"],
+            "mast": request.POST["mast"],
+            "mpst": request.POST["mpst"],
+            "cp": request.POST["cp"],
+            "fl": request.POST["fl"],
+            "tz": request.POST["tz"],
+            "la": request.POST["la"],
+            "un": request.POST["units"],
+            "d": request.POST["d"],
+            "sch": request.POST["sch"],
+            "ctrl_sch": request.POST["ctrl_sch"],
+            "trg": ...,
+            "act": [],
+        }
 
-    resource_id = request.GET.get("resource")
-    items_type = request.GET.get("items_type")
-    context = {
-        "triggers": forms.WialonNotificationTrigger.choices,
-        "resources": await get_resources_from_wialon(request),
-        "units": await get_units_from_wialon(request, items_type, resource_id),
-    }
+    return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/select_resource.html")
+async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
+    async def get_resources_from_wialon(request: HttpRequest) -> list:
+        user = await request.auser()
+        customer = await Customer.objects.afrom_user(user)
+        with WialonSession(token=customer.token) as session:
+            kwargs = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
+            kwargs["spec"]["itemsType"] = "avl_resource"
+            kwargs["spec"]["propName"] = "sys_name"
+            kwargs["spec"]["propValueMask"] = "*"
+            kwargs["spec"]["propType"] = "property"
+            kwargs["spec"]["sortType"] = "sys_name"
+            response = session.wialon_api.core_search_items(**kwargs)
+            return response["items"]
+
+    context = {}
+    context["resource_list"] = await get_resources_from_wialon(request)
     return render(request, kwargs["template_name"], context=context)
 
 
-@htmx_template("terminusgps_notifier/trigger_form.html")
-async def trigger_form(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_form_class(trigger: str) -> Form:
-        form_class = forms.TRIGGER_FORMS_MAP.get(trigger)
-        if form_class is None:
+@htmx_template("terminusgps_notifier/select_units.html")
+async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
+    async def get_items_from_wialon(request: HttpRequest) -> list:
+        if not all(
+            [request.GET.get("items_type"), request.GET.get("resource")]
+        ):
             raise Http404()
-        return form_class
+        user = await request.auser()
+        customer = await Customer.objects.afrom_user(user)
+        with WialonSession(token=customer.token) as session:
+            items_type = request.GET.get("items_type", "avl_unit")
+            prop_value_mask = f"*,{request.GET.get('resource', '')}"
+            kwargs = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
+            kwargs["spec"]["itemsType"] = items_type
+            kwargs["spec"]["propName"] = "sys_name,sys_billing_account_guid"
+            kwargs["spec"]["propValueMask"] = prop_value_mask
+            kwargs["spec"]["propType"] = "property,property"
+            kwargs["spec"]["sortType"] = "sys_name"
+            response = session.wialon_api.core_search_items(**kwargs)
+            return response["items"]
 
-    async def get_form_action(trigger: str) -> str:
-        return reverse(
-            "terminusgps_notifier:trigger form", kwargs={"trigger": trigger}
-        )
-
-    form_class = await get_form_class(kwargs["trigger"])
-    if request.method == "GET":
-        form = form_class()
-    elif request.method == "POST":
-        form = form_class(request.POST, initial=request.GET)
-        if form.is_valid():
-            # Do more stuff
-            print("Form valid")
-            print(f"{form.cleaned_data = }")
     context = {}
-    context["action"] = await get_form_action(kwargs["trigger"])
-    context["form"] = form
+    context["items_list"] = await get_items_from_wialon(request)
     return render(request, kwargs["template_name"], context=context)
 
 
@@ -281,10 +286,4 @@ async def home(request: HttpRequest, **kwargs) -> HttpResponse:
 
 @htmx_template("terminusgps_notifier/dashboard.html")
 async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
-    try:
-        customer = await Customer.objects.afrom_user(request.user)
-    except Customer.DoesNotExist:
-        customer = None
-    return render(
-        request, kwargs["template_name"], context={"customer": customer}
-    )
+    return render(request, kwargs["template_name"], context={})

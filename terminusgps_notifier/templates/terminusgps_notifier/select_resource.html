@@ -1,0 +1,11 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% partialdef main %}
+<select class="peer p-2 border rounded bg-stone-50 w-full" id="id_resource" name="resource" aria-described-by="#id_resource_helptext" hx-get="{% url 'terminusgps_notifier:select units' %}" hx-target="#id_units" hx-trigger="revealed, change" hx-indicator="#resource-indicator" hx-include="this,[name='items_type']">
+{% for resource in resource_list %}
+    <option value="{{ resource.id }}">{{ resource.nm }}</option>
+{% endfor %}
+</select>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

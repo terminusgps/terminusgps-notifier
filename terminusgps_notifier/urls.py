@@ -12,9 +12,9 @@ urlpatterns = [
         name="create notification",
     ),
     path(
-        "notifications/triggers/",
-        views.trigger_parameters,
-        name="trigger parameters",
+        "notifications/triggers/<str:trigger>/",
+        views.trigger_form,
+        name="trigger form",
     ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),

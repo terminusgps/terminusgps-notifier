@@ -5,8 +5,10 @@ import warnings
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.forms import Form
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
@@ -244,24 +246,32 @@ async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
     return render(request, kwargs["template_name"], context=context)
 
 
-@htmx_template("terminusgps_notifier/trigger_parameters.html")
-async def trigger_parameters(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_trigger_form(trigger: str | None = None):
-        if trigger is None:
-            return
-        forms_map = forms.TRIGGER_FORMS_MAP
-        if trigger not in forms_map:
-            return
-        return forms_map[trigger]
+@htmx_template("terminusgps_notifier/trigger_form.html")
+async def trigger_form(request: HttpRequest, **kwargs) -> HttpResponse:
+    async def get_form_class(trigger: str) -> Form:
+        form_class = forms.TRIGGER_FORMS_MAP.get(trigger)
+        if form_class is None:
+            raise Http404()
+        return form_class
 
+    async def get_form_action(trigger: str) -> str:
+        return reverse(
+            "terminusgps_notifier:trigger form", kwargs={"trigger": trigger}
+        )
+
+    form_class = await get_form_class(kwargs["trigger"])
     if request.method == "GET":
-        trigger = request.GET.get("trigger")
-        form = await get_trigger_form(trigger)
-        return render(request, kwargs["template_name"], context={"form": form})
+        form = form_class()
     elif request.method == "POST":
-        trigger = request.POST.get("trigger")
-        form = await get_trigger_form(trigger)
-        return render(request, kwargs["template_name"], context={"form": form})
+        form = form_class(request.POST, initial=request.GET)
+        if form.is_valid():
+            # Do more stuff
+            print("Form valid")
+            print(f"{form.cleaned_data = }")
+    context = {}
+    context["action"] = await get_form_action(kwargs["trigger"])
+    context["form"] = form
+    return render(request, kwargs["template_name"], context=context)
 
 
 @htmx_template("terminusgps_notifier/home.html")

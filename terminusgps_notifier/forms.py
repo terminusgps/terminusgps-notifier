@@ -154,36 +154,95 @@ class GeofenceTriggerForm(forms.Form):
 
 
 class AddressTriggerForm(forms.Form):
-    sensor_type = forms.CharField()
+    sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
     sensor_name_mask = forms.CharField()
-    lower_bound = forms.FloatField()
-    upper_bound = forms.FloatField()
-    prev_msg_diff = forms.TypedChoiceField()
-    merge = forms.TypedChoiceField()
-    reversed = forms.TypedChoiceField()
-    radius = forms.IntegerField()
-    type = forms.TypedChoiceField()
-    min_speed = forms.IntegerField()
-    max_speed = forms.IntegerField()
-    country = forms.CharField()
-    region = forms.CharField()
-    city = forms.CharField()
-    street = forms.CharField()
-    house = forms.CharField()
-    include_lbs = forms.TypedChoiceField()
+    lower_bound = forms.FloatField(step_size=0.1)
+    upper_bound = forms.FloatField(step_size=0.1)
+    prev_msg_diff = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Form boundaries for current value")),
+            ("1", _("Form boundaries for previous value")),
+        ],
+    )
+    merge = (
+        forms.TypedChoiceField(
+            coerce=int,
+            choices=[
+                ("0", _("Calculate separately")),
+                ("1", _("Sum up values")),
+            ],
+        ),
+    )
+    reversed = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Trigger within range")),
+            ("1", _("Trigger outside range")),
+        ],
+    )
+    radius = forms.IntegerField(min_value=1)
+    type = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Control within radius")),
+            ("1", _("Control outside radius")),
+        ],
+    )
+    min_speed = forms.IntegerField(max_value=255)
+    max_speed = forms.IntegerField(max_value=255)
+    country = forms.CharField(required=False)
+    region = forms.CharField(required=False)
+    city = forms.CharField(required=False)
+    street = forms.CharField(required=False)
+    house = forms.CharField(required=False)
+    include_lbs = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Do not process LBS messages")),
+            ("1", _("Process LBS messages")),
+        ],
+    )
 
 
 class SpeedTriggerForm(forms.Form):
-    lower_bound = forms.FloatField()
-    max_speed = forms.IntegerField()
-    merge = forms.TypedChoiceField()
-    min_speed = forms.IntegerField()
-    prev_msg_diff = forms.TypedChoiceField()
-    reversed = forms.TypedChoiceField()
+    lower_bound = forms.FloatField(step_size=0.1)
+    max_speed = forms.IntegerField(max_value=255)
+    merge = (
+        forms.TypedChoiceField(
+            coerce=int,
+            choices=[
+                ("0", _("Calculate separately")),
+                ("1", _("Sum up values")),
+            ],
+        ),
+    )
+    min_speed = forms.IntegerField(max_value=255)
+    prev_msg_diff = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Form boundaries for current value")),
+            ("1", _("Form boundaries for previous value")),
+        ],
+    )
+    reversed = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Trigger within range")),
+            ("1", _("Trigger outside range")),
+        ],
+    )
     sensor_name_mask = forms.CharField()
-    sensor_type = forms.CharField()
-    upper_bound = forms.FloatField()
-    driver = forms.TypedChoiceField()
+    sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
+    upper_bound = forms.FloatField(step_size=0.1)
+    driver = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Ignore driver assignment")),
+            ("1", _("Trigger when no driver assigned")),
+            ("2", _("Trigger only when driver assigned")),
+        ],
+    )
 
 
 class AlarmTriggerForm(forms.Form):
@@ -191,27 +250,56 @@ class AlarmTriggerForm(forms.Form):
 
 
 class DigitalInputTriggerForm(forms.Form):
-    input_index = forms.IntegerField()
-    type = forms.TypedChoiceField()
+    input_index = forms.IntegerField(min_value=1, max_value=32)
+    type = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Check for activation")),
+            ("1", _("Check for deactivation")),
+        ],
+    )
 
 
 class ParameterInAMessageTriggerForm(forms.Form):
-    kind = forms.TypedChoiceField()
-    lower_bound = forms.FloatField()
+    kind = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Value range")),
+            ("1", _("Text mask")),
+            ("2", _("Parameter availability")),
+            ("3", _("Parameter lack")),
+        ],
+    )
+    lower_bound = forms.FloatField(step_size=0.1)
     param = forms.CharField()
     text_mask = forms.CharField()
-    type = forms.TypedChoiceField()
-    upper_bound = forms.FloatField()
+    type = forms.TypedChoiceField(
+        coerce=int,
+        choices=[("0", _("Within range")), ("1", _("Outside range"))],
+    )
+    upper_bound = forms.FloatField(step_size=0.1)
 
 
 class SensorValueTriggerForm(forms.Form):
-    lower_bound = forms.FloatField()
-    merge = forms.TypedChoiceField()
-    prev_msg_diff = forms.TypedChoiceField()
+    lower_bound = forms.FloatField(step_size=0.1)
+    merge = forms.TypedChoiceField(
+        coerce=int,
+        choices=[("0", _("Calculate separately")), ("1", _("Sum up values"))],
+    )
+    prev_msg_diff = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Form boundaries for current value")),
+            ("1", _("Form boundaries for previous value")),
+        ],
+    )
     sensor_name_mask = forms.CharField()
-    sensor_type = forms.CharField()
-    type = forms.TypedChoiceField()
-    upper_bound = forms.FloatField()
+    sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
+    type = forms.TypedChoiceField(
+        coerce=int,
+        choices=[("0", _("Within range")), ("1", _("Outside range"))],
+    )
+    upper_bound = forms.FloatField(step_size=0.1)
 
 
 class ConnectionLossTriggerForm(forms.Form):

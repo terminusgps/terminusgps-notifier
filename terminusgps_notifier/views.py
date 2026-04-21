@@ -13,7 +13,7 @@ from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import RedirectView, View
-from terminusgps.wialon.session import WialonSession
+from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import forms
 from terminusgps_notifier.dispatchers import NotificationDispatcher
@@ -268,11 +268,13 @@ async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
             response = session.wialon_api.core_search_items(**kwargs)
             return response["items"]
 
+    try:
+        items_list = await get_items_from_wialon(request)
+    except WialonAPIError as error:
+        print(error)
+        items_list = []
     context = {}
-    if all([request.GET.get("items_type"), request.GET.get("resource")]):
-        context["items_list"] = await get_items_from_wialon(request)
-    else:
-        context["items_list"] = []
+    context["items_list"] = items_list
     return render(request, kwargs["template_name"], context=context)
 
 

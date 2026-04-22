@@ -11,6 +11,16 @@ urlpatterns = [
     path("terms/", views.terms, name="terms"),
     path("privacy/", views.privacy, name="privacy"),
     path(
+        "notifications/<int:resource_id>/list/",
+        views.list_notification,
+        name="list notification",
+    ),
+    path(
+        "notifications/<int:resource_id>/<int:notification_id>/details/",
+        views.detail_notification,
+        name="detail notification",
+    ),
+    path(
         "notifications/create/",
         views.create_notification,
         name="create notification",

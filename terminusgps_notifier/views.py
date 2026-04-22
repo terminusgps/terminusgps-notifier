@@ -6,8 +6,14 @@ import warnings
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import Http404, HttpRequest, HttpResponse
+from django.http import (
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseRedirect,
+)
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
@@ -15,13 +21,40 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
-from terminusgps_notifier import forms
+from terminusgps_notifier import constants, forms
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Customer
 from terminusgps_notifier.validators import validate_e164_phone_number
 from terminusgps_notifier.wialon import get_phone_numbers
 
 logger = logging.getLogger(__name__)
+
+STATIC_NOTIFICATION_FIELDS = frozenset(
+    {
+        "csrfmiddlewaretoken",
+        "name",
+        "resource",
+        "message",
+        "method",
+        "items_type",
+        "trigger",
+        "activation_time",
+        "deactivation_time",
+        "max_alarms",
+        "max_message_interval",
+        "alarm_timeout",
+        "min_alarm_duration",
+        "min_prev_duration",
+        "control_period",
+        "flags",
+        "timezone",
+        "language",
+        "units",
+        "description",
+        "schedule",
+        "control_schedule",
+    }
+)
 
 
 def htmx_template(template_name: str):
@@ -191,50 +224,79 @@ async def wialon_callback(request: HttpRequest, **kwargs) -> HttpResponse:
 
 @htmx_template("terminusgps_notifier/create_notification.html")
 async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_notification_txt(user_id: int, message: str) -> str:
+    async def get_notification_txt(request: HttpRequest) -> str:
+        user = await request.auser()
         return urllib.parse.urlencode(
             {
-                "user_id": user_id,
+                "user_id": user.pk,
                 "unit_id": "%UNIT_ID%",
                 "msg_time_int": "%MSG_TIME_INT%",
                 "location": "%LOCATION%",
-                "message": message,
+                "message": request.POST["message"],
             }
         )
 
-    if request.method == "POST":
-        user = await request.auser()
-        message = request.POST["message"]
-        kwargs = {
-            "itemId": request.POST["resource"],
-            "id": 0,
-            "callMode": "create",
-            "n": request.POST["name"],
-            "txt": await get_notification_txt(user.pk, message),
-            "ta": request.POST["ta"],
-            "td": request.POST["td"],
-            "ma": request.POST["ma"],
-            "mmtd": request.POST["mmtd"],
-            "cdt": request.POST["cdt"],
-            "mast": request.POST["mast"],
-            "mpst": request.POST["mpst"],
-            "cp": request.POST["cp"],
-            "fl": request.POST["fl"],
-            "tz": request.POST["tz"],
-            "la": request.POST["la"],
-            "un": request.POST["units"],
-            "d": request.POST["d"],
-            "sch": request.POST["sch"],
-            "ctrl_sch": request.POST["ctrl_sch"],
-            "trg": {},
-            "act": [],
+    async def get_notification_act(request: HttpRequest) -> list[dict]:
+        url = urllib.parse.urljoin(
+            "https://api.terminusgps.com/v3/notify/",
+            f"/{request.POST['method']}/",
+        )
+        return [{"t": "push_messages", "p": {"url": url, "get": 0}}]
+
+    async def get_notification_trg(request: HttpRequest) -> dict:
+        p = await get_trigger_parameters(request)
+        return {"t": request.POST["trigger"], "p": p}
+
+    async def get_trigger_parameters(request: HttpRequest) -> dict:
+        return {
+            key: request.POST[key]
+            for key in request.POST
+            if key not in STATIC_NOTIFICATION_FIELDS
         }
 
-    return render(
-        request,
-        kwargs["template_name"],
-        context={"triggers": forms.WialonNotificationTrigger.choices},
-    )
+    if request.method == "POST":
+        try:
+            user = await request.auser()
+            customer = await Customer.objects.afrom_user(user)
+            params = {}
+            params["itemId"] = int(request.POST["resource"])
+            params["id"] = 0
+            params["callMode"] = "create"
+            params["n"] = str(request.POST["name"])
+            params["txt"] = await get_notification_txt(request)
+            params["ta"] = request.POST.get("activation_time", "0")
+            params["td"] = request.POST.get("deactivation_time", "0")
+            params["ma"] = request.POST.get("max_alarms", "0")
+            params["mmtd"] = request.POST.get("max_message_interval", "0")
+            params["cdt"] = request.POST.get("alarm_timeout", "0")
+            params["mast"] = request.POST.get("min_alarm_duration", "0")
+            params["mpst"] = request.POST.get("min_prev_duration", "0")
+            params["cp"] = request.POST.get("control_period", "0")
+            params["fl"] = request.POST.get("flags", "0")
+            params["tz"] = request.POST.get("timezone", "0")
+            params["la"] = request.POST.get("language", "en")
+            params["un"] = request.POST.get("units", [])
+            params["d"] = request.POST.get("description", "")
+            params["sch"] = request.POST.get("schedule", {})
+            params["ctrl_sch"] = request.POST.get("control_schedule", {})
+            params["trg"] = await get_notification_trg(request)
+            params["act"] = await get_notification_act(request)
+            with WialonSession(token=customer.token) as session:
+                session.wialon_api.resource_update_notification(**params)
+                return HttpResponseRedirect(
+                    reverse("terminusgps_notifier:list notifications")
+                )
+        except WialonAPIError as error:
+            logger.error(f"Failed to create notification for user: '{user}'")
+            logger.error(error)
+        except Customer.DoesNotExist as error:
+            logger.error(f"No associated customer for user: '{user}'")
+            logger.error(error)
+
+    context = {}
+    context["triggers"] = forms.WialonNotificationTrigger.choices
+    context["timezones"] = constants.TIMEZONES
+    return render(request, kwargs["template_name"], context=context)
 
 
 @htmx_template("terminusgps_notifier/select_resource.html")
@@ -302,6 +364,51 @@ async def trigger_parameters(request: HttpRequest, **kwargs) -> HttpResponse:
         form_class = forms.TRIGGER_FORMS_MAP[trigger]
         form = form_class()
         return render(request, kwargs["template_name"], context={"form": form})
+
+
+@htmx_template("terminusgps_notifier/list_notification.html")
+async def list_notification(request: HttpRequest, **kwargs) -> HttpResponse:
+    async def get_notifications_from_wialon(customer: Customer) -> list:
+        with WialonSession(token=customer.token) as session:
+            params = {}
+            params["itemId"] = kwargs["resource_id"]
+            return session.wialon_api.resource_get_notification_data(**params)
+
+    try:
+        user = await request.auser()
+        customer = await Customer.objects.afrom_user(user)
+        notification_list = await get_notifications_from_wialon(customer)
+    except WialonAPIError as error:
+        msg = f"Failed to get notifications from Wialon for resource: #{kwargs['resource_id']}"
+        logger.error(msg)
+        logger.error(error)
+        notification_list = []
+    context = {}
+    context["notification_list"] = notification_list
+    return render(request, kwargs["template_name"], context=context)
+
+
+@htmx_template("terminusgps_notifier/detail_notification.html")
+async def detail_notification(request: HttpRequest, **kwargs) -> HttpResponse:
+    async def get_notification_data_from_wialon(customer: Customer) -> list:
+        with WialonSession(token=customer.token) as session:
+            params = {}
+            params["itemId"] = kwargs["resource_id"]
+            params["col"] = [kwargs["notification_id"]]
+            return session.wialon_api.resource_get_notification_data(**params)
+
+    try:
+        user = await request.auser()
+        customer = await Customer.objects.afrom_user(user)
+        notification = await get_notification_data_from_wialon(customer)
+    except WialonAPIError as error:
+        msg = f"Failed to get notification data from Wialon for resource: #{kwargs['resource_id']}"
+        logger.error(msg)
+        logger.error(error)
+        notification = None
+    context = {}
+    context["notification"] = notification
+    return render(request, kwargs["template_name"], context=context)
 
 
 @htmx_template("terminusgps_notifier/home.html")

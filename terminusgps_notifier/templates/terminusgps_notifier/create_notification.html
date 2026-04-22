@@ -1,11 +1,11 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% block title %}Create Notification{% endblock title %}
 {% partialdef main %}
-<form class="@container flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification' %}" hx-target="this" hx-swap="outerHTML" hx-include="*">
+<form class="@container flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification' %}" hx-target="this" hx-swap="outerHTML" hx-include="*" novalidate>
     {% csrf_token %}
     <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
         <div class="flex flex-col gap-2 flex-1 min-w-0">
-            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_resource" name="resource" aria-described-by="#id_resource_helptext" hx-get="{% url 'terminusgps_notifier:select resource' %}" hx-target="this" hx-trigger="revealed" hx-indicator="#resource-indicator"></select>
+            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_resource" name="resource" aria-described-by="#id_resource_helptext" hx-get="{% url 'terminusgps_notifier:select resource' %}" hx-target="this" hx-trigger="load" hx-indicator="#resource-indicator"></select>
             <div class="order-first flex gap-2 items-center">
                 <label class="font-semibold" for="id_resource">Resource</label>
                 <svg id="resource-indicator" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="htmx-indicator size-6 animate-spin">
@@ -41,7 +41,7 @@
         </div>
     </div>
     <div class="flex flex-col gap-2">
-        <select class="peer p-2 border rounded bg-stone-50" id="id_trigger" name="trigger" hx-get="{% url 'terminusgps_notifier:trigger parameters' %}" hx-target="#id_trigger_parameters" hx-include="this" hx-trigger="revealed, change" hx-swap="outerHTML">
+        <select class="peer p-2 border rounded bg-stone-50" id="id_trigger" name="trigger" hx-get="{% url 'terminusgps_notifier:trigger parameters' %}" hx-target="#id_trigger_parameters" hx-include="this" hx-trigger="load, change" hx-swap="outerHTML">
             {% for value, label in triggers %}
             <option value="{{ value }}">{{ label }}</option>
             {% endfor %}
@@ -73,6 +73,93 @@
         <label class="order-first font-semibold" for="id_message">Notification Message</label>
         <div id="id_message_helptext">
             <p>Provide a message to be texted or read aloud on notification trigger.</p>
+        </div>
+    </div>
+    <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
+        <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_timezone" name="timezone" required>
+                {% for value, label in timezones %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <label class="order-first font-semibold" for="id_timezone">Timezone</label>
+            <div id="id_timezone_helptext">
+                <p>Select a timezone from the list.</p>
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_language" name="language" required>
+                {# TODO: localize language names #}
+                <option value="en">English</option>
+            </select>
+            <label class="order-first font-semibold" for="id_language">Language</label>
+            <div id="id_language_helptext">
+                <p>Select a language from the list.</p>
+            </div>
+        </div>
+    </div>
+    <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
+        <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <input class="peer p-2 border rounded bg-stone-50 w-full" id="id_activation_time" name="activation_time" type="datetime-local" aria-described-by="#id_activation_time_helptext">
+            <label class="order-first font-semibold" for="id_activation_time">Activation Time</label>
+            <div id="id_activation_time_helptext">
+                <p>Provide a date and time to activate the notification.</p>
+                <p>Leave this blank to activate immediately.</p>
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <input class="peer p-2 border rounded bg-stone-50 w-full" id="id_deactivation_time" name="deactivation_time" type="datetime-local" aria-described-by="#id_deactivation_time_helptext">
+            <label class="order-first font-semibold" for="id_deactivation_time">Deactivation Time</label>
+            <div id="id_deactivation_time_helptext">
+                <p>Provide a date and time to deactivate the notification.</p>
+                <p>Leave this blank to never deactivate.</p>
+            </div>
+        </div>
+    </div>
+    <div class="flex flex-col gap-2">
+        <input class="peer p-2 border rounded bg-stone-50" id="id_max_alarms" name="max_alarms" type="number" value="0" aria-described-by="#id_max_alarms_helptext">
+        <label class="order-first font-semibold" for="id_max_alarms">Max Alarms</label>
+        <div id="id_max_alarms_helptext">
+            <p>Provide the maximum number of alarms.</p>
+        </div>
+    </div>
+    <div class="flex flex-col gap-2">
+        <input class="peer p-2 border rounded bg-stone-50" id="id_max_message_interval" name="max_message_interval" type="number" value="0" aria-described-by="#id_max_message_interval_helptext">
+        <label class="order-first font-semibold" for="id_max_message_interval">Max Message Interval</label>
+        <div id="id_max_message_interval_helptext">
+            <p>Provide the maximum time between messages in seconds.</p>
+        </div>
+    </div>
+    <div class="flex flex-col gap-2">
+        <input class="peer p-2 border rounded bg-stone-50" id="id_alarm_timeout" name="alarm_timeout" type="number" value="0" aria-described-by="#id_alarm_timeout_helptext">
+        <label class="order-first font-semibold" for="id_alarm_timeout">Alarm Timeout</label>
+        <div id="id_alarm_timeout_helptext">
+            <p>Provide the maximum time before alarm timeout in seconds.</p>
+        </div>
+    </div>
+    <div class="flex flex-col gap-2">
+        <input class="peer p-2 border rounded bg-stone-50" id="id_min_alarm_duration" name="min_alarm_duration" type="number" value="0" aria-described-by="#id_min_alarm_duration_helptext">
+        <label class="order-first font-semibold" for="id_min_alarm_duration">Minimum Alarm State Duration</label>
+        <div id="id_min_alarm_duration_helptext">
+            <p>Provide the minimum duration of the alarm state in seconds.</p>
+        </div>
+    </div>
+    <div class="flex flex-col gap-2">
+        <input class="peer p-2 border rounded bg-stone-50" id="id_control_period" name="control_period" type="number" value="0" aria-described-by="#id_control_period_helptext">
+        <label class="order-first font-semibold" for="id_control_period">Control Period</label>
+        <div id="id_control_period_helptext">
+            <p>Provide the control period relative to current time in seconds.</p>
+        </div>
+    </div>
+    <div class="flex flex-col gap-2">
+        <select class="peer p-2 border rounded bg-stone-50" id="id_flags" name="flags" aria-described-by="#id_flags_helptext">
+            <option value="0" selected>Trigger on the first message</option>
+            <option value="1">Trigger on every message</option>
+            <option value="2">Never trigger</option>
+        </select>
+        <label class="order-first font-semibold" for="id_flags">Flags</label>
+        <div id="id_flags_helptext">
+            <p>Select notification flags.</p>
         </div>
     </div>
     <button type="submit">Submit</button>

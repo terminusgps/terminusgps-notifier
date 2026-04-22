@@ -41,9 +41,9 @@
         </div>
     </div>
     <div class="flex flex-col gap-2">
-        <select class="peer p-2 border rounded bg-stone-50" id="id_trigger" name="trigger" hx-on:change="htmx.ajax('GET', this.value, '#id_trigger_parameters');">
+        <select class="peer p-2 border rounded bg-stone-50" id="id_trigger" name="trigger" hx-get="{% url 'terminusgps_notifier:trigger parameters' %}" hx-target="#id_trigger_parameters" hx-include="this" hx-trigger="revealed, change" hx-swap="outerHTML">
             {% for value, label in triggers %}
-            <option value="{% url 'terminusgps_notifier:trigger form' trigger=value %}">{{ label }}</option>
+            <option value="{{ value }}">{{ label }}</option>
             {% endfor %}
         </select>
         <label class="order-first font-semibold" for="id_trigger">Trigger</label>

@@ -230,7 +230,11 @@ async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
             "act": [],
         }
 
-    return render(request, kwargs["template_name"], context={})
+    return render(
+        request,
+        kwargs["template_name"],
+        context={"triggers": forms.WialonNotificationTrigger.choices},
+    )
 
 
 @htmx_template("terminusgps_notifier/select_resource.html")
@@ -283,6 +287,21 @@ async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
     context = {}
     context["items_list"] = items_list
     return render(request, kwargs["template_name"], context=context)
+
+
+@htmx_template("terminusgps_notifier/trigger_parameters.html")
+async def trigger_parameters(request: HttpRequest, **kwargs) -> HttpResponse:
+    trigger = request.GET.get("trigger")
+    if not trigger:
+        logger.error(f"No trigger provided: '{trigger}'")
+        raise Http404()
+    elif trigger not in forms.WialonNotificationTrigger:
+        logger.error(f"Invalid trigger: '{trigger}'")
+        raise Http404()
+    else:
+        form_class = forms.TRIGGER_FORMS_MAP[trigger]
+        form = form_class()
+        return render(request, kwargs["template_name"], context={"form": form})
 
 
 @htmx_template("terminusgps_notifier/home.html")

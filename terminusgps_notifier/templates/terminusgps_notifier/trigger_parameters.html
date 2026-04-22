@@ -1,6 +1,8 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% partialdef main %}
-{{ form }}
+<div class="flex flex-col gap-2" id="id_trigger_parameters" name="trigger_parameters">
+    {{ form }}
+</div>
 {% endpartialdef main %}
 {% block content %}
 {% partial main %}

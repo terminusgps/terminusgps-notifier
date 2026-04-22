@@ -226,7 +226,7 @@ async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
             "d": request.POST["d"],
             "sch": request.POST["sch"],
             "ctrl_sch": request.POST["ctrl_sch"],
-            "trg": ...,
+            "trg": {},
             "act": [],
         }
 
@@ -235,9 +235,7 @@ async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
 
 @htmx_template("terminusgps_notifier/select_resource.html")
 async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_resources_from_wialon(request: HttpRequest) -> list:
-        user = await request.auser()
-        customer = await Customer.objects.afrom_user(user)
+    async def get_resources_from_wialon(customer: Customer) -> list:
         with WialonSession(token=customer.token) as session:
             params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
             params["spec"]["itemsType"] = "avl_resource"
@@ -249,9 +247,12 @@ async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
             return response["items"]
 
     try:
-        resource_list = await get_resources_from_wialon(request)
+        user = await request.auser()
+        customer = await Customer.objects.afrom_user(user)
+        resource_list = await get_resources_from_wialon(customer)
     except WialonAPIError as error:
-        print(error)
+        logger.error(f"Failed to get resources from Wialon for user: {user}")
+        logger.error(error)
         resource_list = []
     context = {}
     context["resource_list"] = resource_list
@@ -260,9 +261,7 @@ async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
 
 @htmx_template("terminusgps_notifier/select_units.html")
 async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_items_from_wialon(request: HttpRequest) -> list:
-        user = await request.auser()
-        customer = await Customer.objects.afrom_user(user)
+    async def get_items_from_wialon(customer: Customer) -> list:
         with WialonSession(token=customer.token) as session:
             params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
             params["spec"]["itemsType"] = request.GET["items_type"]
@@ -274,9 +273,12 @@ async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
             return response["items"]
 
     try:
-        items_list = await get_items_from_wialon(request)
+        user = await request.auser()
+        customer = await Customer.objects.afrom_user(user)
+        items_list = await get_items_from_wialon(customer)
     except WialonAPIError as error:
-        print(error)
+        logger.error(f"Failed to get items from Wialon for user: {user}")
+        logger.error(error)
         items_list = []
     context = {}
     context["items_list"] = items_list

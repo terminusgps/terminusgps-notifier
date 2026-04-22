@@ -1,5 +1,131 @@
 {% extends "terminusgps_notifier/layout.html" %}
+{% block title %}Privacy Policy{% endblock title %}
 {% partialdef main %}
+<div class="flex flex-col gap-8">
+    <p id="last-updated" class="text-sm text-gray-400">Last updated: May 15, 2025</p>
+    <section id="intro" class="mx-4 flex flex-col gap-4">
+        <p>This Privacy Policy describes how and when we collect, use and share your information across this application, hereby referred to as "App". When using the App, you consent to the collection, transfer, storage, disclosure, and use of your information as described in this Privacy Policy.</p>
+    </section>
+    <section id="toc" class="mx-4 flex flex-col gap-2 text-pretty">
+        <h2 class="-mx-4 text-lg font-semibold text-terminus-red-600 dark:text-terminus-red-100">Table of Contents</h2>
+        <div class="flex flex-col">
+
+            <a href="#1" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">1. How your information is used</a>
+            <div class="mx-4 flex flex-col">
+                <a href="#1.1" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">1.1. Location</a>
+                <a href="#1.2" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">1.2. Log Data</a>
+
+                <a href="#1.3" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">1.3. Limited period of personal data storage</a>
+                <a href="#1.4" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">1.4. Restrictions towards children</a>
+                <a href="#1.5" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">1.5. No advertising companies collect data through our services</a>
+            </div>
+            <a href="#2" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">2. When we disclose information</a>
+            <div class="mx-4 flex flex-col">
+                <a href="#2.1" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">2.1. Third-parties</a>
+                <a href="#2.2" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">2.2. Law and harm</a>
+                <a href="#2.3" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">2.3. Business transfers</a>
+                <a href="#2.4" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">2.4. Non-private or non-personal information</a>
+            </div>
+            <a href="#3" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">3. You can request to see your personal data</a>
+            <a href="#4" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">4. Our commitment to data security</a>
+            <a href="#5" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">5. Changes to this policy</a>
+            <a href="#6" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">6. How to contact us</a>
+        </div>
+    </section>
+    <section id="1" class="mx-4 flex flex-col gap-4 text-pretty">
+        <h2 class="-mx-4 text-lg font-semibold text-terminus-red-600 dark:text-terminus-red-100">1. How your information is used</h2>
+        <p>When you create or reconfigure your account and for use in the App, you voluntarily give us personal information, such as your name, email, phone number and when necessary, billing information. Should you choose to provide us with additional information, you also consent to providing that information and its limited use. If authorized by you, we may also have an on-going access to your personal information from third-party social media sites like Facebook, if you and/or users of those sites give us access to such information, depending upon your or users’ settings on those sites.</p>
+        <p>We may use information about you for various purposes, including to:</p>
+        <ul class="list-inside list-disc">
+            <li>provide, maintain and improve our services, including to provide additional features and content;</li>
+            <li>respond to your questions and requests and provide customer service;</li>
+            <li>send you technical notices, updates, security alerts and support, and administrative messages;</li>
+            <li>monitor and analyze trends, usage and activities in connection with our services;</li>
+            <li>personalize and improve the services;</li>
+            <li>detect, investigate and/or prevent fraudulent, unauthorized or illegal activity; and</li>
+            <li>carry out any other purpose for which the information was collected according to this Privacy Policy.</li>
+        </ul>
+
+        <section id="1.1" class="flex flex-col gap-2">
+            <h3 class="font-semibold text-terminus-red-300">1.1. Location</h3>
+            <p>In serving you, we may use or store your precise geographic location. We may use and store information about your location to provide features of our App and to improve and customize the App. We do not use or share this data for any other purpose. Many devices will indicate through an icon when location services are operating. We only share this location information with others as described by this Privacy Policy.</p>
+        </section>
+        <section id="1.2" class="flex flex-col gap-2">
+            <h3 class="font-semibold text-terminus-red-300">1.2. Log Data</h3>
+            <p>Our servers automatically record information ("log data") created by your use of the App. Log data may include information such as your IP address, operating system, device and search terms. We receive log data when you sign into our App. We use log data to provide our service, measure and improve it.</p>
+        </section>
+        <section id="1.3" class="flex flex-col gap-2">
+            <h3 class="font-semibold text-terminus-red-300">1.3. Limited period of personal data storage</h3>
+            <p>Our systems are designed to retain log data for up to 30 days after it is collected. We remove personally identifiable information (such as your name, address, email or phone number, location) and other preferences associated with your account promptly after you delete your account.</p>
+        </section>
+        <section id="1.4" class="flex flex-col gap-2">
+            <h3 class="font-semibold text-terminus-red-300">1.4. Restrictions towards children</h3>
+            <p>We do not knowingly contact or collect personal information from children under 13. If you become aware that your child has provided us with personal information without your consent, please contact us. If we become aware that a child under 13 has provided us with personal information, we take steps to remove such information and terminate the child's account.</p>
+        </section>
+        <section id="1.5" class="flex flex-col gap-2">
+            <h3 class="font-semibold text-terminus-red-300">1.5. No advertising companies collect data through our services</h3>
+            <p>We do not allow advertising companies to collect data through our service for ad targeting.</p>
+        </section>
+    </section>
+    <section id="2" class="mx-4 flex flex-col gap-4">
+        <h2 class="-mx-4 text-lg font-semibold text-terminus-red-600 dark:text-terminus-red-100">2. When we disclose information</h2>
+        <section id="2.2" class="flex flex-col gap-2">
+            <h3 class="font-semibold text-terminus-red-300">2.1. Third-parties</h3>
+
+            <p>We provide personally identifiable information and non-personally-identifiable information only to our subsidiaries for the purpose of processing such information on our behalf. We require that these parties agree to process such information in compliance with our Privacy Policy, and we use reasonable efforts to limit their use of such information and to use other appropriate confidentiality and security measures.</p>
+        </section>
+        <section id="2.2" class="flex flex-col gap-2">
+            <h3 class="font-semibold text-terminus-red-300">2.2. Law and harm</h3>
+            <p>Notwithstanding anything to the contrary in this Privacy Policy, we may preserve or disclose your information if we believe that it is reasonably necessary to comply with a law, regulation, legal process, or governmental request; in order to investigate, prevent, or take action regarding suspected or actual illegal activities, including but not limited to, fraud, potential threats to public safety or the physical safety of any person; to protect the security or integrity of our products and services; or to protect rights, property, or our personal safety, our staff, our users or others. However, nothing in this Privacy Policy is intended to limit any legal defenses or objections that you may have to a third party’s, including a government’s, request to disclose your information.</p>
+        </section>
+        <section id="2.3" class="flex flex-col gap-2">
+            <h3 class="font-semibold text-terminus-red-300">2.3. Business transfers</h3>
+            <p>In the event that we are involved in a bankruptcy, merger, acquisition, reorganization or sale of assets, your information may be sold or transferred as part of that transaction. This Privacy Policy will apply to your information as transferred to the new entity. We may also disclose information about you to our corporate affiliates in order to help provide, understand, and improve our App and our affiliates’ Apps.</p>
+        </section>
+
+        <section id="2.4" class="flex flex-col gap-2">
+            <h3 class="font-semibold text-terminus-red-300">2.4. Non-private or non-personal information</h3>
+            <p>We may share or disclose your non-personal information, such as your public user profile information, shared boards and so on. Remember: your privacy and visibility settings control whether your personal or any other information are made public.</p>
+
+        </section>
+    </section>
+    <section id="3" class="mx-4 flex flex-col gap-4">
+
+        <h2 class="-mx-4 text-lg font-semibold text-terminus-red-600 dark:text-terminus-red-100">3. You can request to see your personal data</h2>
+        <p>You can sign into your account to see any personally identifiable information we have stored, such as your name, email, address or phone number. You can also contact us by email to request to see this information.</p>
+        <p>You may update or correct your personal profile information and email preferences at any time by visiting your account profile page only via the web interface. We can provide you with additional support to access, correct, delete, or modify the personal information you provided to us and associated with your account.</p>
+
+        <p>To protect your privacy and security, we take reasonable steps (such as requesting any personal information) to verify your identity before making corrections. You are responsible for maintaining the secrecy of your password and account information at all times.</p>
+
+    </section>
+    <section id="4" class="mx-4 flex flex-col gap-4">
+        <h2 class="-mx-4 text-lg font-semibold text-terminus-red-600 dark:text-terminus-red-100">4. Our commitment to data security</h2>
+        <p>Users are expected to take actions to secure their credentials while using the App.</p>
+        <p>We use appropriate physical, managerial, and technical procedures to safeguard and help prevent unauthorized access, maintain data security, and correctly use the information we collect about you. We cannot, however, ensure or warrant the security of any information you convey to us, and you do so at your own risk.</p>
+        <p>Although we take appropriate measures to safeguard against unauthorized disclosures of information, we cannot guarantee with absolute certainty that personally identifiable information will be strictly used in a manner that is consistent with this Privacy Policy.</p>
+    </section>
+    <section id="5" class="mx-4 flex flex-col gap-4">
+        <h2 class="-mx-4 text-lg font-semibold text-terminus-red-600 dark:text-terminus-red-100">5. Changes to this policy</h2>
+        <p>We may revise our Privacy Policy from time to time. If we make any material changes to our policies, we will place a prominent notice on our website or application. If we make a change to this Policy that, in our sole discretion, is material, we will notify you via the email address you optionally provided during sign up. By continuing to access or use the App after those changes become effective, you agree to be bound by the revised Privacy Policy.</p>
+    </section>
+    <section id="6" class="mx-4 flex flex-col gap-4">
+        <h2 class="-mx-4 text-lg font-semibold text-terminus-red-600 dark:text-terminus-red-100">6. How to contact us</h2>
+        <p>If you have further privacy concerns, you can contact us at:</p>
+        <div class="mx-4 flex flex-col">
+            <p>Terminus GPS, LLC</p>
+            <p>17610 South Dr</p>
+
+            <p>Cypress, TX 77433</p>
+            <p>United States</p>
+        </div>
+        <ul class="list-inside list-none">
+            <li>Phone: <a href="tel:7139045262" class="decoration w-fit text-terminus-red-800 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-500 hover:decoration-dotted dark:text-terminus-red-400 dark:decoration-white dark:hover:text-terminus-red-200">(713) 904-5262</a></li>
+
+            <li>Email: <a href="mailto:support@terminusgps.com" class="decoration w-fit text-terminus-red-800 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-500 hover:decoration-dotted dark:text-terminus-red-400 dark:decoration-white dark:hover:text-terminus-red-200">support@terminusgps.com</a></li>
+        </ul>
+
+    </section>
+</div>
 {% endpartialdef main %}
 {% block content %}
 {% partial main %}

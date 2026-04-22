@@ -400,9 +400,12 @@ async def detail_notification(request: HttpRequest, **kwargs) -> HttpResponse:
     try:
         user = await request.auser()
         customer = await Customer.objects.afrom_user(user)
-        notification = await get_notification_data_from_wialon(customer)
+        response = await get_notification_data_from_wialon(customer)
+        notification = response[0]
     except WialonAPIError as error:
-        msg = f"Failed to get notification data from Wialon for resource: #{kwargs['resource_id']}"
+        resource_id = kwargs["resource_id"]
+        notification_id = kwargs["notification_id"]
+        msg = f"Failed to get data from Wialon for notification: '#{resource_id}:{notification_id}'"
         logger.error(msg)
         logger.error(error)
         notification = None

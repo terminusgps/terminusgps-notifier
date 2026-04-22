@@ -286,3 +286,25 @@ async def home(request: HttpRequest, **kwargs) -> HttpResponse:
 @htmx_template("terminusgps_notifier/dashboard.html")
 async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
     return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/contact.html")
+async def contact(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/terms.html")
+async def terms(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/privacy.html")
+async def privacy(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(request, kwargs["template_name"], context={})
+
+
+async def source_code(request: HttpRequest) -> HttpResponse:
+    return RedirectView.as_view(
+        url="https://github.com/terminusgps/terminusgps-notifier",
+        permanent=True,
+    )(request)

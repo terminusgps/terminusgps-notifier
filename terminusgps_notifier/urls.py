@@ -6,6 +6,10 @@ app_name = "terminusgps_notifier"
 urlpatterns = [
     path("", views.home, name="home"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("contact/", views.contact, name="contact"),
+    path("source/", views.source_code, name="source"),
+    path("terms/", views.terms, name="terms"),
+    path("privacy/", views.privacy, name="privacy"),
     path(
         "notifications/create/",
         views.create_notification,

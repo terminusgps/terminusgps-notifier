@@ -239,17 +239,22 @@ async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
         user = await request.auser()
         customer = await Customer.objects.afrom_user(user)
         with WialonSession(token=customer.token) as session:
-            kwargs = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
-            kwargs["spec"]["itemsType"] = "avl_resource"
-            kwargs["spec"]["propName"] = "sys_name"
-            kwargs["spec"]["propValueMask"] = "*"
-            kwargs["spec"]["propType"] = "property"
-            kwargs["spec"]["sortType"] = "sys_name"
-            response = session.wialon_api.core_search_items(**kwargs)
+            params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
+            params["spec"]["itemsType"] = "avl_resource"
+            params["spec"]["propName"] = "sys_name"
+            params["spec"]["propValueMask"] = "*"
+            params["spec"]["propType"] = "property"
+            params["spec"]["sortType"] = "sys_name"
+            response = session.wialon_api.core_search_items(**params)
             return response["items"]
 
+    try:
+        resource_list = await get_resources_from_wialon(request)
+    except WialonAPIError as error:
+        print(error)
+        resource_list = []
     context = {}
-    context["resource_list"] = await get_resources_from_wialon(request)
+    context["resource_list"] = resource_list
     return render(request, kwargs["template_name"], context=context)
 
 
@@ -259,13 +264,13 @@ async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
         user = await request.auser()
         customer = await Customer.objects.afrom_user(user)
         with WialonSession(token=customer.token) as session:
-            kwargs = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
-            kwargs["spec"]["itemsType"] = request.GET["items_type"]
-            kwargs["spec"]["propName"] = "sys_name,sys_billing_account_guid"
-            kwargs["spec"]["propValueMask"] = f"*,{request.GET['resource']}"
-            kwargs["spec"]["propType"] = "property,property"
-            kwargs["spec"]["sortType"] = "sys_name"
-            response = session.wialon_api.core_search_items(**kwargs)
+            params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
+            params["spec"]["itemsType"] = request.GET["items_type"]
+            params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
+            params["spec"]["propValueMask"] = f"*,{request.GET['resource']}"
+            params["spec"]["propType"] = "property,property"
+            params["spec"]["sortType"] = "sys_name"
+            response = session.wialon_api.core_search_items(**params)
             return response["items"]
 
     try:

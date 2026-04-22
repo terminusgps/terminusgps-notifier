@@ -3,7 +3,9 @@
 {% partialdef main %}
 <div id="notification-list">
     {% for notif in notification_list %}
-    <div id="{{ notif.id }}">{{ notif.n }}</div>
+    <a href="{% url 'terminusgps_notifier:detail notification' resource_id notif.id %}">
+        <div id="{{ notif.id }}">{{ notif.n }}</div>
+    </a>
     {% endfor %}
 </div>
 {% endpartialdef main %}

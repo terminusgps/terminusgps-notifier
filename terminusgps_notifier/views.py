@@ -385,6 +385,7 @@ async def list_notification(request: HttpRequest, **kwargs) -> HttpResponse:
         notification_list = []
     context = {}
     context["notification_list"] = notification_list
+    context["resource_id"] = kwargs["resource_id"]
     return render(request, kwargs["template_name"], context=context)
 
 

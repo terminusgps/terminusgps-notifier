@@ -16,7 +16,7 @@ urlpatterns = [
         name="list notification",
     ),
     path(
-        "notifications/<int:resource_id>/<int:notification_id>/details/",
+        "notifications/<int:resource_id>/<int:notification_id>/",
         views.detail_notification,
         name="detail notification",
     ),

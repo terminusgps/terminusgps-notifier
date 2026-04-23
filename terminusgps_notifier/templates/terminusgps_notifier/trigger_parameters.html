@@ -1,6 +1,6 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% partialdef main %}
-<div class="flex flex-col gap-2" id="id_trigger_parameters" name="trigger_parameters">
+<div class="flex flex-col gap-4 *:[&_select,&_input]:p-2 *:[&_select,&_input]:border *:[&_select,&_input]:rounded *:flex *:w-full *:gap-2 *:items-center" id="id_trigger_parameters" name="trigger_parameters">
     {{ form }}
 </div>
 {% endpartialdef main %}

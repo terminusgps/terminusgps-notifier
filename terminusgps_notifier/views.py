@@ -1,19 +1,16 @@
 import asyncio
 import functools
 import logging
+import typing
 import urllib.parse
 import warnings
 
 from django.conf import settings
+from django.contrib import messages
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import (
-    Http404,
-    HttpRequest,
-    HttpResponse,
-    HttpResponseRedirect,
-)
-from django.shortcuts import render
-from django.urls import reverse
+from django.http import Http404, HttpRequest, HttpResponse
+from django.shortcuts import redirect, render
+from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
@@ -224,7 +221,7 @@ async def wialon_callback(request: HttpRequest, **kwargs) -> HttpResponse:
 
 @htmx_template("terminusgps_notifier/create_notification.html")
 async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_notification_txt(request: HttpRequest) -> str:
+    async def get_txt(request: HttpRequest) -> str:
         user = await request.auser()
         return urllib.parse.urlencode(
             {
@@ -232,66 +229,99 @@ async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
                 "unit_id": "%UNIT_ID%",
                 "msg_time_int": "%MSG_TIME_INT%",
                 "location": "%LOCATION%",
-                "message": request.POST["message"],
+                "message": request.POST.get("message", ""),
             }
         )
 
-    async def get_notification_act(request: HttpRequest) -> list[dict]:
+    async def get_act(request: HttpRequest) -> list[dict]:
         url = urllib.parse.urljoin(
             "https://api.terminusgps.com/v3/notify/",
-            f"/{request.POST['method']}/",
+            f"/{request.POST.get('method', 'sms')}/",
         )
         return [{"t": "push_messages", "p": {"url": url, "get": 0}}]
 
-    async def get_notification_trg(request: HttpRequest) -> dict:
-        p = await get_trigger_parameters(request)
+    async def get_trg(request: HttpRequest) -> dict:
+        p = {}
+        for field in request.POST:
+            if field in forms.get_trigger_form_fields():
+                p.update({field: request.POST[field]})
         return {"t": request.POST["trigger"], "p": p}
 
-    async def get_trigger_parameters(request: HttpRequest) -> dict:
-        return {
-            key: request.POST[key]
-            for key in request.POST
-            if key not in STATIC_NOTIFICATION_FIELDS
-        }
+    async def get_timestamp(request: HttpRequest, field: str) -> int:
+        input = request.POST.get(field)
+        if input is None:
+            return 0
+        try:
+            date = parse_date(input)
+            return int(date.timestamp())
+        except ValueError:
+            return 0
+
+    async def get_schedule(request: HttpRequest) -> dict[str, typing.Any]:
+        # TODO: generate schedule from request
+        schedule = {}
+        schedule["f1"] = 0
+        schedule["f2"] = 0
+        schedule["t1"] = 0
+        schedule["t2"] = 0
+        schedule["m"] = 0
+        schedule["y"] = 0
+        schedule["w"] = 0
+        return schedule
+
+    async def get_resource_id(request: HttpRequest) -> int:
+        input = request.POST.get("resource")
+        if input is None:
+            return 0
+        try:
+            return int(input)
+        except ValueError:
+            return 0
+
+    async def get_wialon_api_parameters(
+        request: HttpRequest,
+    ) -> dict[str, typing.Any]:
+        params = {}
+        params["itemId"] = await get_resource_id(request)
+        params["id"] = 0
+        params["callMode"] = "create"
+        params["n"] = request.POST.get("name", "")
+        params["txt"] = await get_txt(request)
+        params["ta"] = await get_timestamp(request, "ta")
+        params["td"] = await get_timestamp(request, "td")
+        params["ma"] = 0
+        params["mmtd"] = 0
+        params["cdt"] = 0
+        params["mast"] = 0
+        params["mpst"] = 0
+        params["cp"] = 0
+        params["fl"] = 0
+        params["tz"] = 0
+        params["la"] = "en"
+        params["un"] = list(map(int, request.POST.getlist("units", [])))
+        params["d"] = request.POST.get("description", "")
+        params["sch"] = await get_schedule(request)
+        params["ctrl_sch"] = await get_schedule(request)
+        params["trg"] = await get_trg(request)
+        params["act"] = await get_act(request)
+        return params
 
     if request.method == "POST":
         try:
             user = await request.auser()
-            customer = await Customer.objects.afrom_user(user)
-            params = {}
-            params["itemId"] = int(request.POST["resource"])
-            params["id"] = 0
-            params["callMode"] = "create"
-            params["n"] = str(request.POST["name"])
-            params["txt"] = await get_notification_txt(request)
-            params["ta"] = request.POST.get("activation_time", "0")
-            params["td"] = request.POST.get("deactivation_time", "0")
-            params["ma"] = request.POST.get("max_alarms", "0")
-            params["mmtd"] = request.POST.get("max_message_interval", "0")
-            params["cdt"] = request.POST.get("alarm_timeout", "0")
-            params["mast"] = request.POST.get("min_alarm_duration", "0")
-            params["mpst"] = request.POST.get("min_prev_duration", "0")
-            params["cp"] = request.POST.get("control_period", "0")
-            params["fl"] = request.POST.get("flags", "0")
-            params["tz"] = request.POST.get("timezone", "0")
-            params["la"] = request.POST.get("language", "en")
-            params["un"] = request.POST.get("units", [])
-            params["d"] = request.POST.get("description", "")
-            params["sch"] = request.POST.get("schedule", {})
-            params["ctrl_sch"] = request.POST.get("control_schedule", {})
-            params["trg"] = await get_notification_trg(request)
-            params["act"] = await get_notification_act(request)
+            customer = Customer.objects.afrom_user(user)
+            params = await get_wialon_api_parameters(request)
             with WialonSession(token=customer.token) as session:
                 session.wialon_api.resource_update_notification(**params)
-                return HttpResponseRedirect(
-                    reverse("terminusgps_notifier:list notifications")
-                )
+                return redirect("terminusgps_notifier:list notifications")
         except WialonAPIError as error:
-            logger.error(f"Failed to create notification for user: '{user}'")
-            logger.error(error)
+            msg = f"Failed to create notification for user: '{user}'"
+            messages.error(request, msg)
+            messages.error(request, error)
         except Customer.DoesNotExist as error:
-            logger.error(f"No associated customer for user: '{user}'")
-            logger.error(error)
+            msg = f"No associated customer for user: '{user}'"
+            messages.error(request, msg)
+            messages.error(request, error)
 
     context = {}
     context["triggers"] = forms.WialonNotificationTrigger.choices
@@ -353,17 +383,27 @@ async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
 
 @htmx_template("terminusgps_notifier/trigger_parameters.html")
 async def trigger_parameters(request: HttpRequest, **kwargs) -> HttpResponse:
-    trigger = request.GET.get("trigger")
-    if not trigger:
-        logger.error(f"No trigger provided: '{trigger}'")
-        raise Http404()
-    elif trigger not in forms.WialonNotificationTrigger:
-        logger.error(f"Invalid trigger: '{trigger}'")
-        raise Http404()
-    else:
-        form_class = forms.TRIGGER_FORMS_MAP[trigger]
-        form = form_class()
-        return render(request, kwargs["template_name"], context={"form": form})
+    async def get_geozones_from_wialon(
+        customer: Customer, resource_id: int
+    ) -> list:
+        with WialonSession(token=customer.token) as session:
+            params = {}
+            params["itemId"] = resource_id
+            return session.wialon_api.resource_get_zone_data(**params)
+
+    async def get_form(trigger: str | None = None):
+        if not trigger:
+            logger.error(f"No trigger provided: '{trigger}'")
+            raise Http404()
+        elif trigger not in forms.WialonNotificationTrigger:
+            logger.error(f"Invalid trigger: '{trigger}'")
+            raise Http404()
+        else:
+            form_class = forms.TRIGGER_FORMS_MAP[trigger]
+            return form_class()
+
+    form = await get_form(request.GET.get("trigger"))
+    return render(request, kwargs["template_name"], context={"form": form})
 
 
 @htmx_template("terminusgps_notifier/list_notification.html")
@@ -383,6 +423,7 @@ async def list_notification(request: HttpRequest, **kwargs) -> HttpResponse:
         logger.error(msg)
         logger.error(error)
         notification_list = []
+
     context = {}
     context["notification_list"] = notification_list
     context["resource_id"] = kwargs["resource_id"]

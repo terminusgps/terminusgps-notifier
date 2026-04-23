@@ -1,6 +1,15 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% block title %}Create Notification{% endblock title %}
 {% partialdef main %}
+{% if messages %}
+<ul id="messages">
+    {% for message in messages %}
+    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+        {{ message }}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
 <form class="@container flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification' %}" hx-target="this" hx-swap="outerHTML" hx-include="*" novalidate>
     {% csrf_token %}
     <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
@@ -47,7 +56,7 @@
             {% endfor %}
         </select>
         <label class="order-first font-semibold" for="id_trigger">Trigger</label>
-        <div id="id_trigger_parameters" name="trigger_parameters"></div>
+        <div class="flex flex-col gap-4" id="id_trigger_parameters" name="trigger_parameters"></div>
     </div>
     <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
         <div class="flex flex-col gap-2 flex-1 min-w-0">
@@ -114,52 +123,6 @@
                 <p>Provide a date and time to deactivate the notification.</p>
                 <p>Leave this blank to never deactivate.</p>
             </div>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <input class="peer p-2 border rounded bg-stone-50" id="id_max_alarms" name="max_alarms" type="number" value="0" aria-described-by="#id_max_alarms_helptext">
-        <label class="order-first font-semibold" for="id_max_alarms">Max Alarms</label>
-        <div id="id_max_alarms_helptext">
-            <p>Provide the maximum number of alarms.</p>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <input class="peer p-2 border rounded bg-stone-50" id="id_max_message_interval" name="max_message_interval" type="number" value="0" aria-described-by="#id_max_message_interval_helptext">
-        <label class="order-first font-semibold" for="id_max_message_interval">Max Message Interval</label>
-        <div id="id_max_message_interval_helptext">
-            <p>Provide the maximum time between messages in seconds.</p>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <input class="peer p-2 border rounded bg-stone-50" id="id_alarm_timeout" name="alarm_timeout" type="number" value="0" aria-described-by="#id_alarm_timeout_helptext">
-        <label class="order-first font-semibold" for="id_alarm_timeout">Alarm Timeout</label>
-        <div id="id_alarm_timeout_helptext">
-            <p>Provide the maximum time before alarm timeout in seconds.</p>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <input class="peer p-2 border rounded bg-stone-50" id="id_min_alarm_duration" name="min_alarm_duration" type="number" value="0" aria-described-by="#id_min_alarm_duration_helptext">
-        <label class="order-first font-semibold" for="id_min_alarm_duration">Minimum Alarm State Duration</label>
-        <div id="id_min_alarm_duration_helptext">
-            <p>Provide the minimum duration of the alarm state in seconds.</p>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <input class="peer p-2 border rounded bg-stone-50" id="id_control_period" name="control_period" type="number" value="0" aria-described-by="#id_control_period_helptext">
-        <label class="order-first font-semibold" for="id_control_period">Control Period</label>
-        <div id="id_control_period_helptext">
-            <p>Provide the control period relative to current time in seconds.</p>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <select class="peer p-2 border rounded bg-stone-50" id="id_flags" name="flags" aria-described-by="#id_flags_helptext">
-            <option value="0" selected>Trigger on the first message</option>
-            <option value="1">Trigger on every message</option>
-            <option value="2">Never trigger</option>
-        </select>
-        <label class="order-first font-semibold" for="id_flags">Flags</label>
-        <div id="id_flags_helptext">
-            <p>Select notification flags.</p>
         </div>
     </div>
     <button type="submit">Submit</button>

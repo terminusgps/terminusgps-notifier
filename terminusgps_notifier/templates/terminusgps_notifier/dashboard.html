@@ -2,11 +2,15 @@
 {% block title %}Dashboard{% endblock title %}
 {% partialdef main %}
 <div class="flex flex-col gap-8">
-    <div class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+    <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+        <h3 class="font-semibold">Terminus GPS Notifier</h3>
+        <p>Hello, {{ username }}!</p>
+    </div>
+    <div id="stats" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
         <label for="id_messages_count">Message Count</label>
-        <div class="flex gap-2 items-center">
-            <meter class="w-full" name="messages_count" id="id_messages_count" min="0" value="{{ customer.messages_count }}" max="{{ customer.messages_limit }}">{{ customer.messages_count }}/{{ customer.messages_limit }}</meter>
-            <p>{{ customer.messages_count }}/{{ customer.messages_limit }}</p>
+        <div class="flex gap-2 items-center" hx-get="{% url 'terminusgps_notifier:messages count' %}" hx-target="this" hx-trigger="every 3s">
+            <meter class="w-full" name="messages_count" id="id_messages_count" min="0" value="{{ messages_count }}" max="{{ messages_limit }}">{{ messages_count }}/{{ messages_limit }}</meter>
+            <p>{{ messages_count }}/{{ messages_limit }}</p>
         </div>
         <div class="flex flex-col gap-4">
             <p>Your Wialon account <span class="font-semibold">{{ has_token|yesno:'is connected, is not connected' }}</span>.</p>

@@ -9,6 +9,7 @@ urlpatterns = [
     path("contact/", views.contact, name="contact"),
     path("source/", views.source_code, name="source"),
     path("terms/", views.terms, name="terms"),
+    path("messages-count/", views.messages_count, name="messages count"),
     path("privacy/", views.privacy, name="privacy"),
     path(
         "notifications/<int:resource_id>/list/",

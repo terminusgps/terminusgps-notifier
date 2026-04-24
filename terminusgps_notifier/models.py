@@ -12,26 +12,6 @@ class CustomerQuerySet(models.QuerySet):
     def from_user(self, user: AbstractBaseUser):
         return self.get(user=user)
 
-    async def aget_token_from_user(self, user: AbstractBaseUser):
-        obj = await self.afrom_user(user)
-        return obj.token
-
-    def get_token_from_user(self, user: AbstractBaseUser):
-        obj = self.from_user(user)
-        return obj.token
-
-    async def aget_subscription_status_from_user(self, user: AbstractBaseUser):
-        obj = await self.afrom_user(user)
-        return (
-            obj.subscription.status if obj.subscription is not None else None
-        )
-
-    def get_subscription_status_from_user(self, user: AbstractBaseUser):
-        obj = self.from_user(user)
-        return (
-            obj.subscription.status if obj.subscription is not None else None
-        )
-
 
 class Customer(models.Model):
     user = models.OneToOneField(

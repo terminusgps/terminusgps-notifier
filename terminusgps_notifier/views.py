@@ -157,7 +157,8 @@ async def wialon_login(request: HttpRequest) -> HttpResponse:
 async def wialon_callback(request: HttpRequest, **kwargs) -> HttpResponse:
     token_saved = False
     if access_token := request.GET.get("access_token"):
-        customer = await Customer.objects.aget(user=request.user)
+        user = await request.auser()
+        customer = await Customer.objects.aget_from_user(user=user)
         customer.token = access_token
         customer.save(update_fields=["access_token"])
         token_saved = True
@@ -438,12 +439,25 @@ async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
     def has_subscription(customer: Customer) -> bool:
         return customer.subscription is not None
 
-    user = await request.auser()
-    customer = await Customer.objects.afrom_user(user)
+    @sync_to_async
+    def get_username(customer: Customer) -> str:
+        return customer.user.username
+
+    @sync_to_async
+    def get_messages_count(customer: Customer) -> int:
+        return customer.messages_count
+
+    @sync_to_async
+    def get_messages_limit(customer: Customer) -> int:
+        return customer.messages_limit
+
+    customer = await Customer.objects.aget(user=await request.auser())
     context = {}
-    context["customer"] = customer
+    context["username"] = await get_username(customer)
     context["has_token"] = await has_token(customer)
     context["has_subscription"] = await has_subscription(customer)
+    context["messages_count"] = await get_messages_count(customer)
+    context["messages_limit"] = await get_messages_limit(customer)
     return render(request, kwargs["template_name"], context=context)
 
 
@@ -460,6 +474,28 @@ async def terms(request: HttpRequest, **kwargs) -> HttpResponse:
 @htmx_template("terminusgps_notifier/privacy.html")
 async def privacy(request: HttpRequest, **kwargs) -> HttpResponse:
     return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/messages_count.html")
+async def messages_count(request: HttpRequest, **kwargs) -> HttpResponse:
+    @sync_to_async
+    def get_messages_count(customer: Customer) -> int:
+        return customer.messages_count
+
+    @sync_to_async
+    def get_messages_limit(customer: Customer) -> int:
+        return customer.messages_limit
+
+    try:
+        customer = await Customer.objects.aget(user=await request.auser())
+        context = {}
+        context["messages_count"] = await get_messages_count(customer)
+        context["messages_limit"] = await get_messages_limit(customer)
+    except Customer.DoesNotExist:
+        context = {}
+        context["messages_count"] = 0
+        context["messages_limit"] = 0
+    return render(request, kwargs["template_name"], context=context)
 
 
 async def source_code(request: HttpRequest) -> HttpResponse:

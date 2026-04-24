@@ -4,7 +4,7 @@
 {% if messages %}
 <ul id="messages">
     {% for message in messages %}
-    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+    <li class="mb-4 p-2 border rounded text-red-800 bg-red-300 border-current animate-jiggle">
         {{ message }}
     </li>
     {% endfor %}

@@ -1,9 +1,31 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% block title %}Home{% endblock title %}
 {% partialdef main %}
-<div class="flex flex-col gap-8">
+<div class="@container flex flex-col gap-8">
     <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
+    </div>
+    <div id="features" class="flex flex-col gap-8">
+        <div class="flex flex-col gap-4">
+            <h3 class="font-semibold text-terminus-red-800">Live Notifications, Instantly Delivered</h3>
+            <p class="text-gray-700">Stay connected in real time. Receive live alerts straight to your mobile device the moment something important happens. Fully customizable so you only get the notifications that matter most to your operation.</p>
+        </div>
+        <div class="flex flex-col gap-4">
+            <h3 class="font-semibold text-terminus-red-800">Custom Notification Management</h3>
+            <p class="text-gray-700">Create, edit and organize alerts for each of your units.</p>
+        </div>
+        <div class="flex flex-col gap-4">
+            <h3 class="font-semibold text-terminus-red-800">Simplified Payment Manager</h3>
+            <p class="text-gray-700">Manage your notification subscriptions and payments all in one place. Track your active subscription, upgrade instantly and scale your usage as your needs grow.</p>
+        </div>
+        <div class="flex flex-col gap-4">
+            <h3 class="font-semibold text-terminus-red-800">Comprehensive Dashboard</h3>
+            <p class="text-gray-700">Monitor how your team uses notifications with a clear, data-driven dashboard. Track total alerts sent and optimize your notifications for better efficiency and cost control.</p>
+        </div>
+        <div class="flex flex-col gap-4">
+            <h3 class="font-semibold text-terminus-red-800">Dedicated In-House Support</h3>
+            <p class="text-gray-700">Our expert <a href="mailto:support@terminusgps.com" class="w-fit decoration text-terminus-red-200 underline decoration-terminus-black underline-offset-4 hover:text-terminus-red-100 hover:decoration-dotted dark:decoration-white">support team</a> is always ready to help with account questions, billing issues or technical setup.</p>
+        </div>
     </div>
 </div>
 {% endpartialdef main %}

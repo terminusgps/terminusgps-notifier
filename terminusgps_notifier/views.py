@@ -10,7 +10,6 @@ from django.contrib import messages
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
-from django.template.response import TemplateResponse
 from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
@@ -27,6 +26,106 @@ from terminusgps_notifier.validators import validate_e164_phone_number
 from terminusgps_notifier.wialon import get_phone_numbers
 
 logger = logging.getLogger(__name__)
+
+
+async def _get_timestamp(request: HttpRequest, field: str) -> int:
+    if field not in request.POST:
+        return 0
+    try:
+        parsed = parse_date(request.POST[field])
+        return int(parsed.timestamp())
+    except ValueError:
+        return 0
+
+
+async def _get_txt(request: HttpRequest) -> str:
+    user = await request.auser()
+    return urllib.parse.urlencode(
+        {
+            "user_id": user.pk,
+            "unit_id": "%UNIT_ID%",
+            "message": request.POST["message"],
+            "msg_time_int": "%MSG_TIME_INT%",
+            "location": "%LOCATION%",
+            "unit_name": "%UNIT%",
+        },
+        safe="%",
+    )
+
+
+async def _get_sch(request: HttpRequest) -> dict[str, int]:
+    schedule = {}
+    schedule["f1"] = 0
+    schedule["f2"] = 0
+    schedule["t1"] = 0
+    schedule["t2"] = 0
+    schedule["m"] = 0
+    schedule["y"] = 0
+    schedule["w"] = 0
+    return schedule
+
+
+async def _get_tz(request: HttpRequest) -> int:
+    if "timezone" not in request.POST:
+        return 0
+    try:
+        return int(request.POST["timezone"])
+    except ValueError:
+        return 0
+
+
+async def _get_trg(request: HttpRequest) -> dict[str, typing.Any]:
+    p = {}
+    trigger_form_fields = forms.get_trigger_form_fields()
+    for field in request.POST:
+        if field in trigger_form_fields:
+            p[field] = request.POST[field]
+    return {"t": request.POST["trigger"], "p": p}
+
+
+async def _get_act(request: HttpRequest) -> list[dict[str, typing.Any]]:
+    url = urllib.parse.urljoin(
+        "https://api.terminusgps.com/v3/notify/", f"/{request.POST['method']}/"
+    )
+    return [{"t": "push_messages", "p": {"url": url, "get": 0}}]
+
+
+async def _get_un(request: HttpRequest) -> list[int]:
+    un = []
+    input = request.POST.getlist("units", [])
+    if not input:
+        return []
+    for unit_id in input:
+        try:
+            un.append(int(unit_id))
+        except ValueError:
+            continue
+    return un
+
+
+@sync_to_async
+def customer_has_token(customer: Customer) -> bool:
+    return customer.token is not None
+
+
+@sync_to_async
+def customer_has_subscription(customer: Customer) -> bool:
+    return customer.subscription is not None
+
+
+@sync_to_async
+def get_customer_username(customer: Customer) -> str:
+    return customer.user.username
+
+
+@sync_to_async
+def get_customer_messages_limit(customer: Customer) -> int:
+    return customer.messages_limit
+
+
+@sync_to_async
+def get_customer_messages_count(customer: Customer) -> int:
+    return customer.messages_count
 
 
 class HealthCheckView(View):
@@ -155,93 +254,51 @@ async def wialon_login(request: HttpRequest) -> HttpResponse:
 @never_cache
 @htmx_template("terminusgps_notifier/wialon_callback.html")
 async def wialon_callback(request: HttpRequest, **kwargs) -> HttpResponse:
+    user = await request.auser()
+    customer, _ = await Customer.objects.aget_or_create(user=user)
     token_saved = False
     if access_token := request.GET.get("access_token"):
-        user = await request.auser()
-        customer = await Customer.objects.aget_from_user(user=user)
         customer.token = access_token
-        customer.save(update_fields=["access_token"])
+        await customer.asave(update_fields=["token"])
         token_saved = True
-    return TemplateResponse(
-        request=request,
-        template=kwargs["template_name"],
-        context={"token_saved": token_saved},
+    context = {"token_saved": token_saved}
+    return render(request, kwargs["template_name"], context=context)
+
+
+@htmx_template("terminusgps_notifier/home.html")
+async def home(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/contact.html")
+async def contact(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/terms.html")
+async def terms(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/privacy.html")
+async def privacy(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(request, kwargs["template_name"], context={})
+
+
+@htmx_template("terminusgps_notifier/navbar.html")
+async def navbar(request: HttpRequest, **kwargs) -> HttpResponse:
+    return render(
+        request,
+        kwargs["template_name"],
+        context={"user": await request.auser()},
     )
 
 
-async def _get_timestamp(request: HttpRequest, field: str) -> int:
-    if field not in request.POST:
-        return 0
-    try:
-        parsed = parse_date(request.POST[field])
-        return int(parsed.timestamp())
-    except ValueError:
-        return 0
-
-
-async def _get_txt(request: HttpRequest) -> str:
-    user = await request.auser()
-    return urllib.parse.urlencode(
-        {
-            "user_id": user.pk,
-            "unit_id": "%UNIT_ID%",
-            "message": request.POST["message"],
-            "msg_time_int": "%MSG_TIME_INT%",
-            "location": "%LOCATION%",
-            "unit_name": "%UNIT%",
-        },
-        safe="%",
-    )
-
-
-async def _get_sch(request: HttpRequest) -> dict[str, int]:
-    schedule = {}
-    schedule["f1"] = 0
-    schedule["f2"] = 0
-    schedule["t1"] = 0
-    schedule["t2"] = 0
-    schedule["m"] = 0
-    schedule["y"] = 0
-    schedule["w"] = 0
-    return schedule
-
-
-async def _get_tz(request: HttpRequest) -> int:
-    if "timezone" not in request.POST:
-        return 0
-    try:
-        return int(request.POST["timezone"])
-    except ValueError:
-        return 0
-
-
-async def _get_trg(request: HttpRequest) -> dict[str, typing.Any]:
-    p = {}
-    trigger_form_fields = forms.get_trigger_form_fields()
-    for field in request.POST:
-        if field in trigger_form_fields:
-            p[field] = request.POST[field]
-    return {"t": request.POST["trigger"], "p": p}
-
-
-async def _get_act(request: HttpRequest) -> list[dict[str, typing.Any]]:
-    url = urllib.parse.urljoin(
-        "https://api.terminusgps.com/v3/notify/", f"/{request.POST['method']}/"
-    )
-    return [{"t": "push_messages", "p": {"url": url, "get": 0}}]
-
-
-async def _get_un(request: HttpRequest) -> list[int]:
-    un = []
-    input = request.POST.getlist("units", [])
-    if not input:
-        return []
-    for unit_id in input:
-        try:
-            un.append(int(unit_id))
-        except ValueError:
-            continue
-    return un
+async def source_code(request: HttpRequest) -> HttpResponse:
+    return RedirectView.as_view(
+        url="https://github.com/terminusgps/terminusgps-notifier",
+        permanent=True,
+    )(request)
 
 
 @never_cache
@@ -424,82 +481,32 @@ async def detail_notification(request: HttpRequest, **kwargs) -> HttpResponse:
     return render(request, kwargs["template_name"], context=context)
 
 
-@htmx_template("terminusgps_notifier/home.html")
-async def home(request: HttpRequest, **kwargs) -> HttpResponse:
-    return render(request, kwargs["template_name"], context={})
-
-
 @htmx_template("terminusgps_notifier/dashboard.html")
 async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
-    @sync_to_async
-    def has_token(customer: Customer) -> bool:
-        return customer.token is not None
-
-    @sync_to_async
-    def has_subscription(customer: Customer) -> bool:
-        return customer.subscription is not None
-
-    @sync_to_async
-    def get_username(customer: Customer) -> str:
-        return customer.user.username
-
-    @sync_to_async
-    def get_messages_count(customer: Customer) -> int:
-        return customer.messages_count
-
-    @sync_to_async
-    def get_messages_limit(customer: Customer) -> int:
-        return customer.messages_limit
-
-    customer = await Customer.objects.aget(user=await request.auser())
-    context = {}
-    context["username"] = await get_username(customer)
-    context["has_token"] = await has_token(customer)
-    context["has_subscription"] = await has_subscription(customer)
-    context["messages_count"] = await get_messages_count(customer)
-    context["messages_limit"] = await get_messages_limit(customer)
-    return render(request, kwargs["template_name"], context=context)
-
-
-@htmx_template("terminusgps_notifier/contact.html")
-async def contact(request: HttpRequest, **kwargs) -> HttpResponse:
     return render(request, kwargs["template_name"], context={})
 
 
-@htmx_template("terminusgps_notifier/terms.html")
-async def terms(request: HttpRequest, **kwargs) -> HttpResponse:
-    return render(request, kwargs["template_name"], context={})
-
-
-@htmx_template("terminusgps_notifier/privacy.html")
-async def privacy(request: HttpRequest, **kwargs) -> HttpResponse:
-    return render(request, kwargs["template_name"], context={})
-
-
-@htmx_template("terminusgps_notifier/messages_count.html")
-async def messages_count(request: HttpRequest, **kwargs) -> HttpResponse:
-    @sync_to_async
-    def get_messages_count(customer: Customer) -> int:
-        return customer.messages_count
-
-    @sync_to_async
-    def get_messages_limit(customer: Customer) -> int:
-        return customer.messages_limit
-
+@htmx_template("terminusgps_notifier/stats.html")
+async def stats(request: HttpRequest, **kwargs) -> HttpResponse:
     try:
-        customer = await Customer.objects.aget(user=await request.auser())
-        context = {}
-        context["messages_count"] = await get_messages_count(customer)
-        context["messages_limit"] = await get_messages_limit(customer)
+        user = await request.auser()
+        customer = await Customer.objects.aget(user=user)
+        username = await get_customer_username(customer)
+        has_token = await customer_has_token(customer)
+        has_subscription = await customer_has_subscription(customer)
+        messages_count = await get_customer_messages_count(customer)
+        messages_limit = await get_customer_messages_limit(customer)
     except Customer.DoesNotExist:
-        context = {}
-        context["messages_count"] = 0
-        context["messages_limit"] = 0
+        username = None
+        has_token = False
+        has_subscription = False
+        messages_count = 0
+        messages_limit = 0
+
+    context = {}
+    context["username"] = username
+    context["has_token"] = has_token
+    context["has_subscription"] = has_subscription
+    context["messages_count"] = messages_count
+    context["messages_limit"] = messages_limit
     return render(request, kwargs["template_name"], context=context)
-
-
-async def source_code(request: HttpRequest) -> HttpResponse:
-    return RedirectView.as_view(
-        url="https://github.com/terminusgps/terminusgps-notifier",
-        permanent=True,
-    )(request)

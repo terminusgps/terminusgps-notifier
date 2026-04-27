@@ -9,8 +9,9 @@ urlpatterns = [
     path("contact/", views.contact, name="contact"),
     path("source/", views.source_code, name="source"),
     path("terms/", views.terms, name="terms"),
-    path("messages-count/", views.messages_count, name="messages count"),
+    path("stats/", views.stats, name="stats"),
     path("privacy/", views.privacy, name="privacy"),
+    path("navbar/", views.navbar, name="navbar"),
     path(
         "notifications/<int:resource_id>/list/",
         views.list_notification,

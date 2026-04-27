@@ -10,11 +10,29 @@
         <title>{% block title %}{% endblock title %} | Terminus GPS Notifier</title>
     </head>
     <body class="text-gray-800 dark:text-gray-100" style='background-image: url("{% static 'terminusgps_notifier/img/background-light.png' %}");' hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
-        <nav class="flex justify-between bg-stone-100 text-gray-800 drop-shadow dark:bg-gray-800">
+        <nav class="flex justify-between bg-stone-100 text-gray-800 drop-shadow dark:bg-gray-800" hx-get="{% url 'terminusgps_notifier:navbar' %}" hx-target="this" hx-trigger="load once">
             <a href="{% url 'terminusgps_notifier:home' %}" class="group flex items-center space-x-1">
                 <img src="{% static 'terminusgps_notifier/icon/logo-waypoint.svg' %}" class="size-16 animate-coin-slow group-hover:animate-none">
                 <img src="{% static 'terminusgps_notifier/icon/logo-text.svg' %}" class="size-24">
             </a>
+            <div class="px-4 flex items-center gap-2">
+                <a href="#">
+                    <div class="py-2 px-4 border rounded bg-stone-200 cursor-pointer flex items-center gap-2 animate-pulse">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                        </svg>
+                        <p>Button</p>
+                    </div>
+                </a>
+                <a href="#">
+                    <div class="py-2 px-4 border rounded bg-stone-200 cursor-pointer flex items-center gap-2 animate-pulse">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                        </svg>
+                        <p>Button</p>
+                    </div>
+                </a>
+            </div>
         </nav>
         <main class="container mx-auto -mt-2 ">
             <div class="border-lr mx-8 border-gray-600 bg-stone-100 dark:bg-gray-800">

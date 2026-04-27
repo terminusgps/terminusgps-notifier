@@ -248,7 +248,11 @@ async def create_notification(request: HttpRequest, **kwargs) -> HttpResponse:
 @require_GET
 @htmx_template("terminusgps_notifier/select_resource.html")
 async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_resources_from_wialon(token: str) -> list:
+    try:
+        resource_list = []
+        user = await request.auser()
+        customer = await Customer.objects.aget(user=user)
+        token = await get_customer_token(customer)
         with WialonSession(token=token) as session:
             params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
             params["spec"]["itemsType"] = "avl_resource"
@@ -257,28 +261,29 @@ async def select_resource(request: HttpRequest, **kwargs) -> HttpResponse:
             params["spec"]["propType"] = "property"
             params["spec"]["sortType"] = "sys_name"
             response = session.wialon_api.core_search_items(**params)
-            return response["items"]
-
-    try:
-        user = await request.auser()
-        customer = await Customer.objects.aget(user=user)
-        token = await get_customer_token(customer)
-        resource_list = await get_resources_from_wialon(token)
+            resource_list = response["items"]
     except WialonAPIError as error:
         msg = f"Failed to get resources from Wialon for user: {user}"
         logger.error(msg)
         logger.error(error)
         messages.error(request, msg)
-        resource_list = []
-    context = {}
-    context["resource_list"] = resource_list
+    except Customer.DoesNotExist:
+        msg = f"No associated customer for user: {user}"
+        logger.error(msg)
+        messages.error(request, msg)
+
+    context = {"resource_list": resource_list}
     return render(request, kwargs["template_name"], context=context)
 
 
 @require_GET
 @htmx_template("terminusgps_notifier/select_units.html")
 async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_items_from_wialon(token: str) -> list:
+    try:
+        items_list = []
+        user = await request.auser()
+        customer = await Customer.objects.aget(user)
+        token = await get_customer_token(customer)
         with WialonSession(token=token) as session:
             params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
             params["spec"]["itemsType"] = request.GET["items_type"]
@@ -287,44 +292,46 @@ async def select_units(request: HttpRequest, **kwargs) -> HttpResponse:
             params["spec"]["propType"] = "property,property"
             params["spec"]["sortType"] = "sys_name"
             response = session.wialon_api.core_search_items(**params)
-            return response["items"]
-
-    items_list = []
-    try:
-        user = await request.auser()
-        customer = await Customer.objects.afrom_user(user)
-        token = await get_customer_token(customer)
-        items_list = await get_items_from_wialon(token)
+            items_list = response["items"]
     except WialonAPIError as error:
         logger.error(f"Failed to get items from Wialon for user: {user}")
         logger.error(error)
-    context = {}
-    context["items_list"] = items_list
+    except Customer.DoesNotExist:
+        msg = f"No associated customer for user: {user}"
+        logger.error(msg)
+        messages.error(request, msg)
+
+    context = {"items_list": items_list}
     return render(request, kwargs["template_name"], context=context)
 
 
 @require_GET
 @htmx_template("terminusgps_notifier/list_notification.html")
 async def list_notification(request: HttpRequest, **kwargs) -> HttpResponse:
-    async def get_notifications_from_wialon(customer: Customer) -> list:
-        with WialonSession(token=customer.token) as session:
-            params = {}
-            params["itemId"] = kwargs["resource_id"]
-            return session.wialon_api.resource_get_notification_data(**params)
-
     try:
+        notification_list = []
         user = await request.auser()
-        customer = await Customer.objects.afrom_user(user)
-        notification_list = await get_notifications_from_wialon(customer)
+        customer = await Customer.objects.aget(user)
+        token = await get_customer_token(customer)
+        with WialonSession(token=token) as session:
+            notification_list = (
+                session.wialon_api.resource_get_notification_data(
+                    **{"itemId": kwargs["resource_id"]}
+                )
+            )
     except WialonAPIError as error:
         msg = f"Failed to get notifications from Wialon for resource: #{kwargs['resource_id']}"
         logger.error(msg)
         logger.error(error)
-        notification_list = []
+    except Customer.DoesNotExist:
+        msg = f"No associated customer for user: {user}"
+        logger.error(msg)
+        messages.error(request, msg)
 
-    context = {}
-    context["notification_list"] = notification_list
-    context["resource_id"] = kwargs["resource_id"]
+    context = {
+        "notification_list": notification_list,
+        "resource_id": kwargs["resource_id"],
+    }
     return render(request, kwargs["template_name"], context=context)
 
 

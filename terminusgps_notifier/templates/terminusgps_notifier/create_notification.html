@@ -1,131 +1,19 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% block title %}Create Notification{% endblock title %}
 {% partialdef main %}
-{% if messages %}
-<ul id="messages">
-    {% for message in messages %}
-    <li class="mb-4 p-2 border rounded text-red-800 bg-red-300 border-current animate-jiggle">
-        {{ message }}
-    </li>
-    {% endfor %}
-</ul>
-{% endif %}
-<form class="@container flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification' %}" hx-target="this" hx-swap="outerHTML" hx-include="*" novalidate>
+<form
+    class="@container flex flex-col gap-8"
+    method="post"
+    action="{% url 'terminusgps_notifier:create notification' %}"
+>
     {% csrf_token %}
-    <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
-        <div class="flex flex-col gap-2 flex-1 min-w-0">
-            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_resource" name="resource" aria-described-by="#id_resource_helptext" hx-get="{% url 'terminusgps_notifier:select resource' %}" hx-target="this" hx-trigger="load" hx-indicator="#resource-indicator"></select>
-            <div class="order-first flex gap-2 items-center">
-                <label class="font-semibold" for="id_resource">Resource</label>
-                <svg id="resource-indicator" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="htmx-indicator size-6 animate-spin">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                </svg>
-            </div>
-            <div id="id_resource_helptext">
-                <p>Select a Wialon resource from the list.</p>
-            </div>
-        </div>
-        <div class="flex flex-col gap-2 flex-1 min-w-0">
-            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:select units' %}" hx-target="#id_units" hx-select="#id_units" hx-indicator="#unit-indicator" hx-include="this,[name='resource']" aria-described-by="#id_items_type_helptext">
-                <option value="avl_unit">Units</option>
-                <option value="avl_unit_group">Unit Groups</option>
-            </select>
-            <label class="order-first font-semibold" for="id_items_type">Items Type</label>
-            <div id="id_items_type_helptext">
-                <p>Select a Wialon items type.</p>
-            </div>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_units" name="units" aria-described-by="#id_units_helptext" required multiple></select>
-        <div class="order-first flex items-center gap-2">
-            <label class="font-semibold" for="id_units">Units/Unit Groups</label>
-            <svg id="unit-indicator" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 htmx-indicator animate-spin">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-        </div>
-        <div id="id_units_helptext">
-            <p>Select unit/unit groups to trigger the notification.</p>
-            <p>Ctrl+click to select multiple. Cmd+click on Mac.</p>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <select class="peer p-2 border rounded bg-stone-50" id="id_trigger" name="trigger" hx-get="{% url 'terminusgps_notifier:trigger parameters' %}" hx-target="#id_trigger_parameters" hx-include="this" hx-trigger="load, change" hx-swap="outerHTML">
-            {% for value, label in triggers %}
-            <option value="{{ value }}">{{ label }}</option>
-            {% endfor %}
-        </select>
-        <label class="order-first font-semibold" for="id_trigger">Trigger</label>
-        <div class="flex flex-col gap-4" id="id_trigger_parameters" name="trigger_parameters"></div>
-    </div>
-    <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
-        <div class="flex flex-col gap-2 flex-1 min-w-0">
-            <input class="peer p-2 border rounded bg-stone-50 w-full" type="text" id="id_name" name="name" placeholder="New Notification">
-            <label class="order-first font-semibold" for="id_name">Notification Name</label>
-            <div id="id_name_helptext">
-                <p>Provide a memorable notification name.</p>
-            </div>
-        </div>
-        <div class="flex flex-col gap-2 flex-1 min-w-0">
-            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_method" name="method">
-                <option value="sms" selected>SMS</option>
-                <option value="voice">Voice</option>
-            </select>
-            <label class="order-first font-semibold" for="id_method">Notification Method</label>
-            <div id="id_method_helptext">
-                <p>Select whether to send a notification via text (SMS) or text-to-speech call (Voice).</p>
-            </div>
-        </div>
-    </div>
-    <div class="flex flex-col gap-2">
-        <input class="peer p-2 border rounded bg-stone-50" id="id_message" name="message" type="text" placeholder="At %POS_TIME%, your vehicle %UNIT% had its ignition switched off.">
-        <label class="order-first font-semibold" for="id_message">Notification Message</label>
-        <div id="id_message_helptext">
-            <p>Provide a message to be texted or read aloud on notification trigger.</p>
-        </div>
-    </div>
-    <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
-        <div class="flex flex-col gap-2 flex-1 min-w-0">
-            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_timezone" name="timezone" required>
-                {% for value, label in timezones %}
-                <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-            </select>
-            <label class="order-first font-semibold" for="id_timezone">Timezone</label>
-            <div id="id_timezone_helptext">
-                <p>Select a timezone from the list.</p>
-            </div>
-        </div>
-        <div class="flex flex-col gap-2 flex-1 min-w-0">
-            <select class="peer p-2 border rounded bg-stone-50 w-full" id="id_language" name="language" required>
-                {# TODO: localize language names #}
-                <option value="en">English</option>
-            </select>
-            <label class="order-first font-semibold" for="id_language">Language</label>
-            <div id="id_language_helptext">
-                <p>Select a language from the list.</p>
-            </div>
-        </div>
-    </div>
-    <div class="flex flex-col gap-8 items-center @md:gap-4 @md:flex-row">
-        <div class="flex flex-col gap-2 flex-1 min-w-0">
-            <input class="peer p-2 border rounded bg-stone-50 w-full" id="id_activation_time" name="activation_time" type="datetime-local" aria-described-by="#id_activation_time_helptext">
-            <label class="order-first font-semibold" for="id_activation_time">Activation Time</label>
-            <div id="id_activation_time_helptext">
-                <p>Provide a date and time to activate the notification.</p>
-                <p>Leave this blank to activate immediately.</p>
-            </div>
-        </div>
-        <div class="flex flex-col gap-2 flex-1 min-w-0">
-            <input class="peer p-2 border rounded bg-stone-50 w-full" id="id_deactivation_time" name="deactivation_time" type="datetime-local" aria-described-by="#id_deactivation_time_helptext">
-            <label class="order-first font-semibold" for="id_deactivation_time">Deactivation Time</label>
-            <div id="id_deactivation_time_helptext">
-                <p>Provide a date and time to deactivate the notification.</p>
-                <p>Leave this blank to never deactivate.</p>
-            </div>
-        </div>
-    </div>
-    <button type="submit">Submit</button>
+    <input type="text" id="id_itemId" name="itemId" value="{{ itemId }}">
+    <input type="text" id="id_id" name="id" value="0">
+    <input type="text" id="id_callMode" name="callMode" value="create">
+    <input type="text" id="id_n" name="n" value="{{ n }}">
+    <input type="text" id="id_txt" name="txt" value="{{ txt }}">
+    <input type="number" id="id_ta" name="ta" value="{{ ta|default:0 }}">
+    <input type="number" id="id_td" name="td" value="{{ td|default:0 }}">
 </form>
 {% endpartialdef main %}
 {% block content %}

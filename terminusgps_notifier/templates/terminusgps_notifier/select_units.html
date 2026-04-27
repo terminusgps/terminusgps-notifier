@@ -1,10 +1,8 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% partialdef main %}
-<select class="peer p-2 border rounded bg-stone-50 w-full" id="id_units" name="units" aria-described-by="#id_units_helptext" required multiple>
 {% for item in items_list %}
-    <option value="{{ item.id }}">{{ item.nm }}</option>
+<option value="{{ item.id }}">{{ item.nm }}</option>
 {% endfor %}
-</select>
 {% endpartialdef main %}
 {% block content %}
 {% partial main %}

@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
@@ -509,4 +510,7 @@ async def stats(request: HttpRequest, **kwargs) -> HttpResponse:
     context["has_subscription"] = has_subscription
     context["messages_count"] = messages_count
     context["messages_limit"] = messages_limit
+    context["redirect_uri"] = request.build_absolute_uri(
+        reverse("terminusgps_notifier:wialon callback")
+    )
     return render(request, kwargs["template_name"], context=context)

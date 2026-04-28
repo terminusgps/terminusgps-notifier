@@ -299,16 +299,13 @@ async def select_units(request: HttpRequest, resource_id: int) -> HttpResponse:
 @htmx_template("terminusgps_notifier/select_trigger.html")
 async def select_trigger(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
-        non_parameter_fields = ("trigger", "csrfmiddlewaretoken")
         t = request.POST["trigger"]
         p = {}
         for field in request.POST:
-            if field not in non_parameter_fields:
+            target_fields = forms.get_trigger_form_fields()
+            if field in target_fields:
                 p[field] = request.POST[field]
         await request.session.aset("trg", {"t": t, "p": p})
-        print(f"{await request.session.aget("trg") = }")
-        print(f"{await request.session.aget("units") = }")
-        print(f"{await request.session.aget("resource_id") = }")
         return redirect(reverse("terminusgps_notifier:create notification"))
     context = {"triggers": forms.WialonNotificationTrigger.choices}
     return render(request, request.template_name, context=context)

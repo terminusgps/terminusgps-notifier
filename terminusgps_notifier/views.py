@@ -6,7 +6,6 @@ import warnings
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.contrib.auth.models import AbstractBaseUser
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.forms import Form
 from django.http import Http404, HttpRequest, HttpResponse
@@ -266,8 +265,11 @@ async def select_resource(request: HttpRequest) -> HttpResponse:
 @htmx_template("terminusgps_notifier/select_units.html")
 async def select_units(request: HttpRequest, resource_id: int) -> HttpResponse:
     if request.method == "POST":
-        units = [int(id) for id in request.POST["units"]]
-        await request.session.aset("units", units)
+        if units := request.POST.getlist("units", []):
+            units = [int(id) for id in units]
+            await request.session.aset("units", units)
+        else:
+            await request.session.aset("units", [])
         await request.session.aset("resource", resource_id)
         return redirect(reverse("terminusgps_notifier:select trigger"))
     try:
@@ -328,21 +330,24 @@ async def trigger_parameters(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/create_notification.html")
 async def create_notification(request: HttpRequest) -> HttpResponse:
-    async def get_txt(user: AbstractBaseUser, message: str) -> str:
+    async def get_txt(request: HttpRequest) -> str:
+        user = await request.auser()
         return urllib.parse.urlencode(
             {
                 "user_id": user.pk,
                 "unit_id": "%UNIT_ID%",
                 "msg_time_int": "%MSG_TIME_INT%",
+                "message": request.POST["message"],
                 "location": "%LOCATION%",
                 "unit_name": "%UNIT%",
             },
             safe="%",
         )
 
-    async def get_act(method: str) -> list[dict]:
+    async def get_act(request: HttpRequest) -> list[dict]:
         url = urllib.parse.urljoin(
-            "https://api.terminusgps.com/v3/notify/", f"/{method}/"
+            "https://api.terminusgps.com/v3/notify/",
+            f"/{request.POST['method']}/",
         )
         return [{"t": "send_messages", "p": {"url": url, "get": 0}}]
 
@@ -363,9 +368,9 @@ async def create_notification(request: HttpRequest) -> HttpResponse:
             customer = await Customer.objects.aget(user=user)
             with WialonSession(token=customer.token) as session:
                 params = {"id": 0, "callMode": "create"}
-                params["itemId"] = int(await request.session.aget("resource"))
+                params["itemId"] = int(request.POST["itemId"])
                 params["n"] = str(request.POST["n"])
-                params["txt"] = await get_txt(user, request.POST["message"])
+                params["txt"] = await get_txt(request)
                 params["ta"] = int(request.POST["ta"])
                 params["td"] = int(request.POST["td"])
                 params["ma"] = int(request.POST["ma"])
@@ -376,15 +381,22 @@ async def create_notification(request: HttpRequest) -> HttpResponse:
                 params["cp"] = int(request.POST["cp"])
                 params["fl"] = int(request.POST["fl"])
                 params["la"] = str(request.POST["la"])
-                params["un"] = await request.session.aget("units", [])
-                params["sch"] = await get_sch(request)
-                params["ctrl_sch"] = await get_sch(request)
-                params["trg"] = await request.session.aget("trigger")
-                params["act"] = await get_act(request.POST["method"])
+                params["un"] = request.POST["un"]
+                params["sch"] = request.POST["sch"]
+                params["ctrl_sch"] = request.POST["ctrl_sch"]
+                params["trg"] = request.POST["trg"]
+                params["act"] = await get_act(request)
+                raise Exception
                 response = session.wialon_api.resource_update_notification(
                     **params
                 )
         except WialonAPIError as error:
             print(f"{error = }")
+
     context = {}
+    context["itemId"] = await request.session.aget("resource")
+    context["trg"] = await request.session.aget("trg", {})
+    context["un"] = await request.session.aget("units", [])
+    context["sch"] = await get_sch(request)
+    context["ctrl_sch"] = await get_sch(request)
     return render(request, request.template_name, context=context)

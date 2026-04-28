@@ -5,12 +5,12 @@
     {% csrf_token %}
     <div>
         <label for="id_n">Name:</label>
-        <input type="text" id="id_n" name="n" value="{{ n }}" aria-described-by="#id_n_helptext">
+        <input type="text" id="id_n" name="n" value="{{ n }}" minlength="4" maxlength="50" aria-described-by="#id_n_helptext" required>
         <p id="id_n_helptext">Provide a memorable name for your notification.</p>
     </div>
     <div>
         <label for="id_message">Message:</label>
-        <input type="text" id="id_message" name="message" value="{{ message }}" aria-described-by="#id_message_helptext">
+        <input type="text" id="id_message" name="message" value="{{ message }}" minlength="4" maxlength="1024" aria-described-by="#id_message_helptext" required>
         <p id="id_message_helptext">Provide a message to send to phone numbers.</p>
     </div>
     <div>
@@ -33,24 +33,68 @@
     </div>
     <div>
         <label for="id_ma">Max Alarms:</label>
-        <input type="number" id="id_ma" name="ma">
+        <input type="number" id="id_ma" name="ma" value="{{ ma|default:0 }}">
+        <p id="id_ma_helptext">Provide the maxmimum number of alarms. 0 = unlimited.</p>
     </div>
     <div>
         <label for="id_mmtd">Max Message Interval:</label>
-        <input type="number" id="id_mmtd" name="mmtd">
+        <select id="id_mmtd" name="mmtd">
+            <option value="0" selected>Any Time</option>
+            <option value="60">1 minute</option>
+            <option value="600">10 minutes</option>
+            <option value="1800">30 minutes</option>
+            <option value="3600">1 hour</option>
+            <option value="21600">6 hours</option>
+            <option value="43200">12 hours</option>
+            <option value="86400">1 day</option>
+            <option value="864000">10 days</option>
+        </select>
+        <p id="id_mmtd_helptext">Max Message Interval</p>
     </div>
     <div>
         <label for="id_cdt">Alarm Timeout:</label>
-        <input type="number" id="id_cdt" name="cdt">
+        <input type="number" id="id_cdt" name="cdt" value="{{ cdt|default:0 }}">
+        <p id="id_cdt_helptext">Timeout</p>
     </div>
     <div>
         <label for="id_mast">Min Alarm Duration State:</label>
-        <input type="number" id="id_mast" name="mast">
+        <input type="number" id="id_mast" name="mast" value="{{ mast|default:0 }}">
+        <p id="id_mast_helptext">Min Duration</p>
     </div>
     <div>
         <label for="id_mpst">Min Previous Duration State:</label>
-        <input type="number" id="id_mpst" name="mpst">
+        <input type="number" id="id_mpst" name="mpst" value="{{ mpst|default:0 }}">
+        <p id="id_mpst_helptext">Min Duration</p>
     </div>
+    <div>
+        <label for="id_cp">Control Period:</label>
+        <input type="number" id="id_cp" name="cp" value="{{ cp|default:0 }}">
+        <p id="id_cp_helptext">Control Period</p>
+    </div>
+    <div>
+        <label for="id_fl">Flags:</label>
+        <select id="id_fl" name="fl">
+            <option value="0" selected>Trigger on first message</option>
+            <option value="1">Trigger on every message</option>
+            <option value="2">Never trigger</option>
+        </select>
+        <p id="id_fl_helptext">Select notification trigger flags.</p>
+    </div>
+    <div>
+        <label for="id_la">Language:</label>
+        <select id="id_la" name="la">
+            <option value="en" selected>English</option>
+        </select>
+        <p id="id_la_helptext">Select notification language.</p>
+    </div>
+    <div>
+        <input type="hidden" id="id_itemId" name="itemId" value="{{ itemId }}">
+        <input type="hidden" id="id_un" name="un" value="{{ un }}">
+        <input type="hidden" id="id_trg" name="trg" value="{{ trg }}">
+        <input type="hidden" id="id_sch" name="sch" value="{{ sch }}">
+        <input type="hidden" id="id_ctrl_sch" name="ctrl_sch" value="{{ ctrl_sch }}">
+    </div>
+    <button type="submit">Submit</button>
 </form>
 {% endpartialdef main %}
 {% block content %}

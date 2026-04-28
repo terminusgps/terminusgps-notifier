@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import logging
 import typing
@@ -6,6 +7,7 @@ import warnings
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from django.contrib import messages
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.forms import Form
 from django.http import Http404, HttpRequest, HttpResponse
@@ -20,7 +22,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
-from terminusgps_notifier import forms
+from terminusgps_notifier import constants, forms
 from terminusgps_notifier.decorators import htmx_template
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Customer
@@ -367,8 +369,9 @@ async def create_notification(request: HttpRequest) -> HttpResponse:
             user = await request.auser()
             customer = await Customer.objects.aget(user=user)
             with WialonSession(token=customer.token) as session:
+                resource_id = int(request.POST["itemId"])
                 params = {"id": 0, "callMode": "create"}
-                params["itemId"] = int(request.POST["itemId"])
+                params["itemId"] = resource_id
                 params["n"] = str(request.POST["n"])
                 params["txt"] = await get_txt(request)
                 params["ta"] = int(request.POST["ta"])
@@ -380,18 +383,32 @@ async def create_notification(request: HttpRequest) -> HttpResponse:
                 params["mpst"] = int(request.POST["mpst"])
                 params["cp"] = int(request.POST["cp"])
                 params["fl"] = int(request.POST["fl"])
+                params["tz"] = int(request.POST["tz"])
                 params["la"] = str(request.POST["la"])
-                params["un"] = request.POST["un"]
-                params["sch"] = request.POST["sch"]
-                params["ctrl_sch"] = request.POST["ctrl_sch"]
-                params["trg"] = request.POST["trg"]
+                params["un"] = ast.literal_eval(request.POST["un"])
+                params["d"] = request.POST.getlist("d", [])
+                params["sch"] = ast.literal_eval(request.POST["sch"])
+                params["ctrl_sch"] = ast.literal_eval(request.POST["ctrl_sch"])
+                params["trg"] = ast.literal_eval(request.POST["trg"])
                 params["act"] = await get_act(request)
-                raise Exception
+                print(f"{params = }")
                 response = session.wialon_api.resource_update_notification(
                     **params
                 )
+                print(f"{response = }")
+                raise Exception
+                return redirect(
+                    reverse(
+                        "terminusgps_notifier:detail notification",
+                        kwargs={
+                            "resource_id": resource_id,
+                            "notification_id": response[0],
+                        },
+                    )
+                )
         except WialonAPIError as error:
-            print(f"{error = }")
+            msg = f"Failed to create notification in Wialon: {error}"
+            messages.error(request, msg)
 
     context = {}
     context["itemId"] = await request.session.aget("resource")
@@ -399,4 +416,25 @@ async def create_notification(request: HttpRequest) -> HttpResponse:
     context["un"] = await request.session.aget("units", [])
     context["sch"] = await get_sch(request)
     context["ctrl_sch"] = await get_sch(request)
+    context["timezones"] = constants.TIMEZONES
+    return render(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/detail_notification.html")
+async def detail_notification(
+    request: HttpRequest, resource_id: int, notification_id: int
+) -> HttpResponse:
+    try:
+        user = await request.auser()
+        customer = await Customer.objects.aget(user=user)
+        with WialonSession(token=customer.token) as session:
+            response = session.wialon_api.resource_get_notification_data(
+                **{"itemId": resource_id, "col": [notification_id]}
+            )
+    except WialonAPIError as error:
+        msg = f"Failed to retrieve notification data for '{resource_id}:{notification_id}': {error}"
+        messages.error(request, msg)
+        response = None
+    context = {"response": response}
     return render(request, request.template_name, context=context)

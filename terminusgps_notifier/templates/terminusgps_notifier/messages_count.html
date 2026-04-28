@@ -1,8 +1,0 @@
-{% extends "terminusgps_notifier/layout.html" %}
-{% partialdef main %}
-<meter class="w-full" name="messages_count" id="id_messages_count" min="0" value="{{ messages_count }}" max="{{ messages_limit }}">{{ messages_count }}/{{ messages_limit }}</meter>
-<p>{{ messages_count }}/{{ messages_limit }}</p>
-{% endpartialdef main %}
-{% block content %}
-{% partial main %}
-{% endblock content %}

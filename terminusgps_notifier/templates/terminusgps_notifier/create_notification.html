@@ -1,6 +1,20 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% block title %}Create Notification{% endblock title %}
 {% partialdef main %}
+{% if messages %}
+<ul id="messages" class="mb-4">
+    {% for message in messages %}
+    <li class="p-4 border rounded bg-red-50 text-red-700 border-current animate-jiggle shadow-sm">
+        <div class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+            <p>{{ message }}</p>
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
 <form method="post" action="{% url 'terminusgps_notifier:create notification' %}">
     {% csrf_token %}
     <div>
@@ -53,23 +67,29 @@
     </div>
     <div>
         <label for="id_cdt">Alarm Timeout:</label>
-        <input type="number" id="id_cdt" name="cdt" value="{{ cdt|default:0 }}">
-        <p id="id_cdt_helptext">Timeout</p>
+        <input type="number" id="id_cdt" name="cdt" value="{{ cdt|default:0 }}" max="1800">
+        <p id="id_cdt_helptext">Alarm timeout in seconds. Max is 1800 (1 hour).</p>
     </div>
     <div>
         <label for="id_mast">Min Alarm Duration State:</label>
-        <input type="number" id="id_mast" name="mast" value="{{ mast|default:0 }}">
-        <p id="id_mast_helptext">Min Duration</p>
+        <input type="number" id="id_mast" name="mast" value="{{ mast|default:0 }}" max="86400">
+        <p id="id_mast_helptext">Provide the minimum duration of alarm state in seconds. Max is 86400 (1 day).</p>
     </div>
     <div>
         <label for="id_mpst">Min Previous Duration State:</label>
-        <input type="number" id="id_mpst" name="mpst" value="{{ mpst|default:0 }}">
-        <p id="id_mpst_helptext">Min Duration</p>
+        <input type="number" id="id_mpst" name="mpst" value="{{ mpst|default:0 }}" max="86400">
+        <p id="id_mpst_helptext">Provide the minimum duration of previous state in seconds. Max is 86400 (1 day).</p>
     </div>
     <div>
         <label for="id_cp">Control Period:</label>
-        <input type="number" id="id_cp" name="cp" value="{{ cp|default:0 }}">
-        <p id="id_cp_helptext">Control Period</p>
+        <select id="id_cp" name="cp">
+            <option value="0">Any Time</option>
+            <option value="60">Last minute</option>
+            <option value="600">Last 10 minutes</option>
+            <option value="3600" selected>Last hour</option>
+            <option value="86400">Last day</option>
+        </select>
+        <p id="id_cp_helptext">Select a control period relative to current time.</p>
     </div>
     <div>
         <label for="id_fl">Flags:</label>
@@ -78,7 +98,16 @@
             <option value="1">Trigger on every message</option>
             <option value="2">Never trigger</option>
         </select>
-        <p id="id_fl_helptext">Select notification trigger flags.</p>
+        <p id="id_fl_helptext">Select a notification flag.</p>
+    </div>
+    <div>
+        <label for="id_tz">Flags:</label>
+        <select id="id_tz" name="tz">
+            {% for value, label in timezones %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+        <p id="id_tz_helptext">Select a timezone.</p>
     </div>
     <div>
         <label for="id_la">Language:</label>

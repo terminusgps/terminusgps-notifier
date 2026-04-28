@@ -9,32 +9,7 @@ urlpatterns = [
     path("contact/", views.contact, name="contact"),
     path("source/", views.source_code, name="source"),
     path("terms/", views.terms, name="terms"),
-    path("stats/", views.stats, name="stats"),
     path("privacy/", views.privacy, name="privacy"),
-    path("navbar/", views.navbar, name="navbar"),
-    path(
-        "notifications/<int:resource_id>/list/",
-        views.list_notification,
-        name="list notification",
-    ),
-    path(
-        "notifications/<int:resource_id>/<int:notification_id>/",
-        views.detail_notification,
-        name="detail notification",
-    ),
-    path(
-        "notifications/create/",
-        views.create_notification,
-        name="create notification",
-    ),
-    path(
-        "notifications/resources/select/",
-        views.select_resource,
-        name="select resource",
-    ),
-    path(
-        "notifications/units/select/", views.select_units, name="select units"
-    ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),
     path("v3/health/", views.HealthCheckView.as_view(), name="health check"),

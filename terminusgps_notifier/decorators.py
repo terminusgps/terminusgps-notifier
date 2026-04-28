@@ -15,9 +15,9 @@ def htmx_template(template_name: str):
         @functools.wraps(view_func)
         async def inner_wrapper(request, *args, **kwargs):
             if request_is_htmx(request):
-                kwargs["template_name"] = template_name + "#main"
+                request.template_name = template_name + "#main"
             else:
-                kwargs["template_name"] = template_name
+                request.template_name = template_name
             return await view_func(request, *args, **kwargs)
 
         return inner_wrapper

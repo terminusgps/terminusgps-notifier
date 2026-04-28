@@ -1,6 +1,20 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% block title %}Dashboard{% endblock title %}
 {% partialdef main %}
+{% if messages %}
+<ul id="messages" class="mb-4">
+    {% for message in messages %}
+    <li class="p-4 border rounded bg-red-50 text-red-700 border-current animate-jiggle shadow-sm">
+        <div class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+            <p>{{ message }}</p>
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
 <div class="@container flex flex-col gap-8">
     <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>

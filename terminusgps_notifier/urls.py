@@ -10,6 +10,31 @@ urlpatterns = [
     path("source/", views.source_code, name="source"),
     path("terms/", views.terms, name="terms"),
     path("privacy/", views.privacy, name="privacy"),
+    path(
+        "notifications/resources/select/",
+        views.select_resource,
+        name="select resource",
+    ),
+    path(
+        "notifications/units/<int:resource_id>/",
+        views.select_units,
+        name="select units",
+    ),
+    path(
+        "notifications/triggers/select/",
+        views.select_trigger,
+        name="select trigger",
+    ),
+    path(
+        "notifications/triggers/parameters/",
+        views.trigger_parameters,
+        name="trigger parameters",
+    ),
+    path(
+        "notifications/create/",
+        views.create_notification,
+        name="create notification",
+    ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),
     path("v3/health/", views.HealthCheckView.as_view(), name="health check"),

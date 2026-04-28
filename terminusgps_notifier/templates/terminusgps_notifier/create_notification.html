@@ -1,19 +1,56 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% block title %}Create Notification{% endblock title %}
 {% partialdef main %}
-<form
-    class="@container flex flex-col gap-8"
-    method="post"
-    action="{% url 'terminusgps_notifier:create notification' %}"
->
+<form method="post" action="{% url 'terminusgps_notifier:create notification' %}">
     {% csrf_token %}
-    <input type="text" id="id_itemId" name="itemId" value="{{ itemId }}">
-    <input type="text" id="id_id" name="id" value="0">
-    <input type="text" id="id_callMode" name="callMode" value="create">
-    <input type="text" id="id_n" name="n" value="{{ n }}">
-    <input type="text" id="id_txt" name="txt" value="{{ txt }}">
-    <input type="number" id="id_ta" name="ta" value="{{ ta|default:0 }}">
-    <input type="number" id="id_td" name="td" value="{{ td|default:0 }}">
+    <div>
+        <label for="id_n">Name:</label>
+        <input type="text" id="id_n" name="n" value="{{ n }}" aria-described-by="#id_n_helptext">
+        <p id="id_n_helptext">Provide a memorable name for your notification.</p>
+    </div>
+    <div>
+        <label for="id_message">Message:</label>
+        <input type="text" id="id_message" name="message" value="{{ message }}" aria-described-by="#id_message_helptext">
+        <p id="id_message_helptext">Provide a message to send to phone numbers.</p>
+    </div>
+    <div>
+        <label for="id_method">Method:</label>
+        <select id="id_method" name="method" aria-described-by="#id_method_helptext">
+            <option value="sms" selected>SMS</option>
+            <option value="voice">Voice</option>
+        </select>
+        <p id="id_method_helptext">Select whether to deliver notification via sms or text-to-speech voice.</p>
+    </div>
+    <div>
+        <label for="id_ta">Activation Time:</label>
+        <input type="number" id="id_ta" name="ta" value="{{ ta|default:0 }}" aria-described-by="#id_ta_helptext">
+        <p id="id_ta_helptext">Leave this blank to activate notification immediately.</p>
+    </div>
+    <div>
+        <label for="id_td">Deactivation Time:</label>
+        <input type="number" id="id_td" name="td" value="{{ td|default:0 }}" aria-described-by="#id_td_helptext">
+        <p id="id_td_helptext">Leave this blank to never deactivate notification.</p>
+    </div>
+    <div>
+        <label for="id_ma">Max Alarms:</label>
+        <input type="number" id="id_ma" name="ma">
+    </div>
+    <div>
+        <label for="id_mmtd">Max Message Interval:</label>
+        <input type="number" id="id_mmtd" name="mmtd">
+    </div>
+    <div>
+        <label for="id_cdt">Alarm Timeout:</label>
+        <input type="number" id="id_cdt" name="cdt">
+    </div>
+    <div>
+        <label for="id_mast">Min Alarm Duration State:</label>
+        <input type="number" id="id_mast" name="mast">
+    </div>
+    <div>
+        <label for="id_mpst">Min Previous Duration State:</label>
+        <input type="number" id="id_mpst" name="mpst">
+    </div>
 </form>
 {% endpartialdef main %}
 {% block content %}

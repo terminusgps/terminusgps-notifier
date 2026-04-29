@@ -11,6 +11,11 @@ urlpatterns = [
     path("terms/", views.terms, name="terms"),
     path("privacy/", views.privacy, name="privacy"),
     path(
+        "notifications/<int:resource_id>/list/",
+        views.list_notification,
+        name="list notification",
+    ),
+    path(
         "notifications/resources/select/",
         views.select_resource,
         name="select resource",
@@ -34,6 +39,11 @@ urlpatterns = [
         "notifications/create/",
         views.create_notification,
         name="create notification",
+    ),
+    path(
+        "notifications/<int:resource_id>/<int:notification_id>/",
+        views.detail_notification,
+        name="detail notification",
     ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),

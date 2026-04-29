@@ -22,7 +22,10 @@ from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import constants, forms
-from terminusgps_notifier.decorators import htmx_template
+from terminusgps_notifier.decorators import (
+    active_subscription_required,
+    htmx_template,
+)
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Customer
 from terminusgps_notifier.validators import validate_e164_phone_number
@@ -251,6 +254,7 @@ async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
+@active_subscription_required()
 @htmx_template("terminusgps_notifier/select_resource.html")
 async def select_resource(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":

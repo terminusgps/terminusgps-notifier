@@ -22,14 +22,11 @@ from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import constants, forms
-from terminusgps_notifier.decorators import (
-    active_subscription_required,
-    htmx_template,
-)
+from terminusgps_notifier.decorators import htmx_template
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Customer
 from terminusgps_notifier.validators import validate_e164_phone_number
-from terminusgps_notifier.wialon import get_phone_numbers
+from terminusgps_notifier.wialon import get_phone_numbers, get_resources
 
 logger = logging.getLogger(__name__)
 
@@ -212,33 +209,10 @@ async def source_code(request: HttpRequest) -> HttpResponse:
 @require_GET
 @htmx_template("terminusgps_notifier/dashboard.html")
 async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
-    def get_resources_from_wialon(customer: Customer) -> list[dict]:
-        with WialonSession(token=customer.token) as session:
-            params = {
-                "spec": {},
-                "force": 0,
-                "from": 0,
-                "to": 0,
-                "flags": 1025,  # Basic + notification data
-            }
-            params["spec"]["itemsType"] = "avl_resource"
-            params["spec"]["propName"] = "sys_name"
-            params["spec"]["propValueMask"] = "*"
-            params["spec"]["propType"] = "property"
-            params["spec"]["sortType"] = "sys_name"
-            response = session.wialon_api.core_search_items(**params)
-            return response["items"]
-
     @sync_to_async
     def get_customer_data(request: HttpRequest) -> dict[str, typing.Any]:
-        location = reverse("terminusgps_notifier:wialon callback")
-        redirect_uri = request.build_absolute_uri(location)
-        customer = Customer.objects.get(user=request.user)
-        resources = get_resources_from_wialon(customer)
-
+        customer, _ = Customer.objects.get_or_create(user=request.user)
         context = {}
-        context["resources"] = resources
-        context["redirect_uri"] = redirect_uri
         context["username"] = customer.user.username
         context["has_token"] = customer.token is not None
         context["has_subscription"] = customer.subscription is not None
@@ -246,15 +220,31 @@ async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
         context["messages_limit"] = customer.messages_limit
         return context
 
+    context = {}
+    location = reverse("terminusgps_notifier:wialon callback")
+    context["redirect_uri"] = request.build_absolute_uri(location)
+    context.update(await get_customer_data(request))
+    return render(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/list_resource.html")
+async def list_resource(request: HttpRequest) -> HttpResponse:
     try:
-        context = await get_customer_data(request)
-    except Customer.DoesNotExist:
         context = {}
+        user = await request.auser()
+        customer, _ = await Customer.objects.aget_or_create(user=user)
+        with WialonSession(token=customer.token) as session:
+            response = await get_resources(session)
+            context["resources"] = response["items"]
+    except WialonAPIError:
+        msg = f"Failed to retrieve resources from Wialon for user: '{user}'"
+        messages.warning(request, msg)
+        context["resources"] = []
     return render(request, request.template_name, context=context)
 
 
 @require_http_methods(["GET", "POST"])
-@active_subscription_required()
 @htmx_template("terminusgps_notifier/select_resource.html")
 async def select_resource(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":

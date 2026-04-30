@@ -102,7 +102,7 @@
                 <a href="{% url 'terminusgps_notifier:list notification' resource.id %}">
                     <div class="p-2 border rounded bg-stone-300 border-stone-600 transition-colors ease-in-out duration-300 hover:bg-stone-100">
                         <div class="flex justify-between items-center">
-                            <p>{{ resource.nm }}</p>
+                            <p class="truncate">{{ resource.nm }}</p>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
                             </svg>

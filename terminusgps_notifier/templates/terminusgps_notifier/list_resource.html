@@ -1,0 +1,7 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% partialdef main %}
+{{ resources|pprint }}
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

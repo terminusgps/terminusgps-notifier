@@ -11,6 +11,11 @@ urlpatterns = [
     path("terms/", views.terms, name="terms"),
     path("privacy/", views.privacy, name="privacy"),
     path(
+        "notifications/resources/list/",
+        views.list_resource,
+        name="list resource",
+    ),
+    path(
         "notifications/<int:resource_id>/list/",
         views.list_notification,
         name="list notification",

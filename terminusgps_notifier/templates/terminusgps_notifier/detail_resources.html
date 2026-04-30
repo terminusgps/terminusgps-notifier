@@ -1,0 +1,22 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% block title %}{{ resource_data.nm }}{% endblock title %}
+{% partialdef main %}
+<h4>{{ resource_data.nm }}</h4>
+{% for id, data in resource_data.unf.items %}
+<a href="{% url 'terminusgps_notifier:detail notifications' resource_data.id id %}">
+    <div id="{{ resource_data.id }}-{{ id }}" class="@container p-2 border rounded bg-stone-50 text-gray-800 dark:text-gray-100 dark:bg-gray-700">
+        <div class="flex justify-between items-center gap-4 min-w-0">
+            <div class="min-w-0">
+                <h4 class="truncate @lg:whitespace-normal">{{ data.n }}</h4>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+        </div>
+    </div>
+</a>
+{% endfor %}
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

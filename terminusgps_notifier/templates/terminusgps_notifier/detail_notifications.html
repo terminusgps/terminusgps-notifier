@@ -1,9 +1,6 @@
 {% extends "terminusgps_notifier/layout.html" %}
-{% block title %}{{ response.n }}{% endblock title %}
 {% partialdef main %}
-<div id="{{ response.id }}">
-    <p>{{ response.n }}</p>
-</div>
+{{ notification_data.n }}
 {% endpartialdef main %}
 {% block content %}
 {% partial main %}

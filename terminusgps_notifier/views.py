@@ -1,14 +1,11 @@
 import asyncio
 import logging
 import typing
-import urllib.parse
 import warnings
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.contrib import messages
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.forms import Form
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.template.response import TemplateResponse
@@ -21,12 +18,17 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
-from terminusgps_notifier import constants, forms
+from terminusgps_notifier import forms
 from terminusgps_notifier.decorators import htmx_template
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Customer
 from terminusgps_notifier.validators import validate_e164_phone_number
-from terminusgps_notifier.wialon import get_phone_numbers, get_resources
+from terminusgps_notifier.wialon import (
+    get_notification_data,
+    get_phone_numbers,
+    get_resource_data,
+    get_resources,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +210,7 @@ async def source_code(request: HttpRequest) -> HttpResponse:
 
 @require_GET
 @htmx_template("terminusgps_notifier/dashboard.html")
-async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
+async def dashboard(request: HttpRequest) -> HttpResponse:
     @sync_to_async
     def get_customer_data(request: HttpRequest) -> dict[str, typing.Any]:
         customer, _ = Customer.objects.get_or_create(user=request.user)
@@ -228,225 +230,76 @@ async def dashboard(request: HttpRequest, **kwargs) -> HttpResponse:
 
 
 @require_GET
-@htmx_template("terminusgps_notifier/list_resource.html")
-async def list_resource(request: HttpRequest) -> HttpResponse:
+@htmx_template("terminusgps_notifier/list_resources.html")
+async def list_resources(request: HttpRequest) -> HttpResponse:
+    context = {}
     try:
-        context = {}
         user = await request.auser()
         customer, _ = await Customer.objects.aget_or_create(user=user)
         with WialonSession(token=customer.token) as session:
             response = await get_resources(session)
-            context["resources"] = response["items"]
-    except WialonAPIError:
-        msg = f"Failed to retrieve resources from Wialon for user: '{user}'"
-        messages.warning(request, msg)
-        context["resources"] = []
-    return render(request, request.template_name, context=context)
-
-
-@require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/select_resource.html")
-async def select_resource(request: HttpRequest) -> HttpResponse:
-    if request.method == "POST":
-        return redirect(
-            reverse(
-                "terminusgps_notifier:select units",
-                kwargs={"resource_id": request.POST["resource"]},
-            )
-        )
-    try:
-        user = await request.auser()
-        customer = await Customer.objects.aget(user=user)
-        with WialonSession(token=customer.token) as session:
-            params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
-            params["spec"]["itemsType"] = "avl_resource"
-            params["spec"]["propName"] = "sys_name"
-            params["spec"]["propValueMask"] = "*"
-            params["spec"]["propType"] = "property"
-            params["spec"]["sortType"] = "sys_name"
-            response = session.wialon_api.core_search_items(**params)
-    except WialonAPIError:
-        response = {"items": []}
-
-    context = {}
-    context["item_list"] = response["items"]
-    return render(request, request.template_name, context=context)
-
-
-@require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/select_units.html")
-async def select_units(request: HttpRequest, resource_id: int) -> HttpResponse:
-    if request.method == "POST":
-        if units := request.POST.getlist("units", []):
-            units = [int(id) for id in units]
-            await request.session.aset("units", units)
-        else:
-            await request.session.aset("units", [])
-        await request.session.aset("resource", resource_id)
-        return redirect(reverse("terminusgps_notifier:select trigger"))
-    try:
-        items_type = request.GET.get("items_type", "avl_unit")
-        user = await request.auser()
-        customer = await Customer.objects.aget(user=user)
-        with WialonSession(token=customer.token) as session:
-            params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
-            params["spec"]["itemsType"] = items_type
-            params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
-            params["spec"]["propValueMask"] = f"*,{resource_id}"
-            params["spec"]["propType"] = "property"
-            params["spec"]["sortType"] = "sys_name"
-            response = session.wialon_api.core_search_items(**params)
-    except WialonAPIError:
-        response = {"items": []}
-
-    context = {}
-    context["item_list"] = response["items"]
-    context["resource_id"] = resource_id
-    return render(request, request.template_name, context=context)
-
-
-@require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/select_trigger.html")
-async def select_trigger(request: HttpRequest) -> HttpResponse:
-    if request.method == "POST":
-        t = request.POST["trigger"]
-        p = {}
-        for field in request.POST:
-            target_fields = forms.get_trigger_form_fields()
-            if field in target_fields:
-                p[field] = request.POST[field]
-        await request.session.aset("trg", {"t": t, "p": p})
-        return redirect(reverse("terminusgps_notifier:create notification"))
-    context = {"triggers": forms.WialonNotificationTrigger.choices}
-    return render(request, request.template_name, context=context)
-
-
-@require_GET
-@htmx_template("terminusgps_notifier/trigger_parameters.html")
-async def trigger_parameters(request: HttpRequest) -> HttpResponse:
-    async def get_form_cls(trigger: str) -> type[Form]:
-        if trigger in forms.TRIGGER_FORMS_MAP:
-            return forms.TRIGGER_FORMS_MAP[trigger]
-        return Form
-
-    context = {}
-    if trigger := request.GET.get("trigger"):
-        form_cls = await get_form_cls(trigger)
-        context["form"] = form_cls()
-    return render(request, request.template_name, context=context)
-
-
-@require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/create_notification.html")
-async def create_notification(request: HttpRequest) -> HttpResponse:
-    async def get_txt(request: HttpRequest) -> str:
-        user = await request.auser()
-        return urllib.parse.urlencode(
-            {
-                "user_id": user.pk,
-                "unit_id": "%UNIT_ID%",
-                "msg_time_int": "%MSG_TIME_INT%",
-                "message": request.POST["message"],
-                "location": "%LOCATION%",
-                "unit_name": "%UNIT%",
-            },
-            safe="%",
-        )
-
-    async def get_act(request: HttpRequest) -> list[dict]:
-        url = urllib.parse.urljoin(
-            "https://api.terminusgps.com/",
-            f"/v3/notify/{request.POST['method']}/",
-        )
-        return [{"t": "send_messages", "p": {"url": url, "get": 0}}]
-
-    async def get_sch(request: HttpRequest) -> dict[str, int]:
-        return {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "w": 0, "m": 0, "y": 0}
-
-    if request.POST:
-        try:
-            user = await request.auser()
-            customer = await Customer.objects.aget(user=user)
-            with WialonSession(token=customer.token) as session:
-                resource_id = int(await request.session.aget("resource"))
-                params = {"id": 0, "callMode": "create"}
-                params["itemId"] = resource_id
-                params["n"] = str(request.POST["n"])
-                params["txt"] = await get_txt(request)
-                params["ta"] = int(request.POST["ta"])
-                params["td"] = int(request.POST["td"])
-                params["ma"] = int(request.POST["ma"])
-                params["mmtd"] = int(request.POST["mmtd"])
-                params["cdt"] = int(request.POST["cdt"])
-                params["mast"] = int(request.POST["mast"])
-                params["mpst"] = int(request.POST["mpst"])
-                params["cp"] = int(request.POST["cp"])
-                params["fl"] = int(request.POST["fl"])
-                params["tz"] = int(request.POST["tz"])
-                params["la"] = str(request.POST["la"])
-                params["un"] = await request.session.aget("un", [])
-                params["d"] = request.POST.getlist("d", [])
-                params["sch"] = await get_sch(request)
-                params["ctrl_sch"] = await get_sch(request)
-                params["trg"] = await request.session.aget("trg", {})
-                params["act"] = await get_act(request)
-                response = session.wialon_api.resource_update_notification(
-                    **params
-                )
-                return redirect(
-                    reverse(
-                        "terminusgps_notifier:detail notification",
-                        kwargs={
-                            "resource_id": resource_id,
-                            "notification_id": response[0],
-                        },
-                    )
-                )
-        except WialonAPIError as error:
-            msg = f"Failed to create notification in Wialon: {error}"
-            messages.error(request, msg)
-
-    context = {"timezones": constants.TIMEZONES}
-    return render(request, request.template_name, context=context)
-
-
-@require_GET
-@htmx_template("terminusgps_notifier/detail_notification.html")
-async def detail_notification(
-    request: HttpRequest, resource_id: int, notification_id: int
-) -> HttpResponse:
-    try:
-        user = await request.auser()
-        customer = await Customer.objects.aget(user=user)
-        with WialonSession(token=customer.token) as session:
-            response = session.wialon_api.resource_get_notification_data(
-                **{"itemId": resource_id, "col": [notification_id]}
-            )
+            context["resource_list"] = response["items"]
     except WialonAPIError as error:
-        msg = f"Failed to retrieve notification data for '{resource_id}:{notification_id}': {error}"
-        messages.error(request, msg)
-        response = []
-    context = {"response": response[0] if len(response) > 0 else response}
+        print(error)
+        context["resource_list"] = []
     return render(request, request.template_name, context=context)
 
 
 @require_GET
-@htmx_template("terminusgps_notifier/list_notification.html")
-async def list_notification(
+@htmx_template("terminusgps_notifier/detail_resources.html")
+async def detail_resources(
     request: HttpRequest, resource_id: int
 ) -> HttpResponse:
+    context = {}
     try:
         user = await request.auser()
-        customer = await Customer.objects.aget(user=user)
+        customer, _ = await Customer.objects.aget_or_create(user=user)
         with WialonSession(token=customer.token) as session:
-            response = session.wialon_api.resource_get_notification_data(
-                **{"itemId": resource_id}
-            )
-    except WialonAPIError:
-        msg = f"Failed to retrieve notifications for resource: '{resource_id}'"
-        messages.error(request, msg)
-        response = []
-    context = {}
-    context["response"] = response
-    context["resource_id"] = resource_id
+            response = await get_resource_data(session, resource_id)
+            context["resource_data"] = response["item"]
+    except WialonAPIError as error:
+        print(error)
+        context["resource_data"] = {}
     return render(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/detail_notifications.html")
+async def detail_notifications(
+    request: HttpRequest, resource_id: int, notification_id: int
+) -> HttpResponse:
+    context = {}
+    try:
+        user = await request.auser()
+        customer, _ = await Customer.objects.aget_or_create(user=user)
+        with WialonSession(token=customer.token) as session:
+            response = await get_notification_data(
+                session, resource_id, [notification_id]
+            )
+            context["notification_data"] = response[0]
+    except WialonAPIError as error:
+        print(error)
+        context["notification_data"] = {}
+    return render(request, request.template_name, context=context)
+
+
+@require_http_methods(["GET", "POST"])
+@htmx_template("terminusgps_notifier/create_notifications.html")
+async def create_notifications(
+    request: HttpRequest, resource_id: int
+) -> HttpResponse:
+    async def get_wialon_api_parameters(request: HttpRequest) -> dict:
+        return {}
+
+    if request.method == "POST":
+        user = await request.auser()
+        customer, _ = await Customer.objects.aget_or_create(user=user)
+        params = await get_wialon_api_parameters(request)
+        with WialonSession(token=customer.token) as session:
+            return redirect(
+                "terminusgps_notifier:detail resources",
+                kwargs={"resource_id": resource_id},
+            )
+    else:
+        context = {}
+        return render(request, request.template_name, context=context)

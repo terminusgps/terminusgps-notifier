@@ -10,6 +10,11 @@ urlpatterns = [
     path("source/", views.source_code, name="source"),
     path("terms/", views.terms, name="terms"),
     path("privacy/", views.privacy, name="privacy"),
+    path(
+        "notifications/<int:resource_id>/list/",
+        views.list_notifications,
+        name="list notifications",
+    ),
     path("resources/list/", views.list_resources, name="list resources"),
     path(
         "resources/<int:resource_id>/details/",

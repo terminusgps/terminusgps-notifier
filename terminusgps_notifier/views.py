@@ -7,14 +7,14 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.http import require_GET
 from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
@@ -26,7 +26,6 @@ from terminusgps_notifier.validators import validate_e164_phone_number
 from terminusgps_notifier.wialon import (
     get_notification_data,
     get_phone_numbers,
-    get_resource_data,
     get_resources,
 )
 
@@ -250,16 +249,25 @@ async def list_resources(request: HttpRequest) -> HttpResponse:
 async def detail_resources(
     request: HttpRequest, resource_id: int
 ) -> HttpResponse:
+    context = {"resource_id": resource_id}
+    return render(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/list_notifications.html")
+async def list_notifications(
+    request: HttpRequest, resource_id: int
+) -> HttpResponse:
     context = {}
     try:
         user = await request.auser()
         customer, _ = await Customer.objects.aget_or_create(user=user)
         with WialonSession(token=customer.token) as session:
-            response = await get_resource_data(session, resource_id)
-            context["resource_data"] = response["item"]
+            response = await get_notification_data(session, resource_id)
+            context["notifications_list"] = response
     except WialonAPIError as error:
         print(error)
-        context["resource_data"] = {}
+        context["notifications_list"] = []
     return render(request, request.template_name, context=context)
 
 
@@ -281,25 +289,3 @@ async def detail_notifications(
         print(error)
         context["notification_data"] = {}
     return render(request, request.template_name, context=context)
-
-
-@require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/create_notifications.html")
-async def create_notifications(
-    request: HttpRequest, resource_id: int
-) -> HttpResponse:
-    async def get_wialon_api_parameters(request: HttpRequest) -> dict:
-        return {}
-
-    if request.method == "POST":
-        user = await request.auser()
-        customer, _ = await Customer.objects.aget_or_create(user=user)
-        params = await get_wialon_api_parameters(request)
-        with WialonSession(token=customer.token) as session:
-            return redirect(
-                "terminusgps_notifier:detail resources",
-                kwargs={"resource_id": resource_id},
-            )
-    else:
-        context = {}
-        return render(request, request.template_name, context=context)

@@ -1,21 +1,30 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% block title %}{{ resource_data.nm }}{% endblock title %}
 {% partialdef main %}
-<h4>{{ resource_data.nm }}</h4>
-{% for id, data in resource_data.unf.items %}
-<a href="{% url 'terminusgps_notifier:detail notifications' resource_data.id id %}">
-    <div id="{{ resource_data.id }}-{{ id }}" class="@container p-2 border rounded bg-stone-50 text-gray-800 dark:text-gray-100 dark:bg-gray-700">
-        <div class="flex justify-between items-center gap-4 min-w-0">
-            <div class="min-w-0">
-                <h4 class="truncate @lg:whitespace-normal">{{ data.n }}</h4>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-            </svg>
-        </div>
+<div class="@container flex flex-col gap-8">
+    <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+        <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-</a>
-{% endfor %}
+    <div class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+        <div class="flex flex-col justify-between gap-2 items-center @md:flex-row">
+            <div class="flex gap-2 items-center">
+                <h4 class="font-semibold">Notifications</h4>
+                <svg id="notifications-list-indicator" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="htmx-indicator size-6 animate-spin">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+            </div>
+            <a href="#">
+                <div class="p-2 flex items-center gap-2 border rounded">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <p>New Notification</p>
+                </div>
+            </a>
+        </div>
+        <div class="flex flex-col gap-4" hx-get="{% url 'terminusgps_notifier:list notifications' resource_id %}" hx-target="this" hx-trigger="load once" hx-swap="innerHTML" hx-indicator="#notifications-list-indicator"></div>
+    </div>
+</div>
 {% endpartialdef main %}
 {% block content %}
 {% partial main %}

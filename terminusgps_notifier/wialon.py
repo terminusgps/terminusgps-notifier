@@ -87,7 +87,7 @@ def get_unit_groups(
     from_index: int = 0,
     to_index: int = 0,
     flags: int = 1,
-) -> list[dict]:
+) -> dict:
     params: dict[str, typing.Any] = {"spec": {}}
     params["spec"]["itemsType"] = "avl_unit_group"
     params["spec"]["propName"] = "sys_name,sys_billing_account_guid"

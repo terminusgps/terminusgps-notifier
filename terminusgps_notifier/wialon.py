@@ -58,42 +58,21 @@ def get_resources(
 
 
 @sync_to_async
-def get_units(
+def get_items(
     session: WialonSession,
     resource_id: int,
+    items_type: str,
     force: bool = False,
     from_index: int = 0,
     to_index: int = 0,
     flags: int = 1,
 ) -> dict:
     params: dict[str, typing.Any] = {"spec": {}}
-    params["spec"]["itemsType"] = "avl_unit"
+    params["spec"]["itemsType"] = items_type
     params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
     params["spec"]["propValueMask"] = f"*,{resource_id}"
     params["spec"]["propType"] = "property,property"
-    params["spec"]["sortType"] = "sys_name,sys_name"
-    params["force"] = int(force)
-    params["from"] = from_index
-    params["to"] = to_index
-    params["flags"] = flags
-    return session.wialon_api.core_search_items(**params)
-
-
-@sync_to_async
-def get_unit_groups(
-    session: WialonSession,
-    resource_id: int,
-    force: bool = False,
-    from_index: int = 0,
-    to_index: int = 0,
-    flags: int = 1,
-) -> dict:
-    params: dict[str, typing.Any] = {"spec": {}}
-    params["spec"]["itemsType"] = "avl_unit_group"
-    params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
-    params["spec"]["propValueMask"] = f"*,{resource_id}"
-    params["spec"]["propType"] = "property,property"
-    params["spec"]["sortType"] = "sys_name,sys_name"
+    params["spec"]["sortType"] = "sys_name"
     params["force"] = int(force)
     params["from"] = from_index
     params["to"] = to_index

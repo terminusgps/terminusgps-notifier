@@ -1,0 +1,11 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% partialdef main %}
+<form method="post" action="{% url 'terminusgps_notifier:select units form' resource_id %}">
+    {% csrf_token %}
+    <select id="id_units" name="units" hx-target="this" hx-trigger="load once" hx-swap="innerHTML" hx-get="{% url 'terminusgps_notifier:select units options' resource_id %}" multiple></select>
+    <button type="submit">Next</button>
+</form>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

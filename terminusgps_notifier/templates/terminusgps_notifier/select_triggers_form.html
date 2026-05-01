@@ -1,0 +1,16 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% partialdef main %}
+<form method="post" action="{% url 'terminusgps_notifier:select triggers form' %}">
+    {% csrf_token %}
+    <select id="id_trigger" name="trigger" hx-get="{% url 'terminusgps_notifier:trigger parameters' %}" hx-target="#id_trigger_parameters" hx-swap="innerHTML" hx-trigger="revealed, change">
+        {% for value, label in triggers %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+    </select>
+    <div id="id_trigger_parameters" name="trigger_parameters"></div>
+    <button type="submit">Submit</button>
+</form>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

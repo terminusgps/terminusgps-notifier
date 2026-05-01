@@ -11,6 +11,26 @@ urlpatterns = [
     path("terms/", views.terms, name="terms"),
     path("privacy/", views.privacy, name="privacy"),
     path(
+        "notifications/<int:resource_id>/units/",
+        views.select_units_form,
+        name="select units form",
+    ),
+    path(
+        "notifications/<int:resource_id>/units/options/",
+        views.select_units_options,
+        name="select units options",
+    ),
+    path(
+        "notifications/triggers/select/",
+        views.select_triggers_form,
+        name="select triggers form",
+    ),
+    path(
+        "notifications/triggers/parameters/",
+        views.trigger_parameters,
+        name="trigger parameters",
+    ),
+    path(
         "notifications/<int:resource_id>/list/",
         views.list_notifications,
         name="list notifications",

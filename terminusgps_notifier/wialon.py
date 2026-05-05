@@ -43,13 +43,14 @@ def get_resources(
     from_index: int = 0,
     to_index: int = 0,
     flags: int = 1025,
+    sort_type: str = "sys_name",
 ) -> dict:
     params: dict[str, typing.Any] = {"spec": {}}
     params["spec"]["itemsType"] = "avl_resource"
     params["spec"]["propName"] = "sys_name"
     params["spec"]["propValueMask"] = "*"
     params["spec"]["propType"] = "property"
-    params["spec"]["sortType"] = "sys_name"
+    params["spec"]["sortType"] = sort_type
     params["force"] = int(force)
     params["from"] = from_index
     params["to"] = to_index

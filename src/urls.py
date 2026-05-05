@@ -3,10 +3,7 @@ from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path(
-        "payments/",
-        include("terminusgps_payments.urls", namespace="terminusgps_payments"),
-    ),
+    path("accounts/", include("django.contrib.auth.urls")),
     path(
         "",
         include("terminusgps_notifier.urls", namespace="terminusgps_notifier"),

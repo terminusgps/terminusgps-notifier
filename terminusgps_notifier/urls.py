@@ -16,6 +16,21 @@ urlpatterns = [
         name="select resources",
     ),
     path(
+        "notifications/resources/list/",
+        views.list_resources,
+        name="list resources",
+    ),
+    path(
+        "notifications/resources/<int:resource_id>/details/",
+        views.detail_resources,
+        name="detail resources",
+    ),
+    path(
+        "notifications/<int:resource_id>/<int:notification_id>/details/",
+        views.detail_notifications,
+        name="detail notifications",
+    ),
+    path(
         "notifications/<int:resource_id>/units/select/",
         views.select_units,
         name="select units",

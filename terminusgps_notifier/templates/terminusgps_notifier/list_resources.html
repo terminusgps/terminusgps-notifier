@@ -1,0 +1,11 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% partialdef main %}
+{% for resource in resource_list %}
+<a href="{% url 'terminusgps_notifier:detail resources' resource.id %}">
+    <p>{{ resource.nm }}</p>
+</a>
+{% endfor %}
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

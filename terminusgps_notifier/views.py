@@ -26,7 +26,9 @@ from terminusgps_notifier.models import Customer
 from terminusgps_notifier.validators import validate_e164_phone_number
 from terminusgps_notifier.wialon import (
     get_items,
+    get_notification_data,
     get_phone_numbers,
+    get_resource_data,
     get_resources,
 )
 
@@ -226,6 +228,60 @@ async def dashboard(request: HttpRequest) -> HttpResponse:
     location = reverse("terminusgps_notifier:wialon callback")
     context["redirect_uri"] = request.build_absolute_uri(location)
     context.update(await get_customer_data(request))
+    return render(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/list_resources.html")
+async def list_resources(request: HttpRequest) -> HttpResponse:
+    context = {}
+    try:
+        user = await request.auser()
+        customer, _ = await Customer.objects.aget_or_create(user=user)
+        with WialonSession(token=customer.token) as session:
+            response = await get_resources(session)
+            context["resource_list"] = response["items"]
+    except WialonAPIError as error:
+        print(error)
+        context["resource_list"] = []
+    return render(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/detail_resources.html")
+async def detail_resources(
+    request: HttpRequest, resource_id: int
+) -> HttpResponse:
+    context = {}
+    try:
+        user = await request.auser()
+        customer, _ = await Customer.objects.aget_or_create(user=user)
+        with WialonSession(token=customer.token) as session:
+            response = await get_resource_data(session, resource_id)
+            context["resource"] = response["item"]
+    except WialonAPIError as error:
+        print(error)
+        context["resource"] = {}
+    return render(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/detail_notifications.html")
+async def detail_notifications(
+    request: HttpRequest, resource_id: int, notification_id: int
+) -> HttpResponse:
+    context = {}
+    try:
+        user = await request.auser()
+        customer, _ = await Customer.objects.aget_or_create(user=user)
+        with WialonSession(token=customer.token) as session:
+            response = await get_notification_data(
+                session, resource_id, notification_ids=[notification_id]
+            )
+            context["notification"] = response[0]
+    except WialonAPIError as error:
+        print(error)
+        context["notification"] = {}
     return render(request, request.template_name, context=context)
 
 

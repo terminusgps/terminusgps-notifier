@@ -13,71 +13,95 @@ from .forms import NotificationDispatchForm
 logger = logging.getLogger(__name__)
 
 
-@sync_to_async
-def get_notification_data(
+def create_notification(
     session: WialonSession,
     resource_id: int,
-    notification_ids: Sequence[int] | None = None,
-) -> list[dict]:
+    n: str,
+    txt: str,
+    ta: int,
+    td: int,
+    ma: int,
+    mmtd: int,
+    cdt: int,
+    mast: int,
+    mpst: int,
+    cp: int,
+    fl: int,
+    tz: int,
+    la: str,
+    un: Sequence[int],
+    sch: dict,
+    ctrl_sch: dict,
+    trg: dict,
+    act: list[dict],
+) -> dict:
     params: dict[str, typing.Any] = {}
     params["itemId"] = resource_id
-    if notification_ids is not None:
-        params["col"] = notification_ids
+    params["id"] = 0
+    params["callMode"] = "create"
+    params["n"] = n
+    params["txt"] = txt
+    params["ta"] = ta
+    params["td"] = td
+    params["ma"] = ma
+    params["mmtd"] = mmtd
+    params["cdt"] = cdt
+    params["mast"] = mast
+    params["mpst"] = mpst
+    params["cp"] = cp
+    params["fl"] = fl
+    params["tz"] = tz
+    params["la"] = la
+    params["un"] = un
+    params["sch"] = sch
+    params["ctrl_sch"] = ctrl_sch
+    params["trg"] = trg
+    params["act"] = act
+    print(f"{params = }")
+    return session.wialon_api.resource_create_notification(**params)
+
+
+def get_notification_data(
+    session: WialonSession, resource_id: int, notification_ids: Sequence[int]
+) -> dict:
+    params: dict[str, typing.Any] = {}
+    params["itemId"] = resource_id
+    params["col"] = notification_ids
     return session.wialon_api.resource_get_notification_data(**params)
 
 
-@sync_to_async
-def get_resource_data(
-    session: WialonSession, resource_id: int, flags: int = 1025
-) -> dict:
+def search_item(session: WialonSession, id: int, flags: int = 1) -> dict:
     params: dict[str, typing.Any] = {}
-    params["id"] = resource_id
+    params["id"] = id
     params["flags"] = flags
     return session.wialon_api.core_search_item(**params)
 
 
-@sync_to_async
-def get_resources(
+def search_items(
     session: WialonSession,
-    force: bool = False,
-    from_index: int = 0,
-    to_index: int = 0,
-    flags: int = 1025,
-    sort_type: str = "sys_name",
-) -> dict:
-    params: dict[str, typing.Any] = {"spec": {}}
-    params["spec"]["itemsType"] = "avl_resource"
-    params["spec"]["propName"] = "sys_name"
-    params["spec"]["propValueMask"] = "*"
-    params["spec"]["propType"] = "property"
-    params["spec"]["sortType"] = sort_type
-    params["force"] = int(force)
-    params["from"] = from_index
-    params["to"] = to_index
-    params["flags"] = flags
-    return session.wialon_api.core_search_items(**params)
-
-
-@sync_to_async
-def get_items(
-    session: WialonSession,
-    resource_id: int,
     items_type: str,
+    prop_name: str,
+    prop_value_mask: str,
+    sort_type: str,
+    prop_type: str,
+    or_logic: bool | None = None,
     force: bool = False,
+    flags: int = 1,
     from_index: int = 0,
     to_index: int = 0,
-    flags: int = 1,
 ) -> dict:
     params: dict[str, typing.Any] = {"spec": {}}
     params["spec"]["itemsType"] = items_type
-    params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
-    params["spec"]["propValueMask"] = f"*,{resource_id}"
-    params["spec"]["propType"] = "property,property"
-    params["spec"]["sortType"] = "sys_name"
+    params["spec"]["propName"] = prop_name
+    params["spec"]["propValueMask"] = prop_value_mask
+    params["spec"]["sortType"] = sort_type
+    params["spec"]["propType"] = prop_type
+    if or_logic is not None:
+        params["spec"]["or_logic"] = or_logic
     params["force"] = int(force)
+    params["flags"] = flags
     params["from"] = from_index
     params["to"] = to_index
-    params["flags"] = flags
     return session.wialon_api.core_search_items(**params)
 
 

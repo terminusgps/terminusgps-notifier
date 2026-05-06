@@ -15,8 +15,8 @@
     {% endfor %}
 </ul>
 {% endif %}
-<div class="@container flex flex-col gap-8">
-    <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+<div class="flex flex-col gap-8">
+    <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
     <div id="stats" class="@container grid grid-cols-2 gap-0 shadow-sm" hx-target="this" hx-trigger="every 10s" hx-get="{% url 'terminusgps_notifier:dashboard' %}" hx-select="#stats" hx-swap="outerHTML">
@@ -89,6 +89,20 @@
                     </div>
                 </div>
             </a>
+        </div>
+    </div>
+    <div class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" id="resources">
+        <div class="flex flex-col @md:justify-between @md:items-center @md:flex-row" id="header">
+            <h3 class="font-semibold">Wialon Resources</h3>
+            <p class="text-sm">Click a resource to view details.</p>
+        </div>
+        <div class="flex flex-col gap-4 overflow-x-auto max-h-48" id="resource-list"  hx-target="this" hx-trigger="load once" hx-swap="innerHTML" hx-get="{% url 'terminusgps_notifier:list resources' %}">
+            <div class="flex items-center gap-2 animate-pulse">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 animate-spin">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                <p>Retrieving resources...</p>
+            </div>
         </div>
     </div>
 </div>

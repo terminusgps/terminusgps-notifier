@@ -1,0 +1,21 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% partialdef main %}
+<form method="post" action="{% url 'terminusgps_notifier:units form' resource_id %}">
+    {% csrf_token %}
+    <div>
+        <label for="id_items_type">Items Type:</label>
+        <select class="p-2 border rounded" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:select units' resource_id %}" hx-target="#id_units" hx-trigger="load once, change" hx-include="this" hx-indicator="#units-indicator">
+            <option value="avl_unit" selected>Units</option>
+            <option value="avl_unit_group">Unit Groups</option>
+        </select>
+    </div>
+    <div>
+        <label for="id_units">Units/Unit Groups:</label>
+        <select class="p-2 border rounded" id="id_units" name="units" multiple></select>
+    </div>
+    <button type="submit">Submit</button>
+</form>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

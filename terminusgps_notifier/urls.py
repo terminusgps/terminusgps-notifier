@@ -10,40 +10,45 @@ urlpatterns = [
     path("source/", views.source_code, name="source"),
     path("terms/", views.terms, name="terms"),
     path("privacy/", views.privacy, name="privacy"),
+    path("resources/select/", views.select_resources, name="select resources"),
+    path("resources/list/", views.list_resources, name="list resources"),
     path(
-        "notifications/resources/select/",
-        views.select_resources,
-        name="select resources",
-    ),
-    path(
-        "notifications/resources/list/",
-        views.list_resources,
-        name="list resources",
-    ),
-    path(
-        "notifications/resources/<int:resource_id>/details/",
+        "resources/<int:resource_id>/details/",
         views.detail_resources,
         name="detail resources",
     ),
     path(
-        "notifications/<int:resource_id>/<int:notification_id>/details/",
+        "notifications/<int:resource_id>/<int:notification_id>/",
         views.detail_notifications,
         name="detail notifications",
     ),
     path(
-        "notifications/<int:resource_id>/units/select/",
+        "resources/<int:resource_id>/units/select/",
         views.select_units,
         name="select units",
     ),
     path(
-        "notifications/triggers/select/",
-        views.select_triggers,
-        name="select triggers",
-    ),
-    path(
-        "notifications/triggers/parameters/",
+        "triggers/parameters/",
         views.trigger_parameters,
         name="trigger parameters",
+    ),
+    path(
+        "resources/<int:resource_id>/units/form/",
+        views.units_form,
+        name="units form",
+    ),
+    path(
+        "resources/<int:resource_id>/trigger/form/",
+        views.trigger_form,
+        name="trigger form",
+    ),
+    path(
+        "notifications/<int:resource_id>/create/",
+        views.create_notifications,
+        name="create notifications",
+    ),
+    path(
+        "units/<int:unit_id>/details/", views.detail_units, name="detail units"
     ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),

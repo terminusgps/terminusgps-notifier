@@ -22,13 +22,9 @@ class Customer(models.Model):
     token = EncryptedField(blank=True, null=True, default=None)
     messages_count = models.PositiveIntegerField(default=0)
     messages_limit = models.PositiveIntegerField(default=500)
-    subscription = models.ForeignKey(
-        "terminusgps_payments.Subscription",
-        blank=True,
-        default=None,
-        null=True,
-        on_delete=models.CASCADE,
-        related_name="notifier_customer",
+    subscription_id = models.IntegerField(blank=True, null=True, default=None)
+    subscription_expiry = models.DateTimeField(
+        blank=True, null=True, default=None
     )
     objects = CustomerQuerySet.as_manager()
 

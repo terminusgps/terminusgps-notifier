@@ -1,70 +1,37 @@
-import datetime
 import functools
 
-from asgiref.sync import sync_to_async
 from django.contrib import messages
-from django.contrib.auth.models import AbstractBaseUser
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
-from django.urls import reverse
 
 from .models import Customer
 
-__all__ = [
-    "htmx_template",
-    "wialon_token_required",
-    "active_subscription_required",
-]
+__all__ = ["htmx_template"]
 
 
-def active_subscription_required():
-    @sync_to_async
-    def user_has_active_subscription(user: AbstractBaseUser) -> bool:
-        try:
-            customer = Customer.objects.get(user=user)
-            if customer.subscription is None:
-                return False
-            if customer.subscription.expires_on is not None:
-                today = datetime.date.today()
-                if today >= customer.subscription.expires_on:
-                    return False
-            return customer.subscription.status == "active"
-        except Customer.DoesNotExist:
-            return False
-
-    def outer_wrapper(view_func):
-        @functools.wraps(view_func)
-        async def inner_wrapper(request, *args, **kwargs):
-            user = await request.auser()
-            if not await user_has_active_subscription(user):
-                msg = "You need an active subscription to perform that action."
-                messages.warning(request, msg)
-                return redirect(reverse("terminusgps_notifier:dashboard"))
-            return await view_func(request, *args, **kwargs)
-
-        return inner_wrapper
-
-    return outer_wrapper
+class HtmxHttpRequest(HttpRequest):
+    template_name: str
 
 
 def wialon_token_required():
-    @sync_to_async
-    def user_has_wialon_token(user: AbstractBaseUser) -> bool:
-        try:
-            customer = Customer.objects.get(user=user)
-            return customer.token is not None
-        except Customer.DoesNotExist:
+    def request_user_has_wialon_token(request: HtmxHttpRequest) -> bool:
+        if not hasattr(request, "user"):
             return False
+        if request.user.is_anonymous:
+            return False
+        else:
+            customer, _ = Customer.objects.get_or_create(user=request.user)
+            return customer.token is not None
 
     def outer_wrapper(view_func):
         @functools.wraps(view_func)
-        async def inner_wrapper(request, *args, **kwargs):
-            user = await request.auser()
-            if not await user_has_wialon_token(user):
-                msg = "You need to connect your Wialon account to perform that action."
+        def inner_wrapper(request, *args, **kwargs) -> HttpResponse:
+            if request_user_has_wialon_token(request):
+                return view_func(request, *args, **kwargs)
+            else:
+                msg = "You need to connect your Wialon account to do that."
                 messages.warning(request, msg)
-                return redirect(reverse("terminusgps_notifier:dashboard"))
-            return await view_func(request, *args, **kwargs)
+                return redirect("terminusgps_notifier:dashboard")
 
         return inner_wrapper
 
@@ -79,12 +46,12 @@ def htmx_template(template_name: str):
 
     def outer_wrapper(view_func):
         @functools.wraps(view_func)
-        async def inner_wrapper(request, *args, **kwargs):
+        def inner_wrapper(request, *args, **kwargs):
             if request_is_htmx(request):
                 request.template_name = template_name + "#main"
             else:
                 request.template_name = template_name
-            return await view_func(request, *args, **kwargs)
+            return view_func(request, *args, **kwargs)
 
         return inner_wrapper
 

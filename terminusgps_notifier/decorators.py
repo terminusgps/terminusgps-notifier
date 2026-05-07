@@ -1,12 +1,13 @@
 import functools
 
 from django.contrib import messages
+from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 
 from .models import Customer
 
-__all__ = ["htmx_template"]
+__all__ = ["htmx_template", "wialon_token_required"]
 
 
 class HtmxHttpRequest(HttpRequest):
@@ -14,24 +15,22 @@ class HtmxHttpRequest(HttpRequest):
 
 
 def wialon_token_required():
-    def request_user_has_wialon_token(request: HtmxHttpRequest) -> bool:
-        if not hasattr(request, "user"):
-            return False
-        if request.user.is_anonymous:
+    def user_has_wialon_token(user: AbstractBaseUser) -> bool:
+        if user.is_anonymous:
             return False
         else:
-            customer, _ = Customer.objects.get_or_create(user=request.user)
+            customer, _ = Customer.objects.get_or_create(user=user)
             return customer.token is not None
 
     def outer_wrapper(view_func):
         @functools.wraps(view_func)
         def inner_wrapper(request, *args, **kwargs) -> HttpResponse:
-            if request_user_has_wialon_token(request):
-                return view_func(request, *args, **kwargs)
-            else:
-                msg = "You need to connect your Wialon account to do that."
-                messages.warning(request, msg)
-                return redirect("terminusgps_notifier:dashboard")
+            if user := getattr(request, "user", None):
+                if user_has_wialon_token(user):
+                    return view_func(request, *args, **kwargs)
+            msg = "You need to connect your Wialon account to do that."
+            messages.warning(request, msg)
+            return redirect("terminusgps_notifier:dashboard")
 
         return inner_wrapper
 

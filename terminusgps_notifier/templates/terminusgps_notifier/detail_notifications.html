@@ -1,0 +1,21 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% block title %}{{ notification.n }}{% endblock title %}
+{% partialdef main %}
+<div class="flex flex-col gap-8">
+    <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+        <h3 class="font-semibold">Terminus GPS Notifier</h3>
+    </div>
+    <div id="details" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+        <div class="flex flex-col @md:justify-between @md:items-center @md:flex-row">
+            <div>
+                <h3 class="font-semibold">{{ notification.n }}</h3>
+                <p></p>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

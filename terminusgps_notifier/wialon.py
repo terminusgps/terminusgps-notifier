@@ -58,7 +58,7 @@ def create_notification(
     params["trg"] = trg
     params["act"] = act
     print(f"{params = }")
-    return session.wialon_api.resource_create_notification(**params)
+    return session.wialon_api.resource_update_notification(**params)
 
 
 def get_notification_data(

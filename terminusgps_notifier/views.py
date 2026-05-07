@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import typing
 import urllib.parse
 import warnings
 
@@ -241,7 +242,11 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
             )
             context["resource_list"] = response["items"]
     except WialonAPIError as error:
-        print(error)
+        if error.code == 6:
+            msg = "Failed to retrieve resources from Wialon. Is your Wialon account connected?"
+        else:
+            msg = str(error)
+        messages.warning(request, msg)
         context["resource_list"] = []
     return TemplateResponse(request, request.template_name, context=context)
 
@@ -393,35 +398,47 @@ def trigger_form(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
 def create_notifications(
     request: HtmxHttpRequest, resource_id: int
 ) -> HttpResponse:
-    def get_txt(request: HttpRequest) -> str:
-        return urllib.parse.urlencode(
-            {
-                "user_id": request.user.pk,
-                "unit_id": "%UNIT_ID%",
-                "message": str(request.POST["message"]),
-                "location": "%LOCATION%",
-                "unit_name": "%UNIT%",
-                "msg_time_int": "%MSG_TIME_INT%",
-            },
-            safe="%",
-        )
-
-    def get_act(request: HttpRequest) -> list[dict]:
-        url = urllib.parse.urljoin(
-            "https://api.terminusgps.com/",
-            f"/v3/notify/{request.POST['method']}/",
-        )
-        return [{"t": "send_messages", "p": {"url": url, "get": 0}}]
-
     if request.method == "POST":
         try:
             customer = Customer.objects.from_user(request.user)
             with WialonSession(token=customer.token) as session:
+                txt = urllib.parse.urlencode(
+                    {
+                        "user_id": request.user.pk,
+                        "unit_id": "%UNIT_ID%",
+                        "message": str(request.POST["message"]),
+                        "msg_time_int": "%MSG_TIME_INT%",
+                        "location": "%LOCATION%",
+                        "unit_name": "%UNIT%",
+                    },
+                    safe="%",
+                )
+                act = [
+                    {
+                        "t": "push_messages",
+                        "p": {
+                            "url": urllib.parse.urljoin(
+                                "https://api.terminusgps.com/",
+                                f"/v3/notify/{request.POST['method']}/",
+                            ),
+                            "get": 0,
+                        },
+                    }
+                ]
+                sch = {
+                    "f1": 0,
+                    "f2": 0,
+                    "t1": 0,
+                    "t2": 0,
+                    "m": 0,
+                    "w": 0,
+                    "y": 0,
+                }
                 response = create_notification(
-                    session=session,
+                    session,
                     resource_id=resource_id,
                     n=str(request.POST["n"]),
-                    txt=get_txt(request),
+                    txt=txt,
                     ta=0,
                     td=0,
                     ma=int(request.POST["ma"]),
@@ -433,29 +450,34 @@ def create_notifications(
                     fl=int(request.POST["fl"]),
                     tz=int(request.POST["tz"]),
                     la=str(request.POST["la"]),
-                    un=request.session["units_list"],
-                    sch={
-                        "f1": 0,
-                        "f2": 0,
-                        "t1": 0,
-                        "t2": 0,
-                        "m": 0,
-                        "w": 0,
-                        "y": 0,
-                    },
-                    ctrl_sch={
-                        "f1": 0,
-                        "f2": 0,
-                        "t1": 0,
-                        "t2": 0,
-                        "m": 0,
-                        "w": 0,
-                        "y": 0,
-                    },
-                    trg=request.session["trg"],
-                    act=get_act(request),
+                    un=request.session.get("units_list", []),
+                    sch=sch,
+                    ctrl_sch=sch,
+                    trg=request.session.get("trg", {}),
+                    act=act,
+                )
+                print(f"{response = }")
+                return redirect(
+                    "terminusgps_notifier:detail notifications",
+                    resource_id=resource_id,
+                    notification_id=response[0],
                 )
         except WialonAPIError as error:
             messages.error(request, error)
     context = {"resource_id": resource_id, "timezones": constants.TIMEZONES}
+    return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/resource_name.html")
+def resource_name(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
+    context: dict[str, typing.Any] = {"resource_id": resource_id}
+    try:
+        customer = Customer.objects.from_user(request.user)
+        with WialonSession(token=customer.token) as session:
+            response = search_item(session, id=resource_id, flags=1)
+            context["name"] = response["item"]["nm"]
+    except WialonAPIError as error:
+        print(error)
+        context["name"] = None
     return TemplateResponse(request, request.template_name, context=context)

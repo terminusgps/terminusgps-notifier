@@ -1,4 +1,5 @@
 {% extends "terminusgps_notifier/layout.html" %}
+{% load date_utils %}
 {% block title %}{{ resource.nm }}{% endblock title %}
 {% partialdef main %}
 <div class="flex flex-col gap-8">
@@ -22,11 +23,33 @@
                 </div>
             </a>
         </div>
-        <div id="notifications-list">
+        <div id="notifications-list" class="@container flex flex-col gap-4">
             {% for id, data in resource.unf.items %}
-            <div id="{{ resource.id }}-{{ id }}">
-                <p>{{ data.n }}</p>
-            </div>
+            <a href="{% url 'terminusgps_notifier:detail notifications' resource.id id %}" hx-boost="true">
+                <div id="{{ resource.id }}-{{ id }}" class="border p-4 rounded bg-stone-200">
+                    <div class="flex flex-col gap-2 @md:justify-between @md:flex-row">
+                        <h4 class="font-semibold">{{ data.n }}</h4>
+                        {% if data.fl != 2 %}
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                            </svg>
+                            <span class="sr-only">Enabled</span>
+                        </div>
+                        {% else %}
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
+                            </svg>
+                            <span class="sr-only">Disabled</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <!-- TODO: fit these dates somewhere -->
+                    <p class="text-sm">{{ data.mt|timestamp_to_datetime|date }}</p>
+                    <p class="text-sm">{{ data.ct|timestamp_to_datetime|date }}</p>
+                </div>
+            </a>
             {% endfor %}
         </div>
     </div>

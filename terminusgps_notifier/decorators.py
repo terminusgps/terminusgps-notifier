@@ -20,7 +20,7 @@ def wialon_token_required():
             return False
         else:
             customer, _ = Customer.objects.get_or_create(user=user)
-            return customer.token is not None
+            return bool(customer.token)
 
     def outer_wrapper(view_func):
         @functools.wraps(view_func)

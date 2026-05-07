@@ -41,13 +41,6 @@
             </div>
         </div>
         <div class="flex flex-col gap-2">
-            <input class="peer p-2 border rounded bg-stone-50 user-invalid:border-red-700 user-invalid:placeholder:text-red-400 user-invalid:bg-red-50 user-valid:bg-green-50 user-valid:placeholder:text-green-400 user-valid:border-green-700 user-valid:text-green-700" type="text" id="id_message" name="message" maxlength="2048" placeholder="Hello! At %MSG_TIME%, your vehicle %UNIT% had its ignition switched on." aria-described-by="id_message_helptext" required>
-            <label class="font-semibold order-first peer-user-invalid:text-red-600 peer-user-valid:text-green-600" for="id_message">{% translate "Notification Message: " %}</label>
-            <div class="text-sm peer-user-invalid:text-red-700 peer-user-valid:text-green-700" id="id_message_helptext">
-                <p>{% translate "Provide a message to text/read aloud to target phone numbers." %}</p>
-            </div>
-        </div>
-        <div class="flex flex-col gap-2">
             <select class="peer p-2 border rounded bg-stone-50 user-invalid:border-red-700 user-invalid:placeholder:text-red-400 user-invalid:bg-red-50 user-valid:bg-green-50 user-valid:placeholder:text-green-400 user-valid:border-green-700 user-valid:text-green-700" id="id_tz" name="tz" required>
                 {% for value, label in timezones %}
                 <option value="{{ value }}">{% translate label %}</label>
@@ -67,6 +60,13 @@
             <label class="font-semibold order-first peer-user-invalid:text-red-600 peer-user-valid:text-green-600" for="id_fl">{% translate "Notification Flags: " %}</label>
             <div class="text-sm peer-user-invalid:text-red-700 peer-user-valid:text-green-700" id="id_fl_helptext">
                 <p>{% translate "TODO: Write helptext." %}</p>
+            </div>
+        </div>
+        <div class="flex flex-col gap-2">
+            <input class="peer p-2 border rounded bg-stone-50 user-invalid:border-red-700 user-invalid:placeholder:text-red-400 user-invalid:bg-red-50 user-valid:bg-green-50 user-valid:placeholder:text-green-400 user-valid:border-green-700 user-valid:text-green-700" type="text" id="id_message" name="message" maxlength="2048" placeholder="Hello! At %MSG_TIME%, your vehicle %UNIT% had its ignition switched on." aria-described-by="id_message_helptext" required>
+            <label class="font-semibold order-first peer-user-invalid:text-red-600 peer-user-valid:text-green-600" for="id_message">{% translate "Notification Message: " %}</label>
+            <div class="text-sm peer-user-invalid:text-red-700 peer-user-valid:text-green-700" id="id_message_helptext">
+                <p>{% translate "Provide a message to text/read aloud to target phone numbers." %}</p>
             </div>
         </div>
         <div class="bg-stone-300 rounded border border-stone-600">

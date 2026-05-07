@@ -1,4 +1,5 @@
 import base64
+import decimal
 import os
 from pathlib import Path
 
@@ -40,6 +41,7 @@ STATIC_URL = "static/"
 TIME_ZONE = "America/Chicago"
 USE_I18N = True
 USE_TZ = True
+SUBSCRIPTION_PRICE = decimal.Decimal("60.00")
 WIALON_TOKEN_ACCESS_TYPE = (
     TokenFlag.VIEW_ACCESS
     | TokenFlag.MANAGE_NONSENSITIVE
@@ -127,6 +129,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "django.forms",
+    "djmoney",
     "terminusgps_payments.apps.TerminusgpsPaymentsConfig",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]

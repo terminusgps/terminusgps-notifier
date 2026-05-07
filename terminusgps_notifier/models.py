@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractBaseUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from encrypted_field import EncryptedField
+from terminusgps.authorizenet import api
+from terminusgps.authorizenet.service import AuthorizenetService
 
 
 class CustomerQuerySet(models.QuerySet):
@@ -23,7 +25,7 @@ class Customer(models.Model):
     messages_count = models.PositiveIntegerField(default=0)
     messages_limit = models.PositiveIntegerField(default=500)
     subscription_id = models.IntegerField(blank=True, null=True, default=None)
-    subscription_expiry = models.DateTimeField(
+    customer_profile_id = models.IntegerField(
         blank=True, null=True, default=None
     )
     objects = CustomerQuerySet.as_manager()
@@ -34,3 +36,13 @@ class Customer(models.Model):
 
     def __str__(self) -> str:
         return str(self.user)
+
+    def get_subscription_status(
+        self, service: AuthorizenetService
+    ) -> str | None:
+        if self.subscription_id is None:
+            return
+        anet_response = service.execute(
+            api.get_subscription_status(subscription_id=self.pk)
+        )
+        return str(anet_response.status)

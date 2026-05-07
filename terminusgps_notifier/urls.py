@@ -55,6 +55,16 @@ urlpatterns = [
     path(
         "units/<int:unit_id>/details/", views.detail_units, name="detail units"
     ),
+    path(
+        "subscriptions/create/",
+        views.create_subscription,
+        name="create subscription",
+    ),
+    path(
+        "subscriptions/<int:subscription_id>/details/",
+        views.detail_subscription,
+        name="detail subscription",
+    ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),
     path("v3/health/", views.HealthCheckView.as_view(), name="health check"),

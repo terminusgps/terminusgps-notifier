@@ -481,3 +481,22 @@ def resource_name(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
         print(error)
         context["name"] = None
     return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_http_methods(["GET", "POST"])
+@htmx_template("terminusgps_notifier/create_subscription.html")
+def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
+    context: dict[str, typing.Any] = {}
+    if request.POST:
+        # check consent
+        ...
+    return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/detail_subscription.html")
+def detail_subscription(
+    request: HtmxHttpRequest, subscription_id: int
+) -> HttpResponse:
+    context: dict[str, typing.Any] = {"subscription_id": subscription_id}
+    return TemplateResponse(request, request.template_name, context=context)

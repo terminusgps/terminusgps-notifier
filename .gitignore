@@ -9,3 +9,4 @@ dist/
 logs/
 db.sqlite3
 src/docs/build/
+node_modules/

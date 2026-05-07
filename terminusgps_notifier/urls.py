@@ -18,11 +18,6 @@ urlpatterns = [
         name="detail resources",
     ),
     path(
-        "resources/<int:resource_id>/name/",
-        views.resource_name,
-        name="resource name",
-    ),
-    path(
         "notifications/<int:resource_id>/<int:notification_id>/",
         views.detail_notifications,
         name="detail notifications",

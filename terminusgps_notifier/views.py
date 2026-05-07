@@ -468,21 +468,6 @@ def create_notifications(
     return TemplateResponse(request, request.template_name, context=context)
 
 
-@require_GET
-@htmx_template("terminusgps_notifier/resource_name.html")
-def resource_name(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
-    context: dict[str, typing.Any] = {"resource_id": resource_id}
-    try:
-        customer = Customer.objects.from_user(request.user)
-        with WialonSession(token=customer.token) as session:
-            response = search_item(session, id=resource_id, flags=1)
-            context["name"] = response["item"]["nm"]
-    except WialonAPIError as error:
-        print(error)
-        context["name"] = None
-    return TemplateResponse(request, request.template_name, context=context)
-
-
 @require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/create_subscription.html")
 def create_subscription(request: HtmxHttpRequest) -> HttpResponse:

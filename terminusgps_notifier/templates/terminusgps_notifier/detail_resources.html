@@ -12,7 +12,7 @@
                 <h3 class="font-semibold">{{ resource.nm }}</h3>
                 <p>{{ resource.unf|length }} notification{{ resource.unf|length|pluralize }}</p>
             </div>
-            <a href="{% url 'terminusgps_notifier:units form' resource.id %}" hx-boost="true">
+            <a href="{% url 'terminusgps_notifier:units form' resource.id %}" hx-boost="true" _="">
                 <div class="p-2 border rounded bg-stone-200 hover:bg-stone-50 ease-in-out duration-300 transition-colors">
                     <div class="flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">

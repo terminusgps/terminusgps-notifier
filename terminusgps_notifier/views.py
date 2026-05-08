@@ -288,7 +288,7 @@ def detail_notifications(
 
 
 @require_GET
-@htmx_template("terminusgps_notifier/select_resources.html")
+@htmx_template("terminusgps_notifier/select/resources.html")
 def select_resources(request: HtmxHttpRequest) -> HttpResponse:
     context = {}
     try:
@@ -310,7 +310,7 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_GET
-@htmx_template("terminusgps_notifier/select_units.html")
+@htmx_template("terminusgps_notifier/select/units.html")
 def select_units(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
     context = {}
     try:
@@ -372,7 +372,7 @@ def units_form(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/trigger_form.html")
+@htmx_template("terminusgps_notifier/forms/trigger.html")
 def trigger_form(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
     if request.method == "POST":
         t = request.POST["trigger"]
@@ -488,14 +488,14 @@ def detail_subscription(
 
 
 @require_GET
-@htmx_template("terminusgps_notifier/address_form.html")
+@htmx_template("terminusgps_notifier/forms/address.html")
 def address_form(request: HtmxHttpRequest) -> HttpResponse:
     context: dict[str, typing.Any] = {}
     return TemplateResponse(request, request.template_name, context=context)
 
 
 @require_GET
-@htmx_template("terminusgps_notifier/payment_form.html")
+@htmx_template("terminusgps_notifier/forms/payment.html")
 def payment_form(request: HtmxHttpRequest) -> HttpResponse:
     context: dict[str, typing.Any] = {}
     return TemplateResponse(request, request.template_name, context=context)

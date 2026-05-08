@@ -304,10 +304,29 @@ class SensorValueTriggerForm(forms.Form):
 
 class ConnectionLossTriggerForm(forms.Form):
     time = forms.IntegerField()
-    type = forms.TypedChoiceField()
-    include_lbs = forms.TypedChoiceField()
-    check_restore = forms.TypedChoiceField()
-    geozones_type = forms.TypedChoiceField()
+    type = forms.TypedChoiceField(
+        coerce=int,
+        choices=[("0", _("Coordinates Loss")), ("1", _("Connection Loss"))],
+    )
+    include_lbs = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Do not process LBS messages")),
+            ("1", _("Process LBS messages")),
+        ],
+    )
+    check_restore = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Connection Lost")),
+            ("1", _("Connection Lost and Restored")),
+            ("2", _("Connection Restored")),
+        ],
+    )
+    geozones_type = forms.TypedChoiceField(
+        coerce=int,
+        choices=[("0", _("Out of Geofence")), ("1", _("Within Geofence"))],
+    )
     geozones_list = forms.CharField()
 
 
@@ -328,7 +347,13 @@ class InterpositionTriggerForm(forms.Form):
     radius = forms.IntegerField()
     type = forms.TypedChoiceField()
     unit_guids = forms.CharField()
-    include_lbs = forms.TypedChoiceField()
+    include_lbs = forms.TypedChoiceField(
+        coerce=int,
+        choices=[
+            ("0", _("Do not process LBS messages")),
+            ("1", _("Process LBS messages")),
+        ],
+    )
     lo = forms.ChoiceField()
 
 

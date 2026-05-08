@@ -5,6 +5,12 @@ from . import views
 app_name = "terminusgps_notifier"
 urlpatterns = [
     path("", views.home, name="home"),
+    path("login/", views.TerminusGPSNotifierLoginView.as_view(), name="login"),
+    path(
+        "logged_out/",
+        views.TerminusGPSNotifierLogoutView.as_view(),
+        name="logout",
+    ),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("contact/", views.contact, name="contact"),
     path("source/", views.source_code, name="source"),

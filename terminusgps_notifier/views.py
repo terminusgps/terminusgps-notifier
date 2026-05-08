@@ -6,12 +6,13 @@ import warnings
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.views import LoginView, LogoutView
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.forms import Form
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
@@ -148,6 +149,17 @@ class NotificationDispatchView(View):
             return HttpResponse(status=200)
         dispatchers = await self.get_dispatchers(form)
         return await self.send_notifications(phones, dispatchers)
+
+
+class TerminusGPSNotifierLoginView(LoginView):
+    next_page = reverse_lazy("terminusgps_notifier:dashboard")
+    redirect_authenticated_user = True
+    template_name = "terminusgps_notifier/login.html"
+
+
+class TerminusGPSNotifierLogoutView(LogoutView):
+    next_page = reverse_lazy("terminusgps_notifier:home")
+    template_name = "terminusgps_notifier/logged_out.html"
 
 
 @require_GET

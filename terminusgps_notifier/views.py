@@ -273,6 +273,16 @@ def detail_resources(
 def detail_notifications(
     request: HtmxHttpRequest, resource_id: int, notification_id: int
 ) -> HttpResponse:
+    def get_notification_method(notification: dict) -> str | None:
+        for action in notification["act"]:
+            if (
+                action["t"] == "push_messages"
+                and "api.terminusgps.com" in action["p"]["url"]
+            ):
+                split_url = urllib.parse.urlsplit(action["p"]["url"])
+                parts = list(filter(None, split_url.path.split("/")))
+                return parts[-1]
+
     context = {}
     try:
         customer, _ = Customer.objects.get_or_create(user=request.user)
@@ -281,9 +291,11 @@ def detail_notifications(
                 session, resource_id, [notification_id]
             )
             context["notification"] = response[0]
+            context["method"] = get_notification_method(response[0])
     except WialonAPIError as error:
         print(error)
         context["notification"] = {}
+        context["method"] = None
     return TemplateResponse(request, request.template_name, context=context)
 
 
@@ -456,7 +468,6 @@ def create_notifications(
                     trg=request.session.get("trg", {}),
                     act=act,
                 )
-                print(f"{response = }")
                 return redirect(
                     "terminusgps_notifier:detail notifications",
                     resource_id=resource_id,

@@ -485,3 +485,24 @@ def detail_subscription(
 ) -> HttpResponse:
     context: dict[str, typing.Any] = {"subscription_id": subscription_id}
     return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/address_form.html")
+def address_form(request: HtmxHttpRequest) -> HttpResponse:
+    context: dict[str, typing.Any] = {}
+    return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/payment_form.html")
+def payment_form(request: HtmxHttpRequest) -> HttpResponse:
+    context: dict[str, typing.Any] = {}
+    return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_http_methods(["GET", "POST"])
+@htmx_template("terminusgps_notifier/save_payment.html")
+def save_payment(request: HtmxHttpRequest) -> HttpResponse:
+    context: dict[str, typing.Any] = {}
+    return TemplateResponse(request, request.template_name, context=context)

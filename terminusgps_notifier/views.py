@@ -359,7 +359,7 @@ def trigger_parameters(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/units_form.html")
+@htmx_template("terminusgps_notifier/forms/units.html")
 def units_form(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
     if request.method == "POST":
         units_list = request.POST.getlist("units", [])

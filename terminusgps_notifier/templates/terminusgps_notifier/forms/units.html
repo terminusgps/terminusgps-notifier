@@ -1,0 +1,43 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% block title %}Select Units{% endblock title %}
+{% partialdef main %}
+<div class="flex flex-col gap-8">
+    <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+        <h3 class="font-semibold">Terminus GPS Notifier</h3>
+    </div>
+    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:units form' resource_id %}">
+        {% csrf_token %}
+        <div class="flex flex-col gap-2">
+            <select class="peer p-2 border rounded bg-stone-50" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:select units' resource_id %}" hx-target="#id_units" hx-trigger="load once, change" hx-include="this" hx-indicator="#units-indicator">
+                <option value="avl_unit" selected>Units</option>
+                <option value="avl_unit_group">Unit Groups</option>
+            </select>
+            <label class="font-semibold order-first" for="id_items_type">Items Type:</label>
+            <div id="id_items_type_helptext" class="text-sm">
+                <p>Select units or unit groups.</p>
+            </div>
+
+        </div>
+        <div class="flex flex-col gap-2">
+            <select class="peer p-2 border rounded bg-stone-50" id="id_units" name="units" multiple required></select>
+            <div class="order-first flex items-center gap-2">
+                <label class="font-semibold" for="id_units">Units/Unit Groups:</label>
+                <svg id="units-indicator" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 htmx-indicator animate-spin">
+
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+
+            </div>
+            <div id="id_units_helptext" class="text-sm">
+                <p>Ctrl+click to select multiple.</p>
+
+                <p>Cmd+click on Mac.</p>
+            </div>
+        </div>
+        <button class="px-4 py-2 border border-current cursor-pointer rounded text-gray-100 bg-terminus-red-800 hover:bg-terminus-red-400 ease-in-out duration-300 transition-colors" type="submit">Next</button>
+    </form>
+</div>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

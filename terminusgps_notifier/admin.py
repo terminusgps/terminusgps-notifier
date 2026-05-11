@@ -3,6 +3,6 @@ from django.contrib import admin
 from . import models
 
 
-@admin.register(models.Customer)
-class CustomerAdmin(admin.ModelAdmin):
+@admin.register(models.Profile)
+class ProfileAdmin(admin.ModelAdmin):
     list_display = ["user", "messages_count", "messages_limit"]

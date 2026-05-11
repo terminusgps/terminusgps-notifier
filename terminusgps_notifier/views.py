@@ -1,16 +1,16 @@
 import asyncio
 import logging
-import typing
 import urllib.parse
 import warnings
 
+import stripe
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.forms import Form
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
@@ -24,7 +24,7 @@ from terminusgps.wialon.session import WialonAPIError, WialonSession
 from terminusgps_notifier import constants, forms
 from terminusgps_notifier.decorators import HtmxHttpRequest, htmx_template
 from terminusgps_notifier.dispatchers import NotificationDispatcher
-from terminusgps_notifier.models import Customer
+from terminusgps_notifier.models import Profile
 from terminusgps_notifier.validators import validate_e164_phone_number
 from terminusgps_notifier.wialon import (
     create_notification,
@@ -175,11 +175,11 @@ def wialon_login(request: HttpRequest) -> HttpResponse:
 @never_cache
 @htmx_template("terminusgps_notifier/wialon_callback.html")
 def wialon_callback(request: HtmxHttpRequest) -> HttpResponse:
-    customer, _ = Customer.objects.get_or_create(user=request.user)
+    profile = get_object_or_404(Profile, user=request.user)
     token_saved = False
     if access_token := request.GET.get("access_token"):
-        customer.token = access_token
-        customer.save(update_fields=["token"])
+        profile.token = access_token
+        profile.save(update_fields=["token"])
         token_saved = True
     context = {"token_saved": token_saved}
     return TemplateResponse(request, request.template_name, context=context)
@@ -224,15 +224,18 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
 @require_GET
 @htmx_template("terminusgps_notifier/dashboard.html")
 def dashboard(request: HtmxHttpRequest) -> HttpResponse:
+    try:
+        profile = Profile.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        profile = Profile.objects.create(user=request.user)
     context = {}
-    customer, _ = Customer.objects.get_or_create(user=request.user)
-    location = reverse("terminusgps_notifier:wialon callback")
-    context["redirect_uri"] = request.build_absolute_uri(location)
-    context["username"] = customer.user.username
-    context["has_token"] = customer.token is not None
-    context["has_subscription"] = customer.subscription_id is not None
-    context["messages_count"] = customer.messages_count
-    context["messages_limit"] = customer.messages_limit
+    context["username"] = profile.user.username
+    context["has_token"] = profile.token is not None
+    context["messages_count"] = profile.messages_count
+    context["messages_limit"] = profile.messages_limit
+    context["redirect_uri"] = request.build_absolute_uri(
+        reverse("terminusgps_notifier:wialon callback")
+    )
     return TemplateResponse(request, request.template_name, context=context)
 
 
@@ -241,8 +244,8 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
 def list_resources(request: HtmxHttpRequest) -> HttpResponse:
     context = {}
     try:
-        customer, _ = Customer.objects.get_or_create(user=request.user)
-        with WialonSession(token=customer.token) as session:
+        profile = get_object_or_404(Profile, user=request.user)
+        with WialonSession(token=profile.token) as session:
             response = search_items(
                 session=session,
                 items_type="avl_resource",
@@ -270,8 +273,8 @@ def detail_resources(
 ) -> HttpResponse:
     context = {}
     try:
-        customer, _ = Customer.objects.get_or_create(user=request.user)
-        with WialonSession(token=customer.token) as session:
+        profile = get_object_or_404(Profile, user=request.user)
+        with WialonSession(token=profile.token) as session:
             response = search_item(session=session, id=resource_id, flags=1025)
             context["resource"] = response["item"]
     except WialonAPIError as error:
@@ -297,8 +300,8 @@ def detail_notifications(
 
     context = {}
     try:
-        customer, _ = Customer.objects.get_or_create(user=request.user)
-        with WialonSession(token=customer.token) as session:
+        profile = get_object_or_404(Profile, user=request.user)
+        with WialonSession(token=profile.token) as session:
             response = get_notification_data(
                 session, resource_id, [notification_id]
             )
@@ -316,8 +319,8 @@ def detail_notifications(
 def select_resources(request: HtmxHttpRequest) -> HttpResponse:
     context = {}
     try:
-        customer, _ = Customer.objects.get_or_create(user=request.user)
-        with WialonSession(token=customer.token) as session:
+        profile = get_object_or_404(Profile, user=request.user)
+        with WialonSession(token=profile.token) as session:
             response = search_items(
                 session=session,
                 items_type="avl_resource",
@@ -338,8 +341,8 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
 def select_units(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
     context = {}
     try:
-        customer, _ = Customer.objects.get_or_create(user=request.user)
-        with WialonSession(token=customer.token) as session:
+        profile = get_object_or_404(Profile, user=request.user)
+        with WialonSession(token=profile.token) as session:
             response = search_items(
                 session=session,
                 items_type=str(request.GET.get("items_type", "avl_unit")),
@@ -360,8 +363,8 @@ def select_units(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
 def detail_units(request: HtmxHttpRequest, unit_id: int) -> HttpResponse:
     context = {}
     try:
-        customer, _ = Customer.objects.get_or_create(user=request.user)
-        with WialonSession(token=customer.token) as session:
+        profile = get_object_or_404(Profile, user=request.user)
+        with WialonSession(token=profile.token) as session:
             response = search_item(session, unit_id)
             context["unit"] = response["item"]
     except WialonAPIError as error:
@@ -424,8 +427,8 @@ def create_notifications(
 ) -> HttpResponse:
     if request.method == "POST":
         try:
-            customer = Customer.objects.from_user(request.user)
-            with WialonSession(token=customer.token) as session:
+            profile = get_object_or_404(Profile, user=request.user)
+            with WialonSession(token=profile.token) as session:
                 txt = urllib.parse.urlencode(
                     {
                         "user_id": request.user.pk,
@@ -492,40 +495,61 @@ def create_notifications(
 
 
 @require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/create_subscription.html")
-def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
-    context: dict[str, typing.Any] = {}
-    if request.POST:
-        # check consent
-        ...
-    return TemplateResponse(request, request.template_name, context=context)
+@htmx_template("terminusgps_notifier/checkout.html")
+def checkout(request: HtmxHttpRequest) -> HttpResponse:
+    profile = get_object_or_404(Profile, user=request.user)
+    if request.method == "POST":
+        client = stripe.StripeClient(settings.STRIPE_API_KEY)
+        try:
+            checkout_session = client.v1.checkout.sessions.create(
+                params={
+                    "line_items": [
+                        {
+                            "price": "price_1TVx8iGphupvKam1plxSWh2D",
+                            "quantity": 1,
+                        }
+                    ],
+                    "mode": "subscription",
+                    "success_url": request.build_absolute_uri(
+                        reverse("terminusgps_notifier:checkout success")
+                    ),
+                }
+            )
+            profile.checkout_id = checkout_session.id
+            profile.save(update_fields=["checkout_id"])
+            return redirect(checkout_session.url)
+        except Exception as error:
+            messages.error(request, str(error))
+    return TemplateResponse(request, request.template_name, context={})
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/checkout_success.html")
+def checkout_success(request: HtmxHttpRequest) -> HttpResponse:
+    profile = get_object_or_404(Profile, user=request.user)
+    client = stripe.StripeClient(settings.STRIPE_API_KEY)
+    session = client.v1.checkout.sessions.retrieve(profile.checkout_id)
+    profile.customer_id = session.customer
+    profile.subscription_id = session.subscription
+    profile.checkout_id = None
+    profile.save(
+        update_fields=["checkout_id", "customer_id", "subscription_id"]
+    )
+    return redirect(
+        "terminusgps_notifier:detail subscription",
+        subscription_id=session.subscription,
+    )
 
 
 @require_GET
 @htmx_template("terminusgps_notifier/detail_subscription.html")
 def detail_subscription(
-    request: HtmxHttpRequest, subscription_id: int
+    request: HtmxHttpRequest, subscription_id: str
 ) -> HttpResponse:
-    context: dict[str, typing.Any] = {"subscription_id": subscription_id}
-    return TemplateResponse(request, request.template_name, context=context)
-
-
-@require_GET
-@htmx_template("terminusgps_notifier/forms/address.html")
-def address_form(request: HtmxHttpRequest) -> HttpResponse:
-    context: dict[str, typing.Any] = {}
-    return TemplateResponse(request, request.template_name, context=context)
-
-
-@require_GET
-@htmx_template("terminusgps_notifier/forms/payment.html")
-def payment_form(request: HtmxHttpRequest) -> HttpResponse:
-    context: dict[str, typing.Any] = {}
-    return TemplateResponse(request, request.template_name, context=context)
-
-
-@require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/save_payment.html")
-def save_payment(request: HtmxHttpRequest) -> HttpResponse:
-    context: dict[str, typing.Any] = {}
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.subscription_id != subscription_id:
+        raise Http404()
+    client = stripe.StripeClient(settings.STRIPE_API_KEY)
+    subscription = client.v1.subscriptions.retrieve(subscription_id)
+    context = {"subscription": subscription.to_dict()}
     return TemplateResponse(request, request.template_name, context=context)

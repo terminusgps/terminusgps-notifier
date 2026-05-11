@@ -3,9 +3,9 @@ import functools
 from django.contrib import messages
 from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 
-from .models import Customer
+from .models import Profile
 
 __all__ = ["htmx_template", "wialon_token_required"]
 
@@ -19,8 +19,8 @@ def wialon_token_required():
         if user.is_anonymous:
             return False
         else:
-            customer, _ = Customer.objects.get_or_create(user=user)
-            return bool(customer.token)
+            profile = get_object_or_404(Profile, user=user)
+            return bool(profile.token)
 
     def outer_wrapper(view_func):
         @functools.wraps(view_func)

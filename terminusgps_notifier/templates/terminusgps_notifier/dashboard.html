@@ -79,7 +79,7 @@
                 <h3 class="font-semibold">Subscription</h3>
             </div>
             <p>You are <span class="font-semibold">{{ has_subscription|yesno:'subscribed, not subscribed' }}</span>.</p>
-            <a href="{% url 'terminusgps_notifier:create subscription' %}" hx-boost="true">
+            <a href="{% url 'terminusgps_notifier:checkout' %}" hx-boost="true">
                 <div class="p-2 border rounded bg-stone-300 border-stone-600 transition-colors ease-in-out duration-300 hover:bg-stone-100">
                     <div class="flex justify-between items-center">
                         <p class="font-semibold">Subscribe</p>

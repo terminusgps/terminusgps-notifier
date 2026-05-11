@@ -57,6 +57,7 @@ NOTIFICATION_DISPATCHERS = {
     ],
 }
 
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": "test" in sys.argv,

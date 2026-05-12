@@ -22,6 +22,10 @@
     <div class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" id="{{ subscription.id }}">
         <h4 class="font-semibold">Your Subscription</h4>
         {% if subscription is not None %}
+        <div id="payment-method">
+            {{ subscription.customer }}
+            {{ subscription.default_payment_method }}
+        </div>
         <button type="button" hx-confirm="Are you sure you want to cancel your subscription?" hx-post="{% url 'terminusgps_notifier:cancel subscription' %}" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}' hx-boost="true">Cancel</button>
         {% else %}
         <p>You aren't subscribed yet.</p>

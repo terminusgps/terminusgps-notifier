@@ -6,10 +6,12 @@ from django.contrib import messages
 from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from terminusgps.wialon.session import WialonSession
+from wialon.api import WialonError
 
 from .models import Profile
 
-__all__ = ["htmx_template", "wialon_token_required"]
+__all__ = ["htmx_template", "wialon_session"]
 
 
 class HtmxHttpRequest(HttpRequest):
@@ -27,8 +29,9 @@ def valid_subscription_required():
     def get_subscription_status(user: AbstractBaseUser) -> str:
         profile = get_object_or_404(Profile, user=user)
         client = stripe.StripeClient(settings.STRIPE_API_KEY)
-        id = profile.subscription_id
-        subscription = client.v1.subscriptions.retrieve(id)
+        subscription = client.v1.subscriptions.retrieve(
+            profile.subscription_id
+        )
         return str(subscription.status)
 
     def outer_wrapper(view_func):
@@ -42,6 +45,44 @@ def valid_subscription_required():
             msg = "You need to subscribe to do that."
             messages.warning(request, msg)
             return redirect("terminusgps_notifier:dashboard")
+
+        return inner_wrapper
+
+    return outer_wrapper
+
+
+def wialon_session():
+    def get_wialon_api_token(request: HttpRequest) -> str | None:
+        if not hasattr(request, "user"):
+            return
+        if request.user.is_anonymous:
+            return
+        profile = get_object_or_404(Profile, user=request.user)
+        return profile.token
+
+    def wialon_sid_is_valid(sid: str | None) -> bool:
+        session = WialonSession(sid=sid)
+        try:
+            session.wialon_api.avl_evts()
+            return True
+        except WialonError:
+            return False
+
+    def outer_wrapper(view_func):
+        @functools.wraps(view_func)
+        def inner_wrapper(request, *args, **kwargs):
+            wialon_api_token = get_wialon_api_token(request)
+            if not wialon_api_token:
+                messages.warning(
+                    request,
+                    "You need to connect your Wialon account to do that.",
+                )
+                return redirect("terminusgps_notifier:dashboard")
+            if not wialon_sid_is_valid(request.session.get("wialon_sid")):
+                session = WialonSession(sid=None)
+                session.token_login(token=wialon_api_token)
+                request.session["wialon_sid"] = session.id
+            return view_func(request, *args, **kwargs)
 
         return inner_wrapper
 

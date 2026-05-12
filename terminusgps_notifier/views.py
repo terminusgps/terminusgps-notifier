@@ -26,7 +26,11 @@ from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import constants, forms
-from terminusgps_notifier.decorators import HtmxHttpRequest, htmx_template
+from terminusgps_notifier.decorators import (
+    HtmxHttpRequest,
+    htmx_template,
+    wialon_session,
+)
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Profile
 from terminusgps_notifier.validators import validate_e164_phone_number
@@ -38,6 +42,19 @@ from terminusgps_notifier.wialon import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@require_GET
+@wialon_session()
+def test_wialon_integration(request: HtmxHttpRequest) -> HttpResponse:
+    print(f"{request.session.get("wialon_sid") = }")
+    with WialonSession(sid=request.session.get("wialon_sid")) as session:
+        print(f"{session.wialon_api.avl_evts() = }")
+    return HttpResponse(status=200)
+
+
+def get_stripe_client() -> stripe.StripeClient:
+    return stripe.StripeClient(settings.STRIPE_API_KEY)
 
 
 class HealthCheckView(View):
@@ -233,8 +250,8 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
     except Profile.DoesNotExist:
         profile = Profile.objects.create(user=request.user)
     if profile.checkout_id is not None:
-        client = stripe.StripeClient(settings.STRIPE_API_KEY)
-        session = client.v1.checkout.sessions.retrieve(profile.checkout_id)
+        stripe = get_stripe_client()
+        session = stripe.v1.checkout.sessions.retrieve(profile.checkout_id)
         profile.customer_id = session.customer
         profile.subscription_id = session.subscription
         profile.checkout_id = None
@@ -504,9 +521,9 @@ def create_notifications(
 
 @require_GET
 def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
-    client = stripe.StripeClient(settings.STRIPE_API_KEY)
+    stripe = get_stripe_client()
     profile = get_object_or_404(Profile, user=request.user)
-    checkout_session = client.v1.checkout.sessions.create(
+    checkout_session = stripe.v1.checkout.sessions.create(
         params={
             "line_items": [
                 {"price": "price_1TVx8iGphupvKam1plxSWh2D", "quantity": 1}
@@ -525,10 +542,10 @@ def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
 @require_GET
 @htmx_template("terminusgps_notifier/detail_subscription.html")
 def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
-    client = stripe.StripeClient(settings.STRIPE_API_KEY)
+    stripe = get_stripe_client()
     profile = get_object_or_404(Profile, user=request.user)
     if profile.subscription_id:
-        subscription = client.v1.subscriptions.retrieve(
+        subscription = stripe.v1.subscriptions.retrieve(
             profile.subscription_id
         )
         context = {"subscription": subscription.to_dict()}
@@ -539,9 +556,9 @@ def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
 
 @require_POST
 def cancel_subscription(request: HtmxHttpRequest) -> HttpResponse:
-    client = stripe.StripeClient(settings.STRIPE_API_KEY)
+    stripe = get_stripe_client()
     profile = get_object_or_404(Profile, user=request.user)
-    client.v1.subscriptions.cancel(profile.subscription_id)
+    stripe.v1.subscriptions.cancel(profile.subscription_id)
     profile.subscription_id = None
     profile.save(update_fields=["subscription_id"])
     messages.success(request, "Subscription succesfully canceled.")

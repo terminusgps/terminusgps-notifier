@@ -69,6 +69,7 @@ urlpatterns = [
     ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),
+    path("wialon/test/", views.test_wialon_integration, name="wialon test"),
     path("v3/health/", views.HealthCheckView.as_view(), name="health check"),
     path(
         "v3/notify/<str:method>/",

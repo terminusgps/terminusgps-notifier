@@ -52,12 +52,20 @@ urlpatterns = [
     path(
         "detail-units/<int:unit_id>/", views.detail_units, name="detail units"
     ),
-    path("checkout/", views.checkout, name="checkout"),
-    path("checkout/success/", views.checkout_success, name="checkout success"),
     path(
-        "detail-subscriptions/<str:subscription_id>/",
+        "create-subscriptions/",
+        views.create_subscription,
+        name="create subscription",
+    ),
+    path(
+        "detail-subscriptions/",
         views.detail_subscription,
         name="detail subscription",
+    ),
+    path(
+        "cancel-subscriptions/",
+        views.cancel_subscription,
+        name="cancel subscription",
     ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),

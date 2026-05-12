@@ -17,7 +17,11 @@ from django.utils.decorators import method_decorator
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.http import (
+    require_GET,
+    require_http_methods,
+    require_POST,
+)
 from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
@@ -226,16 +230,20 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
 def dashboard(request: HtmxHttpRequest) -> HttpResponse:
     try:
         profile = Profile.objects.get(user=request.user)
-    except Customer.DoesNotExist:
+    except Profile.DoesNotExist:
         profile = Profile.objects.create(user=request.user)
-    context = {}
-    context["username"] = profile.user.username
-    context["has_token"] = profile.token is not None
-    context["messages_count"] = profile.messages_count
-    context["messages_limit"] = profile.messages_limit
-    context["redirect_uri"] = request.build_absolute_uri(
+    if profile.checkout_id is not None:
+        client = stripe.StripeClient(settings.STRIPE_API_KEY)
+        session = client.v1.checkout.sessions.retrieve(profile.checkout_id)
+        profile.customer_id = session.customer
+        profile.subscription_id = session.subscription
+        profile.checkout_id = None
+        profile.save()
+        messages.success(request, "Subscription successfully created.")
+    redirect_uri = request.build_absolute_uri(
         reverse("terminusgps_notifier:wialon callback")
     )
+    context = {"profile": profile, "redirect_uri": redirect_uri}
     return TemplateResponse(request, request.template_name, context=context)
 
 
@@ -494,62 +502,47 @@ def create_notifications(
     return TemplateResponse(request, request.template_name, context=context)
 
 
-@require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/checkout.html")
-def checkout(request: HtmxHttpRequest) -> HttpResponse:
-    profile = get_object_or_404(Profile, user=request.user)
-    if request.method == "POST":
-        client = stripe.StripeClient(settings.STRIPE_API_KEY)
-        try:
-            checkout_session = client.v1.checkout.sessions.create(
-                params={
-                    "line_items": [
-                        {
-                            "price": "price_1TVx8iGphupvKam1plxSWh2D",
-                            "quantity": 1,
-                        }
-                    ],
-                    "mode": "subscription",
-                    "success_url": request.build_absolute_uri(
-                        reverse("terminusgps_notifier:checkout success")
-                    ),
-                }
-            )
-            profile.checkout_id = checkout_session.id
-            profile.save(update_fields=["checkout_id"])
-            return redirect(checkout_session.url)
-        except Exception as error:
-            messages.error(request, str(error))
-    return TemplateResponse(request, request.template_name, context={})
-
-
 @require_GET
-@htmx_template("terminusgps_notifier/checkout_success.html")
-def checkout_success(request: HtmxHttpRequest) -> HttpResponse:
-    profile = get_object_or_404(Profile, user=request.user)
+def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
     client = stripe.StripeClient(settings.STRIPE_API_KEY)
-    session = client.v1.checkout.sessions.retrieve(profile.checkout_id)
-    profile.customer_id = session.customer
-    profile.subscription_id = session.subscription
-    profile.checkout_id = None
-    profile.save(
-        update_fields=["checkout_id", "customer_id", "subscription_id"]
+    profile = get_object_or_404(Profile, user=request.user)
+    checkout_session = client.v1.checkout.sessions.create(
+        params={
+            "line_items": [
+                {"price": "price_1TVx8iGphupvKam1plxSWh2D", "quantity": 1}
+            ],
+            "mode": "subscription",
+            "success_url": request.build_absolute_uri(
+                reverse("terminusgps_notifier:dashboard")
+            ),
+        }
     )
-    return redirect(
-        "terminusgps_notifier:detail subscription",
-        subscription_id=session.subscription,
-    )
+    profile.checkout_id = checkout_session.id
+    profile.save(update_fields=["checkout_id"])
+    return redirect(checkout_session.url)
 
 
 @require_GET
 @htmx_template("terminusgps_notifier/detail_subscription.html")
-def detail_subscription(
-    request: HtmxHttpRequest, subscription_id: str
-) -> HttpResponse:
-    profile = get_object_or_404(Profile, user=request.user)
-    if profile.subscription_id != subscription_id:
-        raise Http404()
+def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
     client = stripe.StripeClient(settings.STRIPE_API_KEY)
-    subscription = client.v1.subscriptions.retrieve(subscription_id)
-    context = {"subscription": subscription.to_dict()}
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.subscription_id:
+        subscription = client.v1.subscriptions.retrieve(
+            profile.subscription_id
+        )
+        context = {"subscription": subscription.to_dict()}
+    else:
+        context = {"subscription": None}
     return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_POST
+def cancel_subscription(request: HtmxHttpRequest) -> HttpResponse:
+    client = stripe.StripeClient(settings.STRIPE_API_KEY)
+    profile = get_object_or_404(Profile, user=request.user)
+    client.v1.subscriptions.cancel(profile.subscription_id)
+    profile.subscription_id = None
+    profile.save(update_fields=["subscription_id"])
+    messages.success(request, "Subscription succesfully canceled.")
+    return redirect("terminusgps_notifier:dashboard")

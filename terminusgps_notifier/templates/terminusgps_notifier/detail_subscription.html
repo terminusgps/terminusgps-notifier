@@ -1,5 +1,5 @@
 {% extends "terminusgps_notifier/layout.html" %}
-{% block title %}{{ subscription.name }}{% endblock title %}
+{% block title %}Subscription Details{% endblock title %}
 {% partialdef main %}
 {% if messages %}
 <ul id="messages" class="mb-4">
@@ -20,10 +20,16 @@
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
     <div class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" id="{{ subscription.id }}">
-        <h4>Your Subscription</h4>
-        {{ subscription.status }}
+        <h4 class="font-semibold">Your Subscription</h4>
+        {% if subscription is not None %}
+        <button type="button" hx-confirm="Are you sure you want to cancel your subscription?" hx-post="{% url 'terminusgps_notifier:cancel subscription' %}" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}' hx-boost="true">Cancel</button>
+        {% else %}
+        <p>You aren't subscribed yet.</p>
+        <p>Click <a href="{% url 'terminusgps_notifier:create subscription' %}" hx-boost="false">here</a> to subscribe.</p>
+        {% endif %}
     </div>
 </div>
 {% endpartialdef main %}
 {% block content %}
+{% partial main %}
 {% endblock content %}

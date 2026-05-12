@@ -12,6 +12,7 @@ AUTHORIZENET_SERVICE = "terminusgps.authorizenet.service.AuthorizenetService"
 ALLOWED_HOSTS = [
     ".terminusgps.com",
     ".elb.amazonaws.com",
+    ".stripe.com",
     gethostbyname(gethostname()),
 ]
 ASGI_APPLICATION = "src.asgi.application"

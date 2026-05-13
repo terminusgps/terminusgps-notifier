@@ -1,0 +1,44 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% load date_utils money_utils %}
+{% partialdef main %}
+<div class="relative flex flex-col w-full h-full overflow-scroll">
+    <table class="w-full text-left table-auto min-w-max">
+        <tr>
+            <th class="p-4 border-b border-stone-600 bg-stone-100">
+                <p class="block font-semibold antialiased leading-none text-gray-800">Date</p>
+            </th>
+            <th class="p-4 border-b border-stone-600 bg-stone-100">
+                <p class="block font-semibold antialiased leading-none text-gray-800">Due</p>
+            </th>
+            <th class="p-4 border-b border-stone-600 bg-stone-100">
+                <p class="block font-semibold antialiased leading-none text-gray-800">Status</p>
+            </th>
+            <th class="p-4 border-b border-stone-600 bg-stone-100">
+                <p class="block font-semibold antialiased leading-none text-gray-800">Details</p>
+            </th>
+        </tr>
+        {% for line in page_obj %}
+        <tr>
+            <td class="p-4 border-b border-stone-600 bg-stone-50 group-odd:bg-stone-200">
+                <p class="block text-sm antialiased leading-none text-gray-800">{{ line.effective_at|timestamp_to_datetime|date }}</p>
+            </td>
+            <td class="p-4 border-b border-stone-600 bg-stone-50 group-odd:bg-stone-200">
+                <p class="block text-sm antialiased leading-none text-gray-800">${{ line.amount_due|pennies_to_dollars|floatformat:'2g' }}</p>
+            </td>
+            <td class="p-4 border-b border-stone-600 bg-stone-50 group-odd:bg-stone-200">
+                <p class="block text-sm antialiased leading-none text-gray-800">{{ line.status|title }}</p>
+            </td>
+            <td class="p-4 border-b border-stone-600 bg-stone-50 group-odd:bg-stone-200">
+                <a class="block text-sm antialiased leading-none text-blue-600 hover:text-blue-400 hover:underline" rel="nofollow" href="{{ line.hosted_invoice_url }}">View in Stripe</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% if page_obj.has_next %}
+    <button hx-get="{% url 'terminusgps_notifier:list invoice' subscription_id %}page={{ page_obj.next_page_number }}" hx-target="closest table" hx-swap="beforeend">Load more</button>
+    {% endif %}
+</div>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

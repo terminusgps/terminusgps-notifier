@@ -5,6 +5,7 @@ from . import views
 app_name = "terminusgps_notifier"
 urlpatterns = [
     path("", views.home, name="home"),
+    path("register/", views.register_form, name="register"),
     path("login/", views.TerminusGPSNotifierLoginView.as_view(), name="login"),
     path(
         "logged_out/",
@@ -66,6 +67,11 @@ urlpatterns = [
         "cancel-subscriptions/",
         views.cancel_subscription,
         name="cancel subscription",
+    ),
+    path(
+        "list-invoices/<str:subscription_id>/",
+        views.list_invoices,
+        name="list invoices",
     ),
     path("wialon/callback/", views.wialon_callback, name="wialon callback"),
     path("wialon/login/", views.wialon_login, name="wialon login"),

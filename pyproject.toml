@@ -22,7 +22,6 @@ dependencies = [
     "python-terminusgps>=54.1.0",
     "redis[hiredis]>=6.4.0",
     "stripe>=15.1.0",
-    "terminusgps-payments>=10.0.0",
     "twilio>=9.10.3",
     "types-aioboto3[pinpoint-sms-voice-v2]>=15.5.0",
 ]

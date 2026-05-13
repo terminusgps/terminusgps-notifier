@@ -6,8 +6,11 @@ import warnings
 import stripe
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.paginator import Paginator
 from django.forms import Form
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -245,18 +248,20 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
 @require_GET
 @htmx_template("terminusgps_notifier/dashboard.html")
 def dashboard(request: HtmxHttpRequest) -> HttpResponse:
-    try:
-        profile = Profile.objects.get(user=request.user)
-    except Profile.DoesNotExist:
-        profile = Profile.objects.create(user=request.user)
-    if profile.checkout_id is not None:
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    if profile.checkout_id:
         stripe = get_stripe_client()
         session = stripe.v1.checkout.sessions.retrieve(profile.checkout_id)
-        profile.customer_id = session.customer
-        profile.subscription_id = session.subscription
-        profile.checkout_id = None
-        profile.save()
-        messages.success(request, "Subscription successfully created.")
+        if not session.subscription:  # Subscription creation failed
+            messages.warning(
+                request, "Something went wrong subscribing. Please try again."
+            )
+        else:  # Subscription successfully created
+            profile.customer_id = session.customer
+            profile.subscription_id = session.subscription
+            profile.checkout_id = None
+            profile.save()
+            messages.success(request, "Subscription successfully created.")
     redirect_uri = request.build_absolute_uri(
         reverse("terminusgps_notifier:wialon callback")
     )
@@ -563,3 +568,39 @@ def cancel_subscription(request: HtmxHttpRequest) -> HttpResponse:
     profile.save(update_fields=["subscription_id"])
     messages.success(request, "Subscription succesfully canceled.")
     return redirect("terminusgps_notifier:dashboard")
+
+
+@require_GET
+@htmx_template("terminusgps_notifier/list_invoices.html")
+def list_invoices(
+    request: HtmxHttpRequest, subscription_id: str
+) -> HttpResponse:
+    stripe = get_stripe_client()
+    invoices = stripe.v1.invoices.list(
+        {"limit": 999, "subscription": subscription_id}
+    )
+    paginator = Paginator(invoices.to_dict()["data"], 999)
+    context = {
+        "page_obj": paginator.get_page(request.GET.get("page", 1)),
+        "subscription_id": subscription_id,
+    }
+    return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_http_methods(["GET", "POST"])
+@htmx_template("terminusgps_notifier/forms/register.html")
+def register_form(request: HtmxHttpRequest) -> HttpResponse:
+    if request.method == "GET":
+        form = UserCreationForm(request.GET)
+    elif request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=True)
+            user = authenticate(
+                username=form.cleaned_data["username"],
+                password=form.cleaned_data["password1"],
+            )
+            login(request, user)
+            return redirect("terminusgps_notifier:login")
+    context = {"form": form}
+    return TemplateResponse(request, request.template_name, context=context)

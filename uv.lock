@@ -402,15 +402,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-shapeshifter"
-version = "18.9.23"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d2/3e/7c4255b76ad7f7528fa4d563aa577c75fb7b07658259e853a606eea2c4c8/django-shapeshifter-18.9.23.tar.gz", hash = "sha256:7e127f00f155eb5c01acb2bcaeb46f7919451d4956b1b14ecde0a485d9f8339d", size = 13508, upload-time = "2018-09-23T20:32:09.326Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/89/76/7ae0b65b7a44dceb4d67a80a95aa5743c74dd19d1713e4dbae0b14b62090/django_shapeshifter-18.9.23-py2.py3-none-any.whl", hash = "sha256:e9a829587610a40a7d03fb19436413bc92450c1bf00e90927836a8717b130bc7", size = 15587, upload-time = "2018-09-23T20:32:07.421Z" },
-]
-
-[[package]]
 name = "docutils"
 version = "0.22.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1365,7 +1356,6 @@ dependencies = [
     { name = "python-terminusgps" },
     { name = "redis", extra = ["hiredis"] },
     { name = "stripe" },
-    { name = "terminusgps-payments" },
     { name = "twilio" },
     { name = "types-aioboto3", extra = ["pinpoint-sms-voice-v2"] },
 ]
@@ -1389,7 +1379,6 @@ requires-dist = [
     { name = "python-terminusgps", specifier = ">=54.1.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=6.4.0" },
     { name = "stripe", specifier = ">=15.1.0" },
-    { name = "terminusgps-payments", specifier = ">=10.0.0" },
     { name = "twilio", specifier = ">=9.10.3" },
     { name = "types-aioboto3", extras = ["pinpoint-sms-voice-v2"], specifier = ">=15.5.0" },
 ]
@@ -1399,22 +1388,6 @@ deploy = [{ name = "uvicorn", specifier = ">=0.35.0" }]
 dev = [
     { name = "sphinx", specifier = ">=8.2.3" },
     { name = "sphinx-rtd-theme", specifier = ">=3.0.2" },
-]
-
-[[package]]
-name = "terminusgps-payments"
-version = "10.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "authorizenet" },
-    { name = "django" },
-    { name = "django-shapeshifter" },
-    { name = "python-dateutil" },
-    { name = "python-terminusgps" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/de/18/a9c093a65afe21fa59bf73b9bbac65eeba6ea66e797f2ce3d40fdbfe5c4b/terminusgps_payments-10.0.0.tar.gz", hash = "sha256:cac970ff52f522c3cd71b8222db8d51b22a9b9e7b0c3038e4222342fd1c29c57", size = 112909, upload-time = "2026-04-14T15:52:05.898Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/3b/bb7c1a0b096485a6ddabd0c7d2e0288c1f9ee439c20412bd86f4e4b33ce7/terminusgps_payments-10.0.0-py3-none-any.whl", hash = "sha256:722f06cbba76d98fd2166e7411b2b68fd5d790c0490e866154a7900f7b961dd9", size = 51180, upload-time = "2026-04-14T15:52:04.87Z" },
 ]
 
 [[package]]

@@ -10,9 +10,10 @@ class Profile(models.Model):
         on_delete=models.CASCADE,
         related_name="notifier_customer",
     )
-    token = EncryptedField(blank=True, null=True, default=None)
     messages_count = models.PositiveIntegerField(default=0)
     messages_limit = models.PositiveIntegerField(default=500)
+
+    token = EncryptedField(blank=True, null=True, default=None)
     checkout_id = models.CharField(blank=True, default=None, null=True)
     customer_id = models.CharField(blank=True, default=None, null=True)
     subscription_id = models.CharField(blank=True, default=None, null=True)

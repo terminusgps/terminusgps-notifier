@@ -1,0 +1,21 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% load date_utils money_utils %}
+{% partialdef main %}
+<table>
+    <tr>
+        <th>Date</th>
+        <th>Due</th>
+        <th>Paid</th>
+        <th>Link</th>
+    </tr>
+    <tr>
+        <td>{{ invoice.effective_at|timestamp_to_datetime|date }}</td>
+        <td>${{ invoice.amount_due|pennies_to_dollars|floatformat:'2g' }}</td>
+        <td>${{ invoice.amount_paid|pennies_to_dollars|floatformat:'2g' }}</td>
+        <td><a rel="nofollow" href="{{ invoice.hosted_invoice_url }}">View in Stripe</a></td>
+    </tr>
+</table>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

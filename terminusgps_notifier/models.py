@@ -8,7 +8,7 @@ class Profile(models.Model):
     user = models.OneToOneField(
         get_user_model(),
         on_delete=models.CASCADE,
-        related_name="notifier_customer",
+        related_name="notifier_profile",
     )
     messages_count = models.PositiveIntegerField(default=0)
     messages_limit = models.PositiveIntegerField(default=500)

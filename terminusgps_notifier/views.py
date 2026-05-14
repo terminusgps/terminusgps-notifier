@@ -25,7 +25,11 @@ from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import constants, forms
-from terminusgps_notifier.decorators import HtmxHttpRequest, htmx_template
+from terminusgps_notifier.decorators import (
+    HtmxHttpRequest,
+    htmx_template,
+    persistent_wialon_session,
+)
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Profile
 from terminusgps_notifier.validators import validate_e164_phone_number
@@ -271,22 +275,22 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_GET
+@persistent_wialon_session
 @htmx_template("terminusgps_notifier/list_resources.html")
 def list_resources(request: HtmxHttpRequest) -> HttpResponse:
     context = {}
     try:
-        profile = get_object_or_404(Profile, user=request.user)
-        with WialonSession(token=profile.token) as session:
-            response = search_items(
-                session=session,
-                items_type="avl_resource",
-                prop_name="sys_name",
-                prop_value_mask="*",
-                sort_type="sys_name",
-                prop_type="property",
-                flags=1025,
-            )
-            context["resource_list"] = response["items"]
+        session = WialonSession(sid=request.session["wialon_sid"])
+        response = search_items(
+            session=session,
+            items_type="avl_resource",
+            prop_name="sys_name",
+            prop_value_mask="*",
+            sort_type="sys_name",
+            prop_type="property",
+            flags=1025,
+        )
+        context["resource_list"] = response["items"]
     except WialonAPIError as error:
         if error.code == 6:
             msg = "Failed to retrieve resources from Wialon. Is your Wialon account connected?"

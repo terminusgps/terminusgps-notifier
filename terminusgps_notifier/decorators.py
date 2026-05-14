@@ -1,15 +1,21 @@
 import functools
 
 import stripe
+import wialon.api
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from terminusgps.wialon.session import WialonSession
 
 from .models import Profile
 
-__all__ = ["htmx_template", "active_subscription_required"]
+__all__ = [
+    "htmx_template",
+    "active_subscription_required",
+    "persistent_wialon_session",
+]
 
 
 class HtmxHttpRequest(HttpRequest):
@@ -47,17 +53,46 @@ def active_subscription_required(view_func=None):
 
 
 def persistent_wialon_session(view_func=None):
-    def get_wialon_sid(request: HttpRequest) -> str | None:
-        return
+    def get_wialon_api_token_from_user(user: AbstractBaseUser) -> str | None:
+        profile = get_object_or_404(Profile, user=user)
+        return profile.token
+
+    def wialon_session_is_valid(sid: str | None = None) -> bool:
+        if sid is None:
+            return False
+        try:
+            session = WialonSession(sid=sid)
+            session.wialon_api.avl_evts()
+            return True
+        except wialon.api.WialonError as error:
+            if error._code == 1:
+                return False
+            else:
+                raise
 
     def outer_wrapper(view_func):
         @functools.wraps(view_func)
         def inner_wrapper(request, *args, **kwargs) -> HttpResponse:
+            sid = request.session.pop("wialon_sid", None)
+            token = get_wialon_api_token_from_user(request.user)
+            if wialon_session_is_valid(sid):  # Resume Wialon API session
+                request.session["wialon_sid"] = sid
+            elif token:  # Refresh Wialon API session
+                session = WialonSession(sid=None)
+                session.token_login(token=token)
+                request.session["wialon_sid"] = session.id
+            else:  # User needs to connect Wialon account to profile
+                msg = "You need to connect your Wialon account to do that."
+                messages.error(request, msg)
+                return redirect("terminusgps_notifier:dashboard")
             return view_func(request, *args, **kwargs)
 
         return inner_wrapper
 
-    return outer_wrapper
+    if view_func is None:
+        return outer_wrapper
+    else:
+        return outer_wrapper(view_func)
 
 
 def htmx_template(template_name: str):

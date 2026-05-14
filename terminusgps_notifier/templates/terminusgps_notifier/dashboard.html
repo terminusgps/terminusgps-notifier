@@ -33,16 +33,6 @@
                 <p>{{ profile.messages_count }}/{{ profile.messages_limit }}</p>
             </div>
             <meter min="0" max="{{ profile.messages_limit }}" value="{{ profile.messages_count }}"></meter>
-            <a href="#" hx-boost="false">
-                <div class="p-2 border rounded bg-stone-300 border-stone-600 transition-colors ease-in-out duration-300 hover:bg-stone-100">
-                    <div class="flex justify-between items-center">
-                        <p class="font-semibold">Increase Limit</p>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
-                        </svg>
-                    </div>
-                </div>
-            </a>
         </div>
         <div id="id_wialon_account" name="wialon_account" class="p-4 flex flex-col gap-4 border-l border-b border-r rounded-bl border-gray-300 bg-stone-50 col-span-2 @md:col-span-1">
             <div class="flex items-center gap-2 text-terminus-red-800">
@@ -58,7 +48,7 @@
                 <h3 class="font-semibold">Wialon Account</h3>
             </div>
             <p>Your Wialon account is <span class="font-semibold">{{ profile.token|yesno:'connected, not connected' }}</span>.</p>
-            <a href="{% url 'terminusgps_notifier:wialon login' %}{% querystring access_type=-1 activation_time=0 duration=0 redirect_uri=redirect_uri %}" hx-boost="false">
+            <a href="{% url 'terminusgps_notifier:wialon login' %}{% querystring access_type=-1 activation_time=0 duration=0 redirect_uri=wialon_redirect_uri %}" hx-boost="false">
                 <div class="p-2 border rounded bg-stone-300 border-stone-600 transition-colors ease-in-out duration-300 hover:bg-stone-100">
                     <div class="flex justify-between items-center">
                         <p class="font-semibold">{% if profile.token %}Refresh{% else %}Connect{% endif %}</p>
@@ -86,7 +76,7 @@
             {% if not profile.subscription_id %}
             <a href="{% url 'terminusgps_notifier:create subscription' %}" hx-boost="false">
             {% else %}
-            <a href="{% url 'terminusgps_notifier:detail subscription' %}" hx-boost="true">
+            <a href="{% url 'terminusgps_notifier:billing portal' profile.customer_id %}" hx-boost="false">
             {% endif %}
                 <div class="p-2 border rounded bg-stone-300 border-stone-600 transition-colors ease-in-out duration-300 hover:bg-stone-100">
                     <div class="flex justify-between items-center">

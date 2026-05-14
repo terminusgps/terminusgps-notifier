@@ -17,16 +17,11 @@ class HtmxHttpRequest(HttpRequest):
 
 
 def active_subscription_required(view_func=None):
-    def user_has_subscription(user: AbstractBaseUser) -> bool:
-        if user.is_anonymous:
-            return False
-        else:
-            profile = get_object_or_404(Profile, user=user)
-            return profile.subscription_id is not None
-
-    def get_subscription_from_stripe(user: AbstractBaseUser) -> dict:
+    def get_subscription_id_from_user(user: AbstractBaseUser) -> str | None:
         profile = get_object_or_404(Profile, user=user)
-        subscription_id = profile.subscription_id
+        return profile.subscription_id
+
+    def get_subscription_from_stripe(subscription_id: str) -> dict:
         stripe_client = stripe.StripeClient(settings.STRIPE_API_KEY)
         subscription = stripe_client.v1.subscriptions.retrieve(subscription_id)
         return subscription.to_dict()
@@ -35,8 +30,8 @@ def active_subscription_required(view_func=None):
         @functools.wraps(view_func)
         def inner_wrapper(request, *args, **kwargs) -> HttpResponse:
             if user := getattr(request, "user", None):
-                if user_has_subscription(user):
-                    subscription = get_subscription_from_stripe(user)
+                if id := get_subscription_id_from_user(user):
+                    subscription = get_subscription_from_stripe(id)
                     if subscription.get("status", "expired") == "active":
                         return view_func(request, *args, **kwargs)
             msg = "You need to subscribe to do that."
@@ -49,6 +44,20 @@ def active_subscription_required(view_func=None):
         return outer_wrapper
     else:
         return outer_wrapper(view_func)
+
+
+def persistent_wialon_session(view_func=None):
+    def get_wialon_sid(request: HttpRequest) -> str | None:
+        return
+
+    def outer_wrapper(view_func):
+        @functools.wraps(view_func)
+        def inner_wrapper(request, *args, **kwargs) -> HttpResponse:
+            return view_func(request, *args, **kwargs)
+
+        return inner_wrapper
+
+    return outer_wrapper
 
 
 def htmx_template(template_name: str):

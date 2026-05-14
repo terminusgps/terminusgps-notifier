@@ -183,20 +183,6 @@ def wialon_login(request: HttpRequest) -> HttpResponse:
 
 
 @require_GET
-@never_cache
-@htmx_template("terminusgps_notifier/wialon_callback.html")
-def wialon_callback(request: HtmxHttpRequest) -> HttpResponse:
-    profile = get_object_or_404(Profile, user=request.user)
-    token_saved = False
-    if access_token := request.GET.get("access_token"):
-        profile.token = access_token
-        profile.save(update_fields=["token"])
-        token_saved = True
-    context = {"token_saved": token_saved}
-    return TemplateResponse(request, request.template_name, context=context)
-
-
-@require_GET
 @htmx_template("terminusgps_notifier/home.html")
 def home(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, context={})
@@ -302,16 +288,16 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_GET
+@persistent_wialon_session
 @htmx_template("terminusgps_notifier/detail_resources.html")
 def detail_resources(
     request: HtmxHttpRequest, resource_id: int
 ) -> HttpResponse:
     context = {}
     try:
-        profile = get_object_or_404(Profile, user=request.user)
-        with WialonSession(token=profile.token) as session:
-            response = search_item(session=session, id=resource_id, flags=1025)
-            context["resource"] = response["item"]
+        session = WialonSession(sid=request.session["wialon_sid"])
+        response = search_item(session=session, id=resource_id, flags=1025)
+        context["resource"] = response["item"]
     except WialonAPIError as error:
         print(error)
         context["resource"] = {}
@@ -319,6 +305,7 @@ def detail_resources(
 
 
 @require_GET
+@persistent_wialon_session
 @htmx_template("terminusgps_notifier/detail_notifications.html")
 def detail_notifications(
     request: HtmxHttpRequest, resource_id: int, notification_id: int
@@ -335,13 +322,12 @@ def detail_notifications(
 
     context = {}
     try:
-        profile = get_object_or_404(Profile, user=request.user)
-        with WialonSession(token=profile.token) as session:
-            response = get_notification_data(
-                session, resource_id, [notification_id]
-            )
-            context["notification"] = response[0]
-            context["method"] = get_notification_method(response[0])
+        session = WialonSession(sid=request.session["wialon_sid"])
+        response = get_notification_data(
+            session, resource_id, [notification_id]
+        )
+        context["notification"] = response[0]
+        context["method"] = get_notification_method(response[0])
     except WialonAPIError as error:
         print(error)
         context["notification"] = {}
@@ -350,21 +336,21 @@ def detail_notifications(
 
 
 @require_GET
+@persistent_wialon_session
 @htmx_template("terminusgps_notifier/select/resources.html")
 def select_resources(request: HtmxHttpRequest) -> HttpResponse:
     context = {}
     try:
-        profile = get_object_or_404(Profile, user=request.user)
-        with WialonSession(token=profile.token) as session:
-            response = search_items(
-                session=session,
-                items_type="avl_resource",
-                prop_name="sys_name",
-                prop_value_mask="*",
-                sort_type="sys_name",
-                prop_type="property",
-            )
-            context["options"] = response["items"]
+        session = WialonSession(sid=request.session["wialon_sid"])
+        response = search_items(
+            session=session,
+            items_type="avl_resource",
+            prop_name="sys_name",
+            prop_value_mask="*",
+            sort_type="sys_name",
+            prop_type="property",
+        )
+        context["options"] = response["items"]
     except WialonAPIError as error:
         print(error)
         context["options"] = []
@@ -372,21 +358,21 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_GET
+@persistent_wialon_session
 @htmx_template("terminusgps_notifier/select/units.html")
 def select_units(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
     context = {}
     try:
-        profile = get_object_or_404(Profile, user=request.user)
-        with WialonSession(token=profile.token) as session:
-            response = search_items(
-                session=session,
-                items_type=str(request.GET.get("items_type", "avl_unit")),
-                prop_name="sys_name,sys_billing_account_guid",
-                prop_value_mask=f"*,{resource_id}",
-                sort_type="sys_name",
-                prop_type="property,property",
-            )
-            context["options"] = response["items"]
+        session = WialonSession(sid=request.session["wialon_sid"])
+        response = search_items(
+            session=session,
+            items_type=str(request.GET.get("items_type", "avl_unit")),
+            prop_name="sys_name,sys_billing_account_guid",
+            prop_value_mask=f"*,{resource_id}",
+            sort_type="sys_name",
+            prop_type="property,property",
+        )
+        context["options"] = response["items"]
     except WialonAPIError as error:
         print(error)
         context["options"] = []
@@ -398,10 +384,9 @@ def select_units(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
 def detail_units(request: HtmxHttpRequest, unit_id: int) -> HttpResponse:
     context = {}
     try:
-        profile = get_object_or_404(Profile, user=request.user)
-        with WialonSession(token=profile.token) as session:
-            response = search_item(session, unit_id)
-            context["unit"] = response["item"]
+        session = WialonSession(sid=request.session["wialon_sid"])
+        response = search_item(session, unit_id)
+        context["unit"] = response["item"]
     except WialonAPIError as error:
         print(error)
         context["unit"] = {}
@@ -456,73 +441,65 @@ def trigger_form(request: HtmxHttpRequest, resource_id: int) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
+@persistent_wialon_session
 @htmx_template("terminusgps_notifier/create_notifications.html")
 def create_notifications(
     request: HtmxHttpRequest, resource_id: int
 ) -> HttpResponse:
     if request.method == "POST":
         try:
-            profile = get_object_or_404(Profile, user=request.user)
-            with WialonSession(token=profile.token) as session:
-                txt = urllib.parse.urlencode(
-                    {
-                        "user_id": request.user.pk,
-                        "unit_id": "%UNIT_ID%",
-                        "message": str(request.POST["message"]),
-                        "msg_time_int": "%MSG_TIME_INT%",
-                        "location": "%LOCATION%",
-                        "unit_name": "%UNIT%",
+            session = WialonSession(sid=request.session["wialon_sid"])
+            txt = urllib.parse.urlencode(
+                {
+                    "user_id": request.user.pk,
+                    "unit_id": "%UNIT_ID%",
+                    "message": str(request.POST["message"]),
+                    "msg_time_int": "%MSG_TIME_INT%",
+                    "location": "%LOCATION%",
+                    "unit_name": "%UNIT%",
+                },
+                safe="%",
+            )
+            act = [
+                {
+                    "t": "push_messages",
+                    "p": {
+                        "url": urllib.parse.urljoin(
+                            "https://api.terminusgps.com/",
+                            f"/v3/notify/{request.POST['method']}/",
+                        ),
+                        "get": 0,
                     },
-                    safe="%",
-                )
-                act = [
-                    {
-                        "t": "push_messages",
-                        "p": {
-                            "url": urllib.parse.urljoin(
-                                "https://api.terminusgps.com/",
-                                f"/v3/notify/{request.POST['method']}/",
-                            ),
-                            "get": 0,
-                        },
-                    }
-                ]
-                sch = {
-                    "f1": 0,
-                    "f2": 0,
-                    "t1": 0,
-                    "t2": 0,
-                    "m": 0,
-                    "w": 0,
-                    "y": 0,
                 }
-                response = create_notification(
-                    session,
-                    resource_id=resource_id,
-                    n=str(request.POST["n"]),
-                    txt=txt,
-                    ta=0,
-                    td=0,
-                    ma=int(request.POST["ma"]),
-                    mmtd=int(request.POST["mmtd"]),
-                    cdt=int(request.POST["cdt"]),
-                    mast=int(request.POST["mast"]),
-                    mpst=int(request.POST["mpst"]),
-                    cp=int(request.POST["cp"]),
-                    fl=int(request.POST["fl"]),
-                    tz=int(request.POST["tz"]),
-                    la=str(request.POST["la"]),
-                    un=request.session.get("units_list", []),
-                    sch=sch,
-                    ctrl_sch=sch,
-                    trg=request.session.get("trg", {}),
-                    act=act,
-                )
-                return redirect(
-                    "terminusgps_notifier:detail notifications",
-                    resource_id=resource_id,
-                    notification_id=response[0],
-                )
+            ]
+            sch = {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "w": 0, "y": 0}
+            response = create_notification(
+                session,
+                resource_id=resource_id,
+                n=str(request.POST["n"]),
+                txt=txt,
+                ta=0,
+                td=0,
+                ma=int(request.POST["ma"]),
+                mmtd=int(request.POST["mmtd"]),
+                cdt=int(request.POST["cdt"]),
+                mast=int(request.POST["mast"]),
+                mpst=int(request.POST["mpst"]),
+                cp=int(request.POST["cp"]),
+                fl=int(request.POST["fl"]),
+                tz=int(request.POST["tz"]),
+                la=str(request.POST["la"]),
+                un=request.session.get("units_list", []),
+                sch=sch,
+                ctrl_sch=sch,
+                trg=request.session.get("trg", {}),
+                act=act,
+            )
+            return redirect(
+                "terminusgps_notifier:detail notifications",
+                resource_id=resource_id,
+                notification_id=response[0],
+            )
         except WialonAPIError as error:
             messages.error(request, error)
     context = {"resource_id": resource_id, "timezones": constants.TIMEZONES}

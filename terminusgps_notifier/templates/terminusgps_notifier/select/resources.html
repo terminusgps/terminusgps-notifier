@@ -1,9 +1,0 @@
-{% extends "terminusgps_notifier/layout.html" %}
-{% partialdef main %}
-{% for resource in options %}
-<option value="{{ resource.id }}">{{ resource.nm }}</option>
-{% endfor %}
-{% endpartialdef main %}
-{% block content %}
-{% partial main %}
-{% endblock content %}

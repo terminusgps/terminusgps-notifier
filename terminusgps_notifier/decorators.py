@@ -75,13 +75,15 @@ def persistent_wialon_session(view_func=None):
         def inner_wrapper(request, *args, **kwargs) -> HttpResponse:
             sid = request.session.pop("wialon_sid", None)
             token = get_wialon_api_token_from_user(request.user)
-            if wialon_session_is_valid(sid):  # Resume Wialon API session
+            if wialon_session_is_valid(sid):
+                # Resume Wialon API session
                 request.session["wialon_sid"] = sid
-            elif token:  # Refresh Wialon API session
+            elif token:
+                # Refresh Wialon API session
                 session = WialonSession(sid=None)
                 session.token_login(token=token)
                 request.session["wialon_sid"] = session.id
-            else:  # User needs to connect Wialon account to profile
+            else:
                 msg = "You need to connect your Wialon account to do that."
                 messages.error(request, msg)
                 return redirect("terminusgps_notifier:dashboard")

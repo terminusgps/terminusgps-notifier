@@ -16,6 +16,11 @@ urlpatterns = [
     path("source/", views.source_code, name="source"),
     path("terms/", views.terms, name="terms"),
     path("privacy/", views.privacy, name="privacy"),
+    path(
+        "units/<str:resource_id>/select/",
+        views.select_units,
+        name="select units",
+    ),
     path("resources/list/", views.list_resources, name="list resources"),
     path(
         "resources/<str:resource_id>/details/",

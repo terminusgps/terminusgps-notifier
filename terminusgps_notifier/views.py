@@ -29,7 +29,6 @@ from terminusgps_notifier.decorators import (
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Profile
 from terminusgps_notifier.validators import validate_e164_phone_number
-from terminusgps_notifier.wialon import search_items
 
 logger = logging.getLogger(__name__)
 
@@ -255,34 +254,20 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/list_resources.html")
 def list_resources(request: HtmxHttpRequest) -> HttpResponse:
-    context = {}
     try:
-        session_id = request.session["wialon_sid"]
-        session = WialonSession(sid=session_id)
-        params = {"spec": {}}
+        session = WialonSession(sid=request.session["wialon_sid"])
+        params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
         params["spec"]["itemsType"] = "avl_resource"
         params["spec"]["propName"] = "sys_name"
         params["spec"]["propValueMask"] = "*"
         params["spec"]["propType"] = "property"
         params["spec"]["sortType"] = "sys_name"
         response = session.wialon_api.core_search_items(**params)
-        response = search_items(
-            session=session,
-            items_type="avl_resource",
-            prop_name="sys_name",
-            prop_value_mask="*",
-            sort_type="sys_name",
-            prop_type="property",
-            flags=1025,
-        )
-        context["resource_list"] = response["items"]
+        resource_list = response["items"]
     except WialonAPIError as error:
-        if error.code == 6:
-            msg = "Failed to retrieve resources from Wialon. Is your Wialon account connected?"
-        else:
-            msg = str(error)
-        messages.warning(request, msg)
-        context["resource_list"] = []
+        messages.error(request, error)
+        resource_list = None
+    context = {"resource_list": resource_list}
     return TemplateResponse(request, request.template_name, context=context)
 
 
@@ -293,12 +278,11 @@ def list_notifications(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
     try:
-        session_id = request.session["wialon_sid"]
-        session = WialonSession(sid=session_id)
+        session = WialonSession(sid=request.session["wialon_sid"])
         params = {"itemId": resource_id}
         response = session.wialon_api.resource_get_notification_data(**params)
     except WialonAPIError as error:
-        print(error)
+        messages.error(request, error)
         response = None
     context = {"response": response}
     return TemplateResponse(request, request.template_name, context=context)
@@ -311,14 +295,34 @@ def detail_resources(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
     try:
-        session_id = request.session["wialon_sid"]
-        session = WialonSession(sid=session_id)
+        session = WialonSession(sid=request.session["wialon_sid"])
         params = {"id": resource_id, "flags": 1025}
         response = session.wialon_api.core_search_item(**params)
     except WialonAPIError as error:
-        print(error)
+        messages.error(request, error)
         response = None
     context = {"response": response}
+    return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_GET
+@persistent_wialon_session
+@htmx_template("terminusgps_notifier/select_units.html")
+def select_units(request: HtmxHttpRequest, resource_id: str) -> HttpResponse:
+    try:
+        session = WialonSession(sid=request.session["wialon_sid"])
+        params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
+        params["spec"]["itemsType"] = request.GET.get("items_type", "avl_unit")
+        params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
+        params["spec"]["propValueMask"] = f"*,{resource_id}"
+        params["spec"]["propType"] = "property,property"
+        params["spec"]["sortType"] = "sys_name"
+        response = session.wialon_api.core_search_items(**params)
+        object_list = response["items"]
+    except WialonAPIError:
+        messages.warning(request, error)
+        object_list = []
+    context = {"object_list": object_list}
     return TemplateResponse(request, request.template_name, context=context)
 
 
@@ -330,7 +334,11 @@ def create_notification(
 ) -> HttpResponse:
     if request.method == "POST":
         pass
-    context = {"resource_id": resource_id, "timezones": constants.TIMEZONES}
+    context = {
+        "resource_id": resource_id,
+        "timezones": constants.TIMEZONES,
+        "triggers": forms.WialonNotificationTrigger.choices,
+    }
     return TemplateResponse(request, request.template_name, context=context)
 
 

@@ -2,11 +2,11 @@
 {% partialdef main %}
 <form class="@container flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:trigger form' %}">
     {% csrf_token %}
-    <div id="{{ form.t.id_for_label }}_container" class="flex flex-col gap-2">
+    <div id="{{ form.t.id_for_label }}_container" class="flex flex-col gap-4">
         {{ form.t }}
         <label class="order-first" for="{{ form.t.id_for_label }}">Trigger</label>
     </div>
-    <div id="{{ form.p.id_for_label }}_container" class="flex flex-col gap-2">
+    <div id="{{ form.p.id_for_label }}_container" class="flex flex-col gap-4">
         {{ form.p }}
         <label class="order-first" for="{{ form.p.id_for_label }}">Parameters</label>
     </div>

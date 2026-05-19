@@ -384,10 +384,36 @@ def billing_portal(request: HtmxHttpRequest, customer_id: str) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
+@persistent_wialon_session
 @htmx_template("terminusgps_notifier/create_notification_step_one.html")
 def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
-    context = {"resource": request.GET.get("resource")}
-    return TemplateResponse(request, request.template_name, context)
+    if request.method == "POST":
+        units_list = request.POST.getlist("units", [])
+        step_one_data = {}
+        step_one_data["un"] = units_list
+        step_one_data["itemId"] = request.POST["resource"]
+        request.session["step_one_data"] = step_one_data
+        return redirect("terminusgps_notifier:create notification step two")
+    try:
+        session = WialonSession(sid=request.session["wialon_sid"])
+        params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
+        params["spec"]["itemsType"] = "avl_resource"
+        params["spec"]["propName"] = "sys_name"
+        params["spec"]["propValueMask"] = "*"
+        params["spec"]["propType"] = "property"
+        params["spec"]["sortType"] = "sys_name"
+        response = session.wialon_api.core_search_items(**params)
+    except WialonAPIError as error:
+        messages.error(request, error)
+        response = {"items": []}
+    return TemplateResponse(
+        request,
+        request.template_name,
+        {
+            "resource_list": response["items"],
+            "selected": request.GET.get("resource"),
+        },
+    )
 
 
 @require_http_methods(["GET", "POST"])

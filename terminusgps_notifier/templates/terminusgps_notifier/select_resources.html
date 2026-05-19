@@ -1,7 +1,7 @@
 {% extends "terminusgps_notifier/layout.html" %}
 {% partialdef main %}
 {% for item in object_list %}
-<option value="{{ item.id }}"{% if item.nm == selected %} selected{% endif %}>{{ item.nm }}</option>
+<option value="{{ item.id }}">{{ item.nm }}</option>
 {% endfor %}
 {% endpartialdef main %}
 {% block content %}

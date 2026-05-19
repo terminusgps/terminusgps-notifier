@@ -28,11 +28,6 @@ urlpatterns = [
         name="detail resources",
     ),
     path(
-        "notifications/<str:resource_id>/create/",
-        views.create_notification,
-        name="create notification",
-    ),
-    path(
         "subscriptions/create/",
         views.create_subscription,
         name="create subscription",
@@ -41,6 +36,31 @@ urlpatterns = [
         "billing-portal/<str:customer_id>/",
         views.billing_portal,
         name="billing portal",
+    ),
+    path(
+        "notifications/<str:resource_id>/create/step-one/",
+        views.create_notification_step_one,
+        name="create notification step one",
+    ),
+    path(
+        "notifications/create/step-two/",
+        views.create_notification_step_two,
+        name="create notification step two",
+    ),
+    path(
+        "notifications/create/step-three/",
+        views.create_notification_step_three,
+        name="create notification step three",
+    ),
+    path(
+        "notifications/create/step-four/",
+        views.create_notification_step_four,
+        name="create notification step four",
+    ),
+    path(
+        "forms/triggers/parameters/",
+        views.trigger_parameters_form,
+        name="trigger parameters form",
     ),
     path("wialon/login/", views.wialon_login, name="wialon login"),
     path("v3/health/", views.HealthCheckView.as_view(), name="health check"),

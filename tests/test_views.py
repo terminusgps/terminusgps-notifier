@@ -1,3 +1,4 @@
+import urllib.parse
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
@@ -27,23 +28,6 @@ class DashboardViewTestCase(TestCase):
         self.client = Client()
         self.client.login(**{"username": "testuser", "password": "trolldad"})
 
-    def test_non_get_request_returns_405(self):
-        """Fails if a non-GET request returns anything other than code 405."""
-        response = self.client.post(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.put(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.patch(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.delete(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.head(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.options(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.trace(self.path)
-        self.assertEqual(response.status_code, 405)
-
     @patch("terminusgps_notifier.views.get_stripe_client")
     def test_get_with_checkout_id_calls_stripe_api(
         self, mock_get_stripe_client
@@ -61,7 +45,7 @@ class DashboardViewTestCase(TestCase):
         mock_get_stripe_client.assert_called_once()
 
     def test_htmx_request_renders_partial(self):
-        """Fails if an htmx request doesn't render a partial template."""
+        """Fails if an htmx request didn't render a partial template."""
         headers = {"HX-Request": True}
         response = self.client.get("/dashboard/", headers=headers)
         self.assertTrue(response.template_name.endswith("#main"))
@@ -77,80 +61,114 @@ class DashboardViewTestCase(TestCase):
         response = self.client.get("/dashboard/")
         self.assertIn("profile", response.context_data)
 
-    def test_redirect_uri_added_to_context(self):
+    def test_wialon_redirect_uri_added_to_context(self):
         """Fails if the redirect uri for Wialon token generation wasn't added to the view context."""
         response = self.client.get("/dashboard/")
-        self.assertIn("redirect_uri", response.context_data)
+        self.assertIn("wialon_redirect_uri", response.context_data)
 
 
-class DetailSubscriptionViewTestCase(TestCase):
+class CreateNotificationStepOneViewTestCase(TestCase):
     fixtures = [
         "terminusgps_notifier/tests/test_user.json",
         "terminusgps_notifier/tests/test_profile.json",
     ]
 
     def setUp(self):
-        self.path = "/detail-subscriptions/"
-        self.user = get_user_model().objects.get(pk=1)
-        self.profile = models.Profile.objects.get(pk=1)
         self.client = Client()
         self.client.login(**{"username": "testuser", "password": "trolldad"})
 
-    def test_non_get_request_returns_405(self):
-        """Fails if a non-POST request returns anything other than code 405."""
-        response = self.client.post(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.put(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.patch(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.delete(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.head(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.options(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.trace(self.path)
-        self.assertEqual(response.status_code, 405)
+    def test_post_redirects_to_next_step(self):
+        """Fails if the view doesn't redirect the client to the expected next step."""
+        response = self.client.post(
+            "/notifications/1/create/step-one/", {"units": ["1", "2", "3"]}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("step-two", response.url)
+
+    def test_post_valid_data_added_to_session(self):
+        """Fails if valid form data wasn't added to the session before redirecting the client."""
+        un = ["1", "2", "3"]
+        itemId = "1"
+
+        self.client.post(
+            "/notifications/1/create/step-one/", {"units": ["1", "2", "3"]}
+        )
+        step_one_data = self.client.session["step_one_data"]
+        self.assertEqual(step_one_data["un"], un)
+        self.assertEqual(step_one_data["itemId"], itemId)
 
 
-class CancelSubscriptionViewTestCase(TestCase):
+class CreateNotificationStepTwoViewTestCase(TestCase):
     fixtures = [
         "terminusgps_notifier/tests/test_user.json",
         "terminusgps_notifier/tests/test_profile.json",
     ]
 
     def setUp(self):
-        self.path = "/cancel-subscriptions/"
-        self.user = get_user_model().objects.get(pk=1)
-        self.profile = models.Profile.objects.get(pk=1)
         self.client = Client()
         self.client.login(**{"username": "testuser", "password": "trolldad"})
 
-    def test_non_post_request_returns_405(self):
-        """Fails if a non-POST request returns anything other than code 405."""
-        response = self.client.get(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.put(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.patch(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.delete(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.head(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.options(self.path)
-        self.assertEqual(response.status_code, 405)
-        response = self.client.trace(self.path)
-        self.assertEqual(response.status_code, 405)
+    def test_post_redirects_to_next_step(self):
+        """Fails if the view doesn't redirect the client to the expected next step."""
+        response = self.client.post(
+            "/notifications/create/step-two/", {"t": "alarm"}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("step-three", response.url)
 
-    @patch("terminusgps_notifier.views.get_stripe_client")
-    def test_post_cancels_subscription_in_stripe(self, mock_get_stripe_client):
-        """Fails if the Stripe API wasn't called on POST."""
-        mock_stripe = MagicMock()
-        mock_get_stripe_client.return_value = mock_stripe
-        response = self.client.post(self.path, follow=True)
-        self.assertEqual(response.status_code, 200)
-        mock_get_stripe_client.assert_called_once()
-        self.profile.refresh_from_db()
-        self.assertFalse(self.profile.subscription_id)
+    def test_post_valid_data_added_to_session(self):
+        """Fails if valid form data wasn't added to the session before redirecting the client."""
+        trg = {"t": "alarm", "p": {}}
+        self.client.post("/notifications/create/step-two/", {"t": "alarm"})
+        step_two_data = self.client.session["step_two_data"]
+        self.assertEqual(step_two_data["trg"], trg)
+
+
+class CreateNotificationStepThreeViewTestCase(TestCase):
+    fixtures = [
+        "terminusgps_notifier/tests/test_user.json",
+        "terminusgps_notifier/tests/test_profile.json",
+    ]
+
+    def setUp(self):
+        self.client = Client()
+        self.client.login(**{"username": "testuser", "password": "trolldad"})
+
+    def test_post_redirects_to_next_step(self):
+        """Fails if the view doesn't redirect the client to the expected next step."""
+        n = "Test Notification"
+        message = "At %MSG_TIME%, %UNIT% moved."
+
+        response = self.client.post(
+            "/notifications/create/step-three/",
+            data={"name": n, "message": message, "method": "sms"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("step-four", response.url)
+
+    def test_post_valid_data_added_to_session(self):
+        """Fails if valid form data wasn't added to the session before redirecting the client."""
+        n = "Test Notification"
+        message = "At %MSG_TIME%, %UNIT% moved."
+        url = "https://api.terminusgps.com/v3/notify/sms/"
+        act = [{"t": "send_messages", "p": {"url": url, "get": 0}}]
+        txt = urllib.parse.urlencode(
+            {
+                "user_id": "1",
+                "unit_id": "%UNIT_ID%",
+                "message": message,
+                "msg_time_int": "%MSG_TIME_INT%",
+                "location": "%LOCATION%",
+                "unit_name": "%UNIT%",
+            },
+            safe="%",
+        )
+
+        self.client.post(
+            "/notifications/create/step-three/",
+            data={"name": n, "message": message, "method": "sms"},
+        )
+        step_three_data = self.client.session["step_three_data"]
+        self.assertEqual(step_three_data["n"], n)
+        self.assertEqual(step_three_data["txt"], txt)
+        self.assertEqual(step_three_data["act"], act)

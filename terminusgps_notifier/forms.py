@@ -1,6 +1,10 @@
+import datetime
+
 from django import forms
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+from terminusgps_notifier import constants
 
 
 class WialonNotificationTrigger(models.TextChoices):
@@ -76,6 +80,198 @@ class WialonSensorType(models.TextChoices):
     TAG = "tag", _("Passenger sensor")
 
 
+class CreateNotificationForm(forms.Form):
+    itemId = forms.IntegerField()
+    nm = forms.CharField(min_length=4)
+    txt = forms.CharField(max_length=1024)
+    ta = forms.DateTimeField(required=False)
+    td = forms.DateTimeField(required=False)
+    ma = forms.IntegerField(min_value=0)
+    mmtd = forms.TypedChoiceField(
+        choices=[
+            (0, _("Any time")),
+            (60, _("1 minute")),
+            (600, _("10 minutes")),
+            (1800, _("30 minutes")),
+            (3600, _("1 hour")),
+            (21600, _("6 hours")),
+            (43200, _("12 hours")),
+            (86400, _("1 day")),
+            (864000, _("10 days")),
+        ],
+        coerce=int,
+    )
+    cdt = forms.IntegerField(min_value=0, max_value=1800)
+    mast = forms.IntegerField(min_value=0, max_value=86400)
+    mpst = forms.IntegerField(min_value=0, max_value=86400)
+    cp = forms.TypedChoiceField(
+        choices=[
+            (0, _("Any time")),
+            (60, _("Last minute")),
+            (600, _("Last 10 minutes")),
+            (3600, _("Last hour")),
+            (86400, _("Last day")),
+        ],
+        coerce=int,
+    )
+    fl = forms.TypedChoiceField(
+        choices=[
+            (0, _("Trigger on first message")),
+            (1, _("Trigger on every message")),
+            (2, _("Disabled")),
+        ],
+        coerce=int,
+    )
+    tz = forms.TypedChoiceField(choices=constants.TIMEZONES, coerce=int)
+    la = forms.ChoiceField(choices=[("en", _("English"))])
+    un = forms.JSONField()
+    sch = forms.JSONField(required=False)
+    ctrl_sch = forms.JSONField(required=False)
+    trg = forms.JSONField()
+    act = forms.JSONField()
+
+    def clean_sch(self):
+        if self.cleaned_data["sch"] is None:
+            return {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "w": 0, "y": 0}
+
+    def clean_ctrl_sch(self):
+        if self.cleaned_data["ctrl_sch"] is None:
+            return {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "w": 0, "y": 0}
+
+    def clean_ta(self):
+        if ta := self.cleaned_data["ta"]:
+            return int(datetime.datetime.timestamp(ta))
+        else:
+            return 0
+
+    def clean_td(self):
+        if td := self.cleaned_data["td"]:
+            return int(datetime.datetime.timestamp(td))
+        else:
+            return 0
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data:
+            cleaned_data["callMode"] = "create"
+            cleaned_data["id"] = 0
+
+
+class NotificationScheduleForm(forms.Form):
+    f1 = forms.DateTimeField(required=False)
+    f2 = forms.DateTimeField(required=False)
+    t1 = forms.DateTimeField(required=False)
+    t2 = forms.DateTimeField(required=False)
+    w = forms.TypedMultipleChoiceField(
+        choices=[
+            (2**0, _("Monday")),
+            (2**1, _("Tuesday")),
+            (2**2, _("Wednesday")),
+            (2**3, _("Thursday")),
+            (2**4, _("Friday")),
+            (2**5, _("Saturday")),
+            (2**6, _("Sunday")),
+        ],
+        coerce=int,
+        required=False,
+    )
+    y = forms.TypedMultipleChoiceField(
+        choices=[
+            (2**0, _("January")),
+            (2**1, _("Febuary")),
+            (2**2, _("March")),
+            (2**3, _("April")),
+            (2**4, _("May")),
+            (2**5, _("June")),
+            (2**6, _("July")),
+            (2**7, _("August")),
+            (2**8, _("September")),
+            (2**9, _("October")),
+            (2**10, _("November")),
+            (2**11, _("December")),
+        ],
+        coerce=int,
+        required=False,
+    )
+    m = forms.TypedMultipleChoiceField(
+        choices=[
+            (2**0, _("1")),
+            (2**1, _("2")),
+            (2**2, _("3")),
+            (2**3, _("4")),
+            (2**4, _("5")),
+            (2**5, _("6")),
+            (2**6, _("7")),
+            (2**7, _("8")),
+            (2**8, _("9")),
+            (2**9, _("10")),
+            (2**10, _("11")),
+            (2**11, _("12")),
+            (2**12, _("13")),
+            (2**13, _("14")),
+            (2**14, _("15")),
+            (2**15, _("16")),
+            (2**16, _("17")),
+            (2**17, _("18")),
+            (2**18, _("19")),
+            (2**19, _("20")),
+            (2**20, _("21")),
+            (2**21, _("22")),
+            (2**22, _("23")),
+            (2**23, _("24")),
+            (2**24, _("25")),
+            (2**25, _("26")),
+            (2**26, _("27")),
+            (2**27, _("28")),
+            (2**28, _("29")),
+            (2**29, _("30")),
+            (2**30, _("31")),
+        ],
+        coerce=int,
+        required=False,
+    )
+
+    def clean_f1(self):
+        if f1 := self.cleaned_data["f1"]:
+            return int(datetime.datetime.timestamp(f1))
+        return 0
+
+    def clean_f2(self):
+        if f2 := self.cleaned_data["f2"]:
+            return int(datetime.datetime.timestamp(f2))
+        return 0
+
+    def clean_t1(self):
+        if t1 := self.cleaned_data["t1"]:
+            return int(datetime.datetime.timestamp(t1))
+        return 0
+
+    def clean_t2(self):
+        if t2 := self.cleaned_data["t2"]:
+            return int(datetime.datetime.timestamp(t2))
+        return 0
+
+    def clean_m(self):
+        if m := self.cleaned_data["m"]:
+            return sum(m)
+        return 0
+
+    def clean_y(self):
+        if y := self.cleaned_data["y"]:
+            return sum(y)
+        return 0
+
+    def clean_w(self):
+        if w := self.cleaned_data["w"]:
+            return sum(w)
+        return 0
+
+
+class NotificationTriggerForm(forms.Form):
+    t = forms.ChoiceField(choices=WialonNotificationTrigger.choices)
+    p = forms.JSONField()
+
+
 class NotificationDispatchForm(forms.Form):
     """
     A form for dispatching Wialon unit notifications.
@@ -111,44 +307,41 @@ class GeofenceTriggerForm(forms.Form):
     lower_bound = forms.FloatField()
     upper_bound = forms.FloatField()
     prev_msg_diff = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Form boundaries for current value")),
-            ("1", _("Form boundaries for previous value")),
+            (0, _("Form boundaries for current value")),
+            (1, _("Form boundaries for previous value")),
         ],
+        coerce=int,
     )
     merge = (
         forms.TypedChoiceField(
+            choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
             coerce=int,
-            choices=[
-                ("0", _("Calculate separately")),
-                ("1", _("Sum up values")),
-            ],
         ),
     )
     reversed = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Trigger within range")),
-            ("1", _("Trigger outside range")),
+            (0, _("Trigger within range")),
+            (1, _("Trigger outside range")),
         ],
+        coerce=int,
     )
     geozone_ids = forms.CharField()
     type = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Trigger on geofence entry")),
-            ("1", _("Trigger on geofence exit")),
+            (0, _("Trigger on geofence entry")),
+            (1, _("Trigger on geofence exit")),
         ],
+        coerce=int,
     )
     min_speed = forms.IntegerField(min_value=0, max_value=255)
     max_speed = forms.IntegerField(min_value=0, max_value=255)
     include_lbs = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Do not process LBS messages")),
-            ("1", _("Process LBS messages")),
+            (0, _("Do not process LBS messages")),
+            (1, _("Process LBS messages")),
         ],
+        coerce=int,
     )
     lo = forms.ChoiceField(choices=[("AND", _("AND")), ("OR", _("OR"))])
 
@@ -159,35 +352,32 @@ class AddressTriggerForm(forms.Form):
     lower_bound = forms.FloatField(step_size=0.1)
     upper_bound = forms.FloatField(step_size=0.1)
     prev_msg_diff = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Form boundaries for current value")),
-            ("1", _("Form boundaries for previous value")),
+            (0, _("Form boundaries for current value")),
+            (1, _("Form boundaries for previous value")),
         ],
+        coerce=int,
     )
     merge = (
         forms.TypedChoiceField(
+            choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
             coerce=int,
-            choices=[
-                ("0", _("Calculate separately")),
-                ("1", _("Sum up values")),
-            ],
         ),
     )
     reversed = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Trigger within range")),
-            ("1", _("Trigger outside range")),
+            (0, _("Trigger within range")),
+            (1, _("Trigger outside range")),
         ],
+        coerce=int,
     )
     radius = forms.IntegerField(min_value=1)
     type = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Control within radius")),
-            ("1", _("Control outside radius")),
+            (0, _("Control within radius")),
+            (1, _("Control outside radius")),
         ],
+        coerce=int,
     )
     min_speed = forms.IntegerField(max_value=255)
     max_speed = forms.IntegerField(max_value=255)
@@ -197,11 +387,11 @@ class AddressTriggerForm(forms.Form):
     street = forms.CharField(required=False)
     house = forms.CharField(required=False)
     include_lbs = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Do not process LBS messages")),
-            ("1", _("Process LBS messages")),
+            (0, _("Do not process LBS messages")),
+            (1, _("Process LBS messages")),
         ],
+        coerce=int,
     )
 
 
@@ -210,38 +400,35 @@ class SpeedTriggerForm(forms.Form):
     max_speed = forms.IntegerField(max_value=255)
     merge = (
         forms.TypedChoiceField(
+            choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
             coerce=int,
-            choices=[
-                ("0", _("Calculate separately")),
-                ("1", _("Sum up values")),
-            ],
         ),
     )
     min_speed = forms.IntegerField(max_value=255)
     prev_msg_diff = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Form boundaries for current value")),
-            ("1", _("Form boundaries for previous value")),
+            (0, _("Form boundaries for current value")),
+            (1, _("Form boundaries for previous value")),
         ],
+        coerce=int,
     )
     reversed = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Trigger within range")),
-            ("1", _("Trigger outside range")),
+            (0, _("Trigger within range")),
+            (1, _("Trigger outside range")),
         ],
+        coerce=int,
     )
     sensor_name_mask = forms.CharField()
     sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
     upper_bound = forms.FloatField(step_size=0.1)
     driver = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Ignore driver assignment")),
-            ("1", _("Trigger when no driver assigned")),
-            ("2", _("Trigger only when driver assigned")),
+            (0, _("Ignore driver assignment")),
+            (1, _("Trigger when no driver assigned")),
+            (2, _("Trigger only when driver assigned")),
         ],
+        coerce=int,
     )
 
 
@@ -252,30 +439,29 @@ class AlarmTriggerForm(forms.Form):
 class DigitalInputTriggerForm(forms.Form):
     input_index = forms.IntegerField(min_value=1, max_value=32)
     type = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Check for activation")),
-            ("1", _("Check for deactivation")),
+            (0, _("Check for activation")),
+            (1, _("Check for deactivation")),
         ],
+        coerce=int,
     )
 
 
 class ParameterInAMessageTriggerForm(forms.Form):
     kind = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Value range")),
-            ("1", _("Text mask")),
-            ("2", _("Parameter availability")),
-            ("3", _("Parameter lack")),
+            (0, _("Value range")),
+            (1, _("Text mask")),
+            (2, _("Parameter availability")),
+            (3, _("Parameter lack")),
         ],
+        coerce=int,
     )
     lower_bound = forms.FloatField(step_size=0.1)
     param = forms.CharField()
     text_mask = forms.CharField()
     type = forms.TypedChoiceField(
-        coerce=int,
-        choices=[("0", _("Within range")), ("1", _("Outside range"))],
+        choices=[(0, _("Within range")), (1, _("Outside range"))], coerce=int
     )
     upper_bound = forms.FloatField(step_size=0.1)
 
@@ -283,21 +469,20 @@ class ParameterInAMessageTriggerForm(forms.Form):
 class SensorValueTriggerForm(forms.Form):
     lower_bound = forms.FloatField(step_size=0.1)
     merge = forms.TypedChoiceField(
+        choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
         coerce=int,
-        choices=[("0", _("Calculate separately")), ("1", _("Sum up values"))],
     )
     prev_msg_diff = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Form boundaries for current value")),
-            ("1", _("Form boundaries for previous value")),
+            (0, _("Form boundaries for current value")),
+            (1, _("Form boundaries for previous value")),
         ],
+        coerce=int,
     )
     sensor_name_mask = forms.CharField()
     sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
     type = forms.TypedChoiceField(
-        coerce=int,
-        choices=[("0", _("Within range")), ("1", _("Outside range"))],
+        choices=[(0, _("Within range")), (1, _("Outside range"))], coerce=int
     )
     upper_bound = forms.FloatField(step_size=0.1)
 
@@ -305,27 +490,27 @@ class SensorValueTriggerForm(forms.Form):
 class ConnectionLossTriggerForm(forms.Form):
     time = forms.IntegerField()
     type = forms.TypedChoiceField(
+        choices=[(0, _("Coordinates Loss")), (1, _("Connection Loss"))],
         coerce=int,
-        choices=[("0", _("Coordinates Loss")), ("1", _("Connection Loss"))],
     )
     include_lbs = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Do not process LBS messages")),
-            ("1", _("Process LBS messages")),
+            (0, _("Do not process LBS messages")),
+            (1, _("Process LBS messages")),
         ],
+        coerce=int,
     )
     check_restore = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Connection Lost")),
-            ("1", _("Connection Lost and Restored")),
-            ("2", _("Connection Restored")),
+            (0, _("Connection Lost")),
+            (1, _("Connection Lost and Restored")),
+            (2, _("Connection Restored")),
         ],
+        coerce=int,
     )
     geozones_type = forms.TypedChoiceField(
+        choices=[(0, _("Out of Geofence")), (1, _("Within Geofence"))],
         coerce=int,
-        choices=[("0", _("Out of Geofence")), ("1", _("Within Geofence"))],
     )
     geozones_list = forms.CharField()
 
@@ -348,11 +533,11 @@ class InterpositionTriggerForm(forms.Form):
     type = forms.TypedChoiceField()
     unit_guids = forms.CharField()
     include_lbs = forms.TypedChoiceField(
-        coerce=int,
         choices=[
-            ("0", _("Do not process LBS messages")),
-            ("1", _("Process LBS messages")),
+            (0, _("Do not process LBS messages")),
+            (1, _("Process LBS messages")),
         ],
+        coerce=int,
     )
     lo = forms.ChoiceField()
 

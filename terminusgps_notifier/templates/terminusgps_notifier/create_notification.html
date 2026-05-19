@@ -19,32 +19,10 @@
     <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="">
-        <div id="step-one">
-            <div>
-                <label for="id_items_type">Type: </label>
-                <select id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:select units' resource_id %}" hx-target="#id_units" hx-swap="innerHTML" hx-trigger="load once, change" hx-include="this">
-                    <option value="avl_unit">Units</option>
-                    <option value="avl_unit_group">Unit Groups</option>
-                </select>
-            </div>
-            <div>
-                <label for="id_units">Units: </label>
-                <select id="id_units" name="units" multiple required></select>
-            </div>
-        </div>
-        <div id="step-two">
-            <div>
-                <label for="id_trigger">Trigger: </label>
-                <select id="id_trigger" name="trigger">
-                    {% for value, label in triggers %}
-                    <option value="{{ value }}">{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <div id="step-three"></div>
+    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification' %}">
+        {% csrf_token %}
     </form>
+</div>
 {% endpartialdef main %}
 {% block content %}
 {% partial main %}

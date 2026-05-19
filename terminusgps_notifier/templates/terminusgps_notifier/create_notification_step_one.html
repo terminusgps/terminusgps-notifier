@@ -1,0 +1,45 @@
+{% extends "terminusgps_notifier/layout.html" %}
+{% partialdef main %}
+{% if messages %}
+<ul id="messages" class="mb-4">
+    {% for message in messages %}
+    <li class="p-4 border rounded bg-red-50 text-red-700 border-current animate-jiggle shadow-sm">
+        <div class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+            <p>{{ message }}</p>
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+<div class="flex flex-col gap-8">
+    <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+        <h3 class="font-semibold">Terminus GPS Notifier</h3>
+    </div>
+    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification step one' resource_id %}">
+        {% csrf_token %}
+        <div id="id_items_type_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4">
+             <select class="p-2 border rounded bg-stone-50" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:select units' resource_id %}" hx-target="#id_units" hx-trigger="load once, change" hx-indicator="#id_units_indicator">
+                <option value="avl_unit">Units</option>
+                <option value="avl_unit_group">Unit Groups</option>
+            </select>
+            <label class="order-first font-semibold" for="id_items_type">Type: </label>
+        </div>
+        <div id="id_units_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4">
+            <select class="p-2 border rounded bg-stone-50" id="id_units" name="units" required multiple></select>
+            <div class="order-first font-semibold flex items-center gap-2">
+                <label for="id_units">Units: </label>
+                <svg id="id_units_indicator" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 animate-spin htmx-indicator">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+            </div>
+        </div>
+        <button class="px-4 py-2 border border-current cursor-pointer rounded text-gray-100 bg-terminus-red-800 hover:bg-terminus-red-400 ease-in-out duration-300 transition-colors" type="submit">Next</button>
+    </form>
+</div>
+{% endpartialdef main %}
+{% block content %}
+{% partial main %}
+{% endblock content %}

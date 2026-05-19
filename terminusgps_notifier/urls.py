@@ -16,11 +16,8 @@ urlpatterns = [
     path("source/", views.source_code, name="source"),
     path("terms/", views.terms, name="terms"),
     path("privacy/", views.privacy, name="privacy"),
-    path(
-        "units/<str:resource_id>/select/",
-        views.select_units,
-        name="select units",
-    ),
+    path("units/select/", views.select_units, name="select units"),
+    path("resources/select/", views.select_resources, name="select resources"),
     path("resources/list/", views.list_resources, name="list resources"),
     path(
         "resources/<str:resource_id>/details/",
@@ -38,7 +35,7 @@ urlpatterns = [
         name="billing portal",
     ),
     path(
-        "notifications/<str:resource_id>/create/step-one/",
+        "notifications/create/step-one/",
         views.create_notification_step_one,
         name="create notification step one",
     ),
@@ -56,6 +53,11 @@ urlpatterns = [
         "notifications/create/step-four/",
         views.create_notification_step_four,
         name="create notification step four",
+    ),
+    path(
+        "notifications/create/review/",
+        views.create_notification_review,
+        name="create notification review",
     ),
     path(
         "forms/triggers/parameters/",

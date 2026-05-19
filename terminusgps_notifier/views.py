@@ -274,6 +274,26 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
 
 @require_GET
 @persistent_wialon_session
+@htmx_template("terminusgps_notifier/select_resources.html")
+def select_resources(request: HtmxHttpRequest) -> HttpResponse:
+    try:
+        session = WialonSession(sid=request.session["wialon_sid"])
+        params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
+        params["spec"]["itemsType"] = "avl_resource"
+        params["spec"]["propName"] = "sys_name"
+        params["spec"]["propValueMask"] = "*"
+        params["spec"]["propType"] = "property"
+        params["spec"]["sortType"] = "sys_name"
+        response = session.wialon_api.core_search_items(**params)
+    except WialonAPIError as error:
+        messages.error(request, error)
+        response = {"items": []}
+    context = {"object_list": response["items"]}
+    return TemplateResponse(request, request.template_name, context=context)
+
+
+@require_GET
+@persistent_wialon_session
 @htmx_template("terminusgps_notifier/list_notifications.html")
 def list_notifications(
     request: HtmxHttpRequest, resource_id: str
@@ -309,13 +329,15 @@ def detail_resources(
 @require_GET
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/select_units.html")
-def select_units(request: HtmxHttpRequest, resource_id: str) -> HttpResponse:
+def select_units(request: HtmxHttpRequest) -> HttpResponse:
+    if not request.GET.get("resource"):
+        raise Http404()
     try:
         session = WialonSession(sid=request.session["wialon_sid"])
         params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
         params["spec"]["itemsType"] = request.GET.get("items_type", "avl_unit")
         params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
-        params["spec"]["propValueMask"] = f"*,{resource_id}"
+        params["spec"]["propValueMask"] = f"*,{request.GET['resource']}"
         params["spec"]["propType"] = "property,property"
         params["spec"]["sortType"] = "sys_name"
         response = session.wialon_api.core_search_items(**params)
@@ -363,16 +385,9 @@ def billing_portal(request: HtmxHttpRequest, customer_id: str) -> HttpResponse:
 
 @require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/create_notification_step_one.html")
-def create_notification_step_one(
-    request: HtmxHttpRequest, resource_id: str
-) -> HttpResponse:
-    if request.method == "POST":
-        units_list = request.POST.getlist("units", [])
-        step_one_data = {"un": units_list, "itemId": resource_id}
-        request.session["step_one_data"] = step_one_data
-        return redirect("terminusgps_notifier:create notification step two")
-    context = {"resource_id": resource_id}
-    return TemplateResponse(request, request.template_name, context=context)
+def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
+    context = {"resource": request.GET.get("resource")}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -386,8 +401,9 @@ def create_notification_step_two(request: HtmxHttpRequest) -> HttpResponse:
         trg = {"t": request.POST["t"], "p": p}
         request.session["step_two_data"] = {"trg": trg}
         return redirect("terminusgps_notifier:create notification step three")
-    context = {"triggers": forms.WialonNotificationTrigger.choices}
-    return TemplateResponse(request, request.template_name, context=context)
+    else:
+        context = {"triggers": forms.WialonNotificationTrigger.choices}
+        return TemplateResponse(request, request.template_name, context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -420,19 +436,23 @@ def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
         request.session["step_three_data"] = {"n": n, "txt": txt, "act": act}
         return redirect("terminusgps_notifier:create notification step four")
     else:
-        return TemplateResponse(request, request.template_name, context={})
+        return TemplateResponse(request, request.template_name, {})
 
 
 @require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/create_notification_step_four.html")
 def create_notification_step_four(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, context={})
+    if request.method == "POST":
+        return redirect("terminusgps_notifier:create notification review")
+    else:
+        context = {}
+        return TemplateResponse(request, request.template_name, context)
 
 
 @require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/create_notification_step_review.html")
-def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, context={})
+@htmx_template("terminusgps_notifier/create_notification_review.html")
+def create_notification_review(request: HtmxHttpRequest) -> HttpResponse:
+    return TemplateResponse(request, request.template_name, {})
 
 
 @require_GET

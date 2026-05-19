@@ -18,10 +18,19 @@
     <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification step one' resource_id %}">
+    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification step one' %}">
         {% csrf_token %}
+        <div id="id_resource_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4" hx-get="{% url 'terminusgps_notifier:select resources' %}" hx-target="#id_resource" hx-trigger="load once" hx-indicator="#id_resource_indicator">
+            <select class="p-2 border rounded bg-stone-50" id="id_resource" name="resource" hx-get="{% url 'terminusgps_notifier:select units' %}" hx-target="#id_units" hx-trigger="revealed, change" hx-include="this,[name='items_type']"></select>
+            <div class="order-first font-semibold flex items-center gap-2">
+                <label class="order-first font-semibold" for="id_resource">Resource: </label>
+                <svg id="id_resource_indicator" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 animate-spin htmx-indicator">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+            </div>
+        </div>
         <div id="id_items_type_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4">
-             <select class="p-2 border rounded bg-stone-50" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:select units' resource_id %}" hx-target="#id_units" hx-trigger="load once, change" hx-indicator="#id_units_indicator">
+            <select class="p-2 border rounded bg-stone-50" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:select units' %}" hx-target="#id_units" hx-trigger="change" hx-indicator="#id_units_indicator" hx-include="this,[name='resource']">
                 <option value="avl_unit">Units</option>
                 <option value="avl_unit_group">Unit Groups</option>
             </select>

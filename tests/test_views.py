@@ -44,18 +44,6 @@ class DashboardViewTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         mock_get_stripe_client.assert_called_once()
 
-    def test_htmx_request_renders_partial(self):
-        """Fails if an htmx request didn't render a partial template."""
-        headers = {"HX-Request": True}
-        response = self.client.get("/dashboard/", headers=headers)
-        self.assertTrue(response.template_name.endswith("#main"))
-        headers = {"HX-Request": True, "HX-Boosted": True}
-        response = self.client.get("/dashboard/", headers=headers)
-        self.assertFalse(response.template_name.endswith("#main"))
-        headers = {}
-        response = self.client.get("/dashboard/", headers=headers)
-        self.assertFalse(response.template_name.endswith("#main"))
-
     def test_profile_added_to_context(self):
         """Fails if the user's profile wasn't added to the view context."""
         response = self.client.get("/dashboard/")

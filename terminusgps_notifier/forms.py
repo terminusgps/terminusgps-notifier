@@ -272,6 +272,18 @@ class NotificationTriggerForm(forms.Form):
     p = forms.JSONField()
 
 
+class CreateNotificationStepOneForm(forms.Form):
+    resource = forms.ChoiceField(choices=[])
+    units = forms.MultipleChoiceField(choices=[])
+    groups = forms.MultipleChoiceField(choices=[])
+
+    def __init__(self, resources, units, groups, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.fields["resource"].choices = resources
+        self.fields["units"].choices = units
+        self.fields["groups"].choices = groups
+
+
 class NotificationDispatchForm(forms.Form):
     """
     A form for dispatching Wialon unit notifications.

@@ -520,10 +520,6 @@ def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
             )
         except WialonAPIError as error:
             messages.error(request, error)
-            messages.warning(
-                request,
-                "Something went wrong creating the notification. Do you have all required permissions?",
-            )
     context = {"params": params}
     return TemplateResponse(request, request.template_name, context)
 

@@ -4,6 +4,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.utils import timezone
+from terminusgps.wialon.session import WialonSession
 
 from terminusgps_notifier import models
 
@@ -205,3 +206,87 @@ class CreateNotificationStepFourViewTestCase(TestCase):
 
         self.client.post("/notifications/create/step-four/", data)
         self.assertIn("step_four_data", self.client.session.keys())
+
+
+class CreateNotificationStepFourViewTestCase(TestCase):
+    fixtures = [
+        "terminusgps_notifier/tests/test_user.json",
+        "terminusgps_notifier/tests/test_profile.json",
+    ]
+
+    def setUp(self):
+        self.client = Client()
+        self.client.login(**{"username": "testuser", "password": "trolldad"})
+        step_one_data = {}
+        step_one_data["itemId"] = "1"
+        step_one_data["un"] = ["1", "2", "3"]
+        step_two_data = {}
+        step_two_data["trg"] = {"t": "alarm", "p": {}}
+        step_three_data = {}
+        step_three_data["n"] = "Test Notification"
+        step_three_data["act"] = [
+            {
+                "t": "push_messages",
+                "p": {
+                    "url": "https://api.terminusgps.com/v3/notify/sms/",
+                    "get": 0,
+                },
+            }
+        ]
+        step_three_data["txt"] = (
+            "user_id=1&unit_id=%UNIT_ID%&msg_time_int=%MSG_TIME_INT%&message=What+up"
+        )
+        step_four_data = {}
+        step_four_data["tz"] = 0
+        step_four_data["ta"] = 0
+        step_four_data["td"] = 0
+        step_four_data["fl"] = 0
+        step_four_data["la"] = 0
+        step_four_data["ma"] = 0
+        step_four_data["cdt"] = 0
+        step_four_data["cp"] = 0
+        step_four_data["mast"] = 0
+        step_four_data["mpst"] = 0
+        step_four_data["mmtd"] = 0
+
+        session = self.client.session
+        session["step_one_data"] = step_one_data.copy()
+        session["step_two_data"] = step_two_data.copy()
+        session["step_three_data"] = step_three_data.copy()
+        session["step_four_data"] = step_four_data.copy()
+        session.save()
+
+    def test_post_valid_data_does_wialon_api_call(self):
+        """Fails if a Wialon API call wasn't made with valid data."""
+        with patch(
+            "terminusgps_notifier.decorators.wialon_session_is_valid",
+            return_value=True,
+        ):
+            with patch(
+                "terminusgps_notifier.views.get_wialon_session",
+                return_value=MagicMock(WialonSession),
+            ):
+                response = self.client.post("/notifications/create/review/")
+                self.assertEqual(response.status_code, 302)
+                has_step_one = self.client.session.has_key("step_one_data")
+                has_step_two = self.client.session.has_key("step_two_data")
+                has_step_three = self.client.session.has_key("step_three_data")
+                has_step_four = self.client.session.has_key("step_four_data")
+                self.assertFalse(has_step_one)
+                self.assertFalse(has_step_two)
+                self.assertFalse(has_step_three)
+                self.assertFalse(has_step_four)
+
+    def test_post_redirects_to_resource_details(self):
+        """Fails if the view doesn't redirect the client to resource details."""
+        with patch(
+            "terminusgps_notifier.decorators.wialon_session_is_valid",
+            return_value=True,
+        ):
+            with patch(
+                "terminusgps_notifier.views.get_wialon_session",
+                return_value=MagicMock(WialonSession),
+            ):
+                response = self.client.post("/notifications/create/review/")
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual("/resources/1/details/", response.url)

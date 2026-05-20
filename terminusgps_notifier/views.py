@@ -39,6 +39,10 @@ def get_stripe_client() -> stripe.StripeClient:
     return stripe.StripeClient(settings.STRIPE_API_KEY)
 
 
+def get_wialon_session(sid: str) -> WialonSession:
+    return WialonSession(sid=sid)
+
+
 @require_GET
 def health_check(request: HttpRequest) -> HttpResponse:
     return HttpResponse("I'm alive\n".encode("utf-8"), status=200)
@@ -253,7 +257,7 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
 @htmx_template("terminusgps_notifier/list_resources.html")
 def list_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
-        session = WialonSession(sid=request.session["wialon_sid"])
+        session = get_wialon_session(request.session["wialon_sid"])
         params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
         params["spec"]["itemsType"] = "avl_resource"
         params["spec"]["propName"] = "sys_name"
@@ -274,7 +278,7 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
 @htmx_template("terminusgps_notifier/select_resources.html")
 def select_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
-        session = WialonSession(sid=request.session["wialon_sid"])
+        session = get_wialon_session(request.session["wialon_sid"])
         params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
         params["spec"]["itemsType"] = "avl_resource"
         params["spec"]["propName"] = "sys_name"
@@ -296,7 +300,7 @@ def list_notifications(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
     try:
-        session = WialonSession(sid=request.session["wialon_sid"])
+        session = get_wialon_session(request.session["wialon_sid"])
         params = {"itemId": resource_id}
         response = session.wialon_api.resource_get_notification_data(**params)
     except WialonAPIError as error:
@@ -313,7 +317,7 @@ def detail_resources(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
     try:
-        session = WialonSession(sid=request.session["wialon_sid"])
+        session = get_wialon_session(request.session["wialon_sid"])
         params = {"id": resource_id, "flags": 1025}
         response = session.wialon_api.core_search_item(**params)
     except WialonAPIError as error:
@@ -330,7 +334,7 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
     if not request.GET.get("resource"):
         raise Http404()
     try:
-        session = WialonSession(sid=request.session["wialon_sid"])
+        session = get_wialon_session(request.session["wialon_sid"])
         params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
         params["spec"]["itemsType"] = request.GET.get("items_type", "avl_unit")
         params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
@@ -390,7 +394,7 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
         request.session["step_one_data"] = {"un": un, "itemId": itemId}
         return redirect("terminusgps_notifier:create notification step two")
     try:
-        session = WialonSession(sid=request.session["wialon_sid"])
+        session = get_wialon_session(request.session["wialon_sid"])
         params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
         params["spec"]["itemsType"] = "avl_resource"
         params["spec"]["propName"] = "sys_name"
@@ -507,7 +511,7 @@ def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
     params = get_resource_update_notification_params(request)
     if request.method == "POST":
         try:
-            session = WialonSession(sid=request.session["wialon_sid"])
+            session = get_wialon_session(request.session["wialon_sid"])
             session.wialon_api.resource_update_notification(**params)
             request.session.pop("step_one_data", None)
             request.session.pop("step_two_data", None)

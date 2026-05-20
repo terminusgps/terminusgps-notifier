@@ -39,13 +39,9 @@ def get_stripe_client() -> stripe.StripeClient:
     return stripe.StripeClient(settings.STRIPE_API_KEY)
 
 
-class HealthCheckView(View):
-    content_type = "text/plain"
-    http_method_names = ["get"]
-
-    async def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        """Responds with status code 200."""
-        return HttpResponse("I'm alive\n".encode("utf-8"), status=200)
+@require_GET
+def health_check(request: HttpRequest) -> HttpResponse:
+    return HttpResponse("I'm alive\n".encode("utf-8"), status=200)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -389,11 +385,9 @@ def billing_portal(request: HtmxHttpRequest, customer_id: str) -> HttpResponse:
 @htmx_template("terminusgps_notifier/create_notification/step_one.html")
 def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
-        units_list = request.POST.getlist("units", [])
-        step_one_data = {}
-        step_one_data["un"] = list(map(int, units_list))
-        step_one_data["itemId"] = int(request.POST["resource"])
-        request.session["step_one_data"] = step_one_data
+        un = request.POST.getlist("units", [])
+        itemId = int(request.POST["resource"])
+        request.session["step_one_data"] = {"un": un, "itemId": itemId}
         return redirect("terminusgps_notifier:create notification step two")
     try:
         session = WialonSession(sid=request.session["wialon_sid"])

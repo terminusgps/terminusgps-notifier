@@ -22,15 +22,37 @@ class HtmxHttpRequest(HttpRequest):
     template_name: str
 
 
-def active_subscription_required(view_func=None):
-    def get_subscription_id_from_user(user: AbstractBaseUser) -> str | None:
-        profile = get_object_or_404(Profile, user=user)
-        return profile.subscription_id
+def get_subscription_id_from_user(user: AbstractBaseUser) -> str | None:
+    profile = get_object_or_404(Profile, user=user)
+    return profile.subscription_id
 
-    def get_subscription_from_stripe(subscription_id: str) -> dict:
-        stripe_client = stripe.StripeClient(settings.STRIPE_API_KEY)
-        subscription = stripe_client.v1.subscriptions.retrieve(subscription_id)
-        return subscription.to_dict()
+
+def get_subscription_from_stripe(subscription_id: str) -> dict:
+    stripe_client = stripe.StripeClient(settings.STRIPE_API_KEY)
+    subscription = stripe_client.v1.subscriptions.retrieve(subscription_id)
+    return subscription.to_dict()
+
+
+def get_wialon_api_token_from_user(user: AbstractBaseUser) -> str | None:
+    profile = get_object_or_404(Profile, user=user)
+    return profile.token
+
+
+def wialon_session_is_valid(sid: str | None = None) -> bool:
+    if sid is None:
+        return False
+    try:
+        session = WialonSession(sid=sid)
+        session.wialon_api.avl_evts()
+        return True
+    except wialon.api.WialonError as error:
+        if error._code == 1:
+            return False
+        else:
+            raise
+
+
+def active_subscription_required(view_func=None):
 
     def outer_wrapper(view_func):
         @functools.wraps(view_func)
@@ -53,22 +75,6 @@ def active_subscription_required(view_func=None):
 
 
 def persistent_wialon_session(view_func=None):
-    def get_wialon_api_token_from_user(user: AbstractBaseUser) -> str | None:
-        profile = get_object_or_404(Profile, user=user)
-        return profile.token
-
-    def wialon_session_is_valid(sid: str | None = None) -> bool:
-        if sid is None:
-            return False
-        try:
-            session = WialonSession(sid=sid)
-            session.wialon_api.avl_evts()
-            return True
-        except wialon.api.WialonError as error:
-            if error._code == 1:
-                return False
-            else:
-                raise
 
     def outer_wrapper(view_func):
         @functools.wraps(view_func)

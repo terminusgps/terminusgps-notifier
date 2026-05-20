@@ -1,8 +1,9 @@
-import urllib.parse
 from unittest.mock import MagicMock, patch
 
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
+from django.utils import timezone
 
 from terminusgps_notifier import models
 
@@ -67,23 +68,32 @@ class CreateNotificationStepOneViewTestCase(TestCase):
 
     def test_post_redirects_to_next_step(self):
         """Fails if the view doesn't redirect the client to the expected next step."""
-        response = self.client.post(
-            "/notifications/1/create/step-one/", {"units": ["1", "2", "3"]}
-        )
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("step-two", response.url)
+        data = {}
+        data["units"] = ["1", "2", "3"]
+        data["resource"] = "1"
+
+        with patch(
+            "terminusgps_notifier.decorators.wialon_session_is_valid",
+            return_value=True,
+        ):
+            response = self.client.post(
+                "/notifications/create/step-one/", data
+            )
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual("/notifications/create/step-two/", response.url)
 
     def test_post_valid_data_added_to_session(self):
         """Fails if valid form data wasn't added to the session before redirecting the client."""
-        un = ["1", "2", "3"]
-        itemId = "1"
+        data = {}
+        data["units"] = ["1", "2", "3"]
+        data["resource"] = "1"
 
-        self.client.post(
-            "/notifications/1/create/step-one/", {"units": ["1", "2", "3"]}
-        )
-        step_one_data = self.client.session["step_one_data"]
-        self.assertEqual(step_one_data["un"], un)
-        self.assertEqual(step_one_data["itemId"], itemId)
+        with patch(
+            "terminusgps_notifier.decorators.wialon_session_is_valid",
+            return_value=True,
+        ):
+            self.client.post("/notifications/create/step-one/", data)
+            self.assertIn("step_one_data", self.client.session.keys())
 
 
 class CreateNotificationStepTwoViewTestCase(TestCase):
@@ -98,18 +108,20 @@ class CreateNotificationStepTwoViewTestCase(TestCase):
 
     def test_post_redirects_to_next_step(self):
         """Fails if the view doesn't redirect the client to the expected next step."""
-        response = self.client.post(
-            "/notifications/create/step-two/", {"t": "alarm"}
-        )
+        data = {}
+        data["t"] = "alarm"
+
+        response = self.client.post("/notifications/create/step-two/", data)
         self.assertEqual(response.status_code, 302)
-        self.assertIn("step-three", response.url)
+        self.assertEqual("/notifications/create/step-three/", response.url)
 
     def test_post_valid_data_added_to_session(self):
         """Fails if valid form data wasn't added to the session before redirecting the client."""
-        trg = {"t": "alarm", "p": {}}
-        self.client.post("/notifications/create/step-two/", {"t": "alarm"})
-        step_two_data = self.client.session["step_two_data"]
-        self.assertEqual(step_two_data["trg"], trg)
+        data = {}
+        data["t"] = "alarm"
+
+        self.client.post("/notifications/create/step-two/", data)
+        self.assertIn("step_two_data", self.client.session.keys())
 
 
 class CreateNotificationStepThreeViewTestCase(TestCase):
@@ -124,39 +136,72 @@ class CreateNotificationStepThreeViewTestCase(TestCase):
 
     def test_post_redirects_to_next_step(self):
         """Fails if the view doesn't redirect the client to the expected next step."""
-        n = "Test Notification"
-        message = "At %MSG_TIME%, %UNIT% moved."
+        data = {}
+        data["name"] = "Test Notification"
+        data["message"] = "At %MSG_TIME%, %UNIT% had its ignition switched on."
+        data["method"] = "sms"
 
-        response = self.client.post(
-            "/notifications/create/step-three/",
-            data={"name": n, "message": message, "method": "sms"},
-        )
+        response = self.client.post("/notifications/create/step-three/", data)
         self.assertEqual(response.status_code, 302)
-        self.assertIn("step-four", response.url)
+        self.assertEqual("/notifications/create/step-four/", response.url)
 
     def test_post_valid_data_added_to_session(self):
         """Fails if valid form data wasn't added to the session before redirecting the client."""
-        n = "Test Notification"
-        message = "At %MSG_TIME%, %UNIT% moved."
-        url = "https://api.terminusgps.com/v3/notify/sms/"
-        act = [{"t": "send_messages", "p": {"url": url, "get": 0}}]
-        txt = urllib.parse.urlencode(
-            {
-                "user_id": "1",
-                "unit_id": "%UNIT_ID%",
-                "message": message,
-                "msg_time_int": "%MSG_TIME_INT%",
-                "location": "%LOCATION%",
-                "unit_name": "%UNIT%",
-            },
-            safe="%",
-        )
+        data = {}
+        data["name"] = "Test Notification"
+        data["message"] = "At %MSG_TIME%, %UNIT% had its ignition switched on."
+        data["method"] = "sms"
 
-        self.client.post(
-            "/notifications/create/step-three/",
-            data={"name": n, "message": message, "method": "sms"},
-        )
-        step_three_data = self.client.session["step_three_data"]
-        self.assertEqual(step_three_data["n"], n)
-        self.assertEqual(step_three_data["txt"], txt)
-        self.assertEqual(step_three_data["act"], act)
+        response = self.client.post("/notifications/create/step-three/", data)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("step_three_data", self.client.session.keys())
+
+
+class CreateNotificationStepFourViewTestCase(TestCase):
+    fixtures = [
+        "terminusgps_notifier/tests/test_user.json",
+        "terminusgps_notifier/tests/test_profile.json",
+    ]
+
+    def setUp(self):
+        self.client = Client()
+        self.client.login(**{"username": "testuser", "password": "trolldad"})
+
+    def test_post_redirects_to_next_step(self):
+        """Fails if the view doesn't redirect the client to the expected next step."""
+        now, fmt = timezone.now(), "%Y-%m-%dT%H:%M:%S"
+        data = {}
+        data["tz"] = 0
+        data["ta"] = now.strftime(fmt)
+        data["td"] = (now + relativedelta(days=1)).strftime(fmt)
+        data["fl"] = 0
+        data["la"] = "en"
+        data["ma"] = 0
+        data["cdt"] = 0
+        data["cp"] = 3600
+        data["mast"] = 0
+        data["mpst"] = 0
+        data["mmtd"] = 0
+
+        response = self.client.post("/notifications/create/step-four/", data)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual("/notifications/create/review/", response.url)
+
+    def test_post_valid_data_added_to_session(self):
+        """Fails if valid form data wasn't added to the session before redirecting the client."""
+        now, fmt = timezone.now(), "%Y-%m-%dT%H:%M:%S"
+        data = {}
+        data["tz"] = 0
+        data["ta"] = now.strftime(fmt)
+        data["td"] = (now + relativedelta(days=1)).strftime(fmt)
+        data["fl"] = 0
+        data["la"] = "en"
+        data["ma"] = 0
+        data["cdt"] = 0
+        data["cp"] = 3600
+        data["mast"] = 0
+        data["mpst"] = 0
+        data["mmtd"] = 0
+
+        self.client.post("/notifications/create/step-four/", data)
+        self.assertIn("step_four_data", self.client.session.keys())

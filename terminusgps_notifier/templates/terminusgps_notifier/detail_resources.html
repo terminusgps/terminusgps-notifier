@@ -41,6 +41,13 @@
                 </div>
             </a>
         </div>
+        <div id="notifications-list" class="list-inside flex flex-col gap-4">
+            {% for id, notif in response.item.unf.items %}
+            <div id="{{ response.item.id }}-{{ id }}" class="p-2 border rounded bg-stone-200">
+                <p class="font-semibold">{{ notif.n }}</p>
+            </div>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
 </div>

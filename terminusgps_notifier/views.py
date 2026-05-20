@@ -177,25 +177,25 @@ def wialon_login(request: HttpRequest) -> HttpResponse:
 @require_GET
 @htmx_template("terminusgps_notifier/home.html")
 def home(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, context={})
+    return TemplateResponse(request, request.template_name, {})
 
 
 @require_GET
 @htmx_template("terminusgps_notifier/contact.html")
 def contact(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, context={})
+    return TemplateResponse(request, request.template_name, {})
 
 
 @require_GET
 @htmx_template("terminusgps_notifier/terms.html")
 def terms(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, context={})
+    return TemplateResponse(request, request.template_name, {})
 
 
 @require_GET
 @htmx_template("terminusgps_notifier/privacy.html")
 def privacy(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, context={})
+    return TemplateResponse(request, request.template_name, {})
 
 
 @require_GET
@@ -529,7 +529,7 @@ def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_GET
-@htmx_template("terminusgps_notifier/forms/trigger_parameters.html")
+@htmx_template("terminusgps_notifier/trigger_parameters.html")
 def trigger_parameters_form(request: HtmxHttpRequest) -> HttpResponse:
     t = request.GET.get("t")
     if t is None:

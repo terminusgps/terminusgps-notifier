@@ -493,28 +493,43 @@ def create_notification_step_four(request: HtmxHttpRequest) -> HttpResponse:
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/create_notification/step_review.html")
 def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
+    def get_resource_update_notification_param_overrides() -> dict:
+        schedule = {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "w": 0, "y": 0}
+        overrides = {"callMode": "create", "id": 0, "sch": {}, "ctrl_sch": {}}
+        overrides["sch"] = schedule.copy()
+        overrides["ctrl_sch"] = schedule.copy()
+        return overrides
+
     def get_resource_update_notification_params(
         request: HtmxHttpRequest,
     ) -> dict:
-        sch = {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "w": 0, "y": 0}
-        extra = {"callMode": "create", "id": 0, "sch": sch, "ctrl_sch": sch}
         step_one = dict(request.session.get("step_one_data", {}))
         step_two = dict(request.session.get("step_two_data", {}))
         step_three = dict(request.session.get("step_three_data", {}))
         step_four = dict(request.session.get("step_four_data", {}))
-        return step_one | step_two | step_three | step_four | extra
+        overrides = get_resource_update_notification_param_overrides()
+        return step_one | step_two | step_three | step_four | overrides
 
     params = get_resource_update_notification_params(request)
     if request.method == "POST":
         try:
             session = WialonSession(sid=request.session["wialon_sid"])
             session.wialon_api.resource_update_notification(**params)
+            request.session.pop("step_one_data", None)
+            request.session.pop("step_two_data", None)
+            request.session.pop("step_three_data", None)
+            request.session.pop("step_four_data", None)
+            messages.success(request, "Notification successfully created!")
             return redirect(
                 "terminusgps_notifier:detail resources",
                 resource_id=params["itemId"],
             )
         except WialonAPIError as error:
             messages.error(request, error)
+            messages.warning(
+                request,
+                "Something went wrong creating the notification. Do you have all required permissions?",
+            )
     context = {"params": params}
     return TemplateResponse(request, request.template_name, context)
 

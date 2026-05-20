@@ -569,12 +569,24 @@ class RouteProgressTriggerForm(forms.Form):
 
 class DriverTriggerForm(forms.Form):
     driver_code_mask = forms.CharField()
-    flags = forms.TypedChoiceField()
+    flags = forms.TypedChoiceField(
+        choices=[
+            (0, _("Trigger on driver assignment")),
+            (1, _("Trigger on driver separation")),
+        ],
+        coerce=int,
+    )
 
 
 class TrailerTriggerForm(forms.Form):
     driver_code_mask = forms.CharField()
-    flags = forms.TypedChoiceField()
+    flags = forms.TypedChoiceField(
+        choices=[
+            (0, _("Trigger on trailer assignment")),
+            (1, _("Trigger on trailer separation")),
+        ],
+        coerce=int,
+    )
 
 
 class MaintenanceTriggerForm(forms.Form):

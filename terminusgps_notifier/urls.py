@@ -56,8 +56,8 @@ urlpatterns = [
     ),
     path(
         "notifications/create/review/",
-        views.create_notification_review,
-        name="create notification review",
+        views.create_notification_step_review,
+        name="create notification step review",
     ),
     path(
         "forms/triggers/parameters/",

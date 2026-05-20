@@ -2,6 +2,7 @@ import datetime
 
 from django import forms
 from django.db import models
+from django.forms import widgets
 from django.utils.translation import gettext_lazy as _
 
 from terminusgps_notifier import constants
@@ -80,13 +81,21 @@ class WialonSensorType(models.TextChoices):
     TAG = "tag", _("Passenger sensor")
 
 
-class CreateNotificationForm(forms.Form):
-    itemId = forms.IntegerField()
-    nm = forms.CharField(min_length=4)
-    txt = forms.CharField(max_length=1024)
-    ta = forms.DateTimeField(required=False)
-    td = forms.DateTimeField(required=False)
-    ma = forms.IntegerField(min_value=0)
+class CreateNotificationStepFourForm(forms.Form):
+    ta = forms.DateTimeField(
+        label=_("Activation Time"),
+        required=False,
+        widget=widgets.DateInput(attrs={"type": "datetime-local"}),
+    )
+    td = forms.DateTimeField(
+        label=_("Deactivation Time"),
+        required=False,
+        widget=widgets.DateInput(attrs={"type": "datetime-local"}),
+    )
+    tz = forms.TypedChoiceField(
+        choices=constants.TIMEZONES, coerce=int, label=_("Timezone")
+    )
+    ma = forms.IntegerField(min_value=0, label=_("Max Alarms"))
     mmtd = forms.TypedChoiceField(
         choices=[
             (0, _("Any time")),
@@ -100,10 +109,21 @@ class CreateNotificationForm(forms.Form):
             (864000, _("10 days")),
         ],
         coerce=int,
+        label=_("Max Time Interval Between Messages"),
     )
-    cdt = forms.IntegerField(min_value=0, max_value=1800)
-    mast = forms.IntegerField(min_value=0, max_value=86400)
-    mpst = forms.IntegerField(min_value=0, max_value=86400)
+    cdt = forms.IntegerField(
+        min_value=0, max_value=1800, label=_("Alarm Timeout")
+    )
+    mast = forms.IntegerField(
+        min_value=0,
+        max_value=86400,
+        label=_("Minimum Duration of Alarm State"),
+    )
+    mpst = forms.IntegerField(
+        min_value=0,
+        max_value=86400,
+        label=_("Minimum Duration of Previous State"),
+    )
     cp = forms.TypedChoiceField(
         choices=[
             (0, _("Any time")),
@@ -113,6 +133,7 @@ class CreateNotificationForm(forms.Form):
             (86400, _("Last day")),
         ],
         coerce=int,
+        label=_("Control Period"),
     )
     fl = forms.TypedChoiceField(
         choices=[
@@ -121,40 +142,19 @@ class CreateNotificationForm(forms.Form):
             (2, _("Disabled")),
         ],
         coerce=int,
+        label=_("Flags"),
     )
-    tz = forms.TypedChoiceField(choices=constants.TIMEZONES, coerce=int)
-    la = forms.ChoiceField(choices=[("en", _("English"))])
-    un = forms.JSONField()
-    sch = forms.JSONField(required=False)
-    ctrl_sch = forms.JSONField(required=False)
-    trg = forms.JSONField()
-    act = forms.JSONField()
-
-    def clean_sch(self):
-        if self.cleaned_data["sch"] is None:
-            return {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "w": 0, "y": 0}
-
-    def clean_ctrl_sch(self):
-        if self.cleaned_data["ctrl_sch"] is None:
-            return {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "w": 0, "y": 0}
+    la = forms.ChoiceField(choices=[("en", _("English"))], label=_("Language"))
 
     def clean_ta(self):
-        if ta := self.cleaned_data["ta"]:
-            return int(datetime.datetime.timestamp(ta))
-        else:
-            return 0
+        if ta := self.cleaned_data.get("ta"):
+            return int(ta.timestamp())
+        return 0
 
     def clean_td(self):
-        if td := self.cleaned_data["td"]:
-            return int(datetime.datetime.timestamp(td))
-        else:
-            return 0
-
-    def clean(self):
-        cleaned_data = super().clean()
-        if cleaned_data:
-            cleaned_data["callMode"] = "create"
-            cleaned_data["id"] = 0
+        if td := self.cleaned_data.get("td"):
+            return int(td.timestamp())
+        return 0
 
 
 class NotificationScheduleForm(forms.Form):

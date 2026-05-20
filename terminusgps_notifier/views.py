@@ -21,7 +21,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.views.generic import RedirectView, View
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
-from terminusgps_notifier import forms
+from terminusgps_notifier import constants, forms
 from terminusgps_notifier.decorators import (
     HtmxHttpRequest,
     htmx_template,
@@ -30,6 +30,7 @@ from terminusgps_notifier.decorators import (
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Profile
 from terminusgps_notifier.validators import validate_e164_phone_number
+from terminusgps_notifier.wialon import get_phone_numbers
 
 logger = logging.getLogger(__name__)
 
@@ -385,13 +386,13 @@ def billing_portal(request: HtmxHttpRequest, customer_id: str) -> HttpResponse:
 
 @require_http_methods(["GET", "POST"])
 @persistent_wialon_session
-@htmx_template("terminusgps_notifier/create_notification_step_one.html")
+@htmx_template("terminusgps_notifier/create_notification/step_one.html")
 def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
         units_list = request.POST.getlist("units", [])
         step_one_data = {}
-        step_one_data["un"] = units_list
-        step_one_data["itemId"] = request.POST["resource"]
+        step_one_data["un"] = list(map(int, units_list))
+        step_one_data["itemId"] = int(request.POST["resource"])
         request.session["step_one_data"] = step_one_data
         return redirect("terminusgps_notifier:create notification step two")
     try:
@@ -417,7 +418,7 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/create_notification_step_two.html")
+@htmx_template("terminusgps_notifier/create_notification/step_two.html")
 def create_notification_step_two(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
         p = {}
@@ -433,7 +434,7 @@ def create_notification_step_two(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/create_notification_step_three.html")
+@htmx_template("terminusgps_notifier/create_notification/step_three.html")
 def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
     def generate_txt(request: HtmxHttpRequest) -> str:
         return urllib.parse.urlencode(
@@ -453,7 +454,7 @@ def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
             "https://api.terminusgps.com/",  # TODO: Retrieve host programatically
             f"/v3/notify/{request.POST['method']}/",
         )
-        return [{"t": "send_messages", "p": {"url": url, "get": 0}}]
+        return [{"t": "push_messages", "p": {"url": url, "get": 0}}]
 
     if request.method == "POST":
         n = request.POST["name"]
@@ -466,29 +467,66 @@ def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/create_notification_step_four.html")
+@htmx_template("terminusgps_notifier/create_notification/step_four.html")
 def create_notification_step_four(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
-        return redirect("terminusgps_notifier:create notification review")
+        form = forms.CreateNotificationStepFourForm(request.POST)
+        if form.is_valid():
+            request.session["step_four_data"] = form.cleaned_data
+            return redirect(
+                "terminusgps_notifier:create notification step review"
+            )
     else:
-        context = {}
-        return TemplateResponse(request, request.template_name, context)
+        initial = {}
+        initial["ma"] = 0
+        initial["cdt"] = 0
+        initial["mpst"] = 0
+        initial["mast"] = 0
+        initial["cp"] = 3600
+        initial["mmtd"] = 3600
+        form = forms.CreateNotificationStepFourForm(initial=initial)
+    context = {"timezones": constants.TIMEZONES, "form": form}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @require_http_methods(["GET", "POST"])
-@htmx_template("terminusgps_notifier/create_notification_review.html")
-def create_notification_review(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, {})
+@persistent_wialon_session
+@htmx_template("terminusgps_notifier/create_notification/step_review.html")
+def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
+    def get_resource_update_notification_params(
+        request: HtmxHttpRequest,
+    ) -> dict:
+        sch = {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "w": 0, "y": 0}
+        extra = {"callMode": "create", "id": 0, "sch": sch, "ctrl_sch": sch}
+        step_one = dict(request.session.get("step_one_data", {}))
+        step_two = dict(request.session.get("step_two_data", {}))
+        step_three = dict(request.session.get("step_three_data", {}))
+        step_four = dict(request.session.get("step_four_data", {}))
+        return step_one | step_two | step_three | step_four | extra
+
+    params = get_resource_update_notification_params(request)
+    if request.method == "POST":
+        try:
+            session = WialonSession(sid=request.session["wialon_sid"])
+            session.wialon_api.resource_update_notification(**params)
+            return redirect(
+                "terminusgps_notifier:detail resources",
+                resource_id=params["itemId"],
+            )
+        except WialonAPIError as error:
+            messages.error(request, error)
+    context = {"params": params}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @require_GET
 @htmx_template("terminusgps_notifier/forms/trigger_parameters.html")
 def trigger_parameters_form(request: HtmxHttpRequest) -> HttpResponse:
-    if not request.GET.get("t"):
+    t = request.GET.get("t")
+    if t is None:
         raise Http404()
-    t = str(request.GET.get("t"))
-    if t not in forms.WialonNotificationTrigger:
+    if str(t) not in forms.WialonNotificationTrigger:
         raise Http404()
-    form_cls = forms.TRIGGER_FORMS_MAP[t]
+    form_cls = forms.TRIGGER_FORMS_MAP[str(t)]
     context = {"form": form_cls()}
     return TemplateResponse(request, request.template_name, context=context)

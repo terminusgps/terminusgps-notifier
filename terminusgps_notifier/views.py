@@ -40,6 +40,15 @@ logger = logging.getLogger(__name__)
 
 
 def clean_phones(phones: list[str]) -> list[str]:
+    """
+    Cleans and returns a list of E.164 format phone numbers.
+
+    :param phones: A list of phone numbers.
+    :type phones: list[str]
+    :returns: A list of properly formatted E.164 phone numbers.
+    :rtype: list[str]
+
+    """
     cleaned = []
     for phone in phones:
         try:
@@ -52,6 +61,19 @@ def clean_phones(phones: list[str]) -> list[str]:
 
 
 def get_phones(token: str | None, unit_id: int) -> list[str]:
+    """
+    Calls the Wialon API and returns a list of phone numbers assigned to a unit.
+
+    Returns an empty list if something went wrong during the Wialon API call.
+
+    :param token: A Wialon API token. If not provided, immediately returns an empty list.
+    :type token: str | None
+    :param unit_id: A Wialon unit id.
+    :type unit_id: int
+    :returns: A list of phone numbers assigned to the Wialon unit.
+    :rtype: list[str]
+
+    """
     if token is None:
         return []
     try:
@@ -66,6 +88,18 @@ def get_phones(token: str | None, unit_id: int) -> list[str]:
 def get_dispatchers(
     form: forms.NotificationDispatchForm, method: str
 ) -> list[NotificationDispatcher]:
+    """
+    Returns a list of notification dispatchers.
+
+    :param form: A valid notification dispatch form.
+    :type form: :py:obj:`~django.forms.Form`
+    :param method: A notification method.
+    :type method: str
+    :raises ValueError: If the provided method was invalid.
+    :returns: A list of notification dispatcher objects.
+    :rtype: list[NotificationDispatcher]
+
+    """
     if method not in settings.NOTIFICATION_DISPATCHERS:
         raise ValueError(f"Invalid method: '{method}'")
     dispatcher_classes = []
@@ -77,6 +111,19 @@ def get_dispatchers(
 
 @async_to_sync
 async def send_notifications(method, phones, dispatchers) -> HttpResponse:
+    """
+    Sends notifications to target phone numbers using dispatchers.
+
+    :param method: A notification method.
+    :type method: str
+    :param phones: A list of E.164 formatted phone numbers.
+    :type phones: list[str]
+    :param dispatchers: A list of notification dispatchers.
+    :type dispatchers: list[NotificationDispatcher]
+    :returns: An HTTP response with status code 200 if successful delivery.
+    :rtype: :py:obj:`~django.http.HttpResponse`
+
+    """
     for dispatcher in dispatchers:
         try:
             tasks = [
@@ -97,6 +144,17 @@ async def send_notifications(method, phones, dispatchers) -> HttpResponse:
 
 
 def get_subscription_status(profile: Profile) -> str | None:
+    """
+    Returns the current subscription status for a profile.
+
+    If the profile is associated with a staff user, always returns "active".
+
+    :param profile: A user profile.
+    :type profile: :py:obj:`~terminusgps_notifier.models.Profile`
+    :returns: The profile's subscription status, if any.
+    :rtype: str | None
+
+    """
     if profile.user.is_staff:
         return "active"
     if profile.subscription_id is None:
@@ -107,16 +165,33 @@ def get_subscription_status(profile: Profile) -> str | None:
 
 
 def get_stripe_client() -> stripe.StripeClient:
+    """Returns an authenticated stripe client."""
     return stripe.StripeClient(settings.STRIPE_API_KEY)
 
 
 def get_wialon_session(sid: str) -> WialonSession:
+    """Returns a Wialon API session based on the provided session id."""
     return WialonSession(sid=sid)
 
 
 @require_POST
 @csrf_exempt
 def notify(request: HttpRequest, method: str) -> HttpResponse:
+    """
+    Delivers notifications to destination phone numbers via `method`.
+
+    Returns:
+
+        * 403 - If the user had an invalid subscription.
+        * 403 - If the user was maxed out on messages for the payment period.
+        * 404 - If the provided method was invalid.
+        * 404 - If the user didn't have an associated profile.
+        * 406 - If the provided form data was invalid.
+        * 500 - If something went wrong dispatching notifications.
+        * 204 - If the Wialon unit didn't have any phone numbers assigned.
+        * 200 - If phone numbers were phone and all notifications were queued successfully.
+
+    """
     if method not in settings.NOTIFICATION_DISPATCHERS:
         return HttpResponse("Invalid method".encode("utf-8"), status=404)
     form = forms.NotificationDispatchForm(request.POST)

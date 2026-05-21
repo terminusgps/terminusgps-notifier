@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView, redirect_to_login
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import F
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
@@ -33,7 +34,7 @@ from terminusgps_notifier.decorators import (
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Profile
 from terminusgps_notifier.validators import validate_e164_phone_number
-from terminusgps_notifier.wialon import get_phone_numbers
+from terminusgps_notifier.wialon import get_phone_numbers_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,12 @@ def clean_phones(phones: list[str]) -> list[str]:
     return cleaned
 
 
-def get_phones(form: forms.NotificationDispatchForm) -> list[str]:
-    profile = get_object_or_404(Profile, user__pk=form.cleaned_data["user_id"])
+def get_phones(token: str | None, unit_id: int) -> list[str]:
+    if token is None:
+        return []
     try:
-        with WialonSession(token=profile.token) as session:
-            dirty_phones = get_phone_numbers(form, session)
+        with WialonSession(token=token) as session:
+            dirty_phones = get_phone_numbers_by_id(unit_id, session)
             return clean_phones(dirty_phones)
     except WialonAPIError as error:
         logger.error(error)
@@ -82,12 +84,26 @@ async def send_notifications(method, phones, dispatchers) -> HttpResponse:
                 for phone in phones
             ]
             await asyncio.gather(*tasks)
-            logger.info(f"Dispatched via {type(dispatcher).__name__}")
-            return HttpResponse(status=200)
+            return HttpResponse(
+                f"Dispatched via {type(dispatcher).__name__}".encode("utf-8"),
+                status=200,
+            )
         except Exception as error:
             logger.warning(f"{type(dispatcher).__name__} failed: '{error}'")
-    logger.error(f"All dispatchers failed for method: '{method}'")
-    return HttpResponse(status=500)
+    return HttpResponse(
+        f"All dispatchers failed for method: '{method}'".encode("utf-8"),
+        status=500,
+    )
+
+
+def get_subscription_status(profile: Profile) -> str | None:
+    if profile.user.is_staff:
+        return "active"
+    if profile.subscription_id is None:
+        return
+    stripe_client = get_stripe_client()
+    response = stripe_client.v1.subscriptions.retrieve(profile.subscription_id)
+    return str(response.status)
 
 
 def get_stripe_client() -> stripe.StripeClient:
@@ -101,14 +117,26 @@ def get_wialon_session(sid: str) -> WialonSession:
 @require_POST
 @csrf_exempt
 def notify(request: HttpRequest, method: str) -> HttpResponse:
+    if method not in settings.NOTIFICATION_DISPATCHERS:
+        return HttpResponse("Invalid method".encode("utf-8"), status=404)
     form = forms.NotificationDispatchForm(request.POST)
     if not form.is_valid():
         return HttpResponse(status=406)
-    phones = get_phones(form)
+    profile = get_object_or_404(Profile, user__pk=form.cleaned_data["user_id"])
+    status = get_subscription_status(profile)
+    if status != "active":
+        return HttpResponse("Invalid subscription".encode("utf-8"), status=403)
+    if profile.messages_count >= profile.messages_limit:
+        return HttpResponse("Messages maxed".encode("utf-8"), status=403)
+    phones = get_phones(profile.token, form.cleaned_data["unit_id"])
     if not phones:
-        return HttpResponse(status=200)
+        return HttpResponse("No phones found".encode("utf-8"), status=204)
     dispatchers = get_dispatchers(form, method)
-    return send_notifications(method, phones, dispatchers)
+    response = send_notifications(method, phones, dispatchers)
+    if response.status_code == 200:
+        profile.messages_count = F("messages_count") + len(phones)
+        profile.save(update_fields=["messages_count"])
+    return response
 
 
 class TerminusGPSNotifierLoginView(LoginView):

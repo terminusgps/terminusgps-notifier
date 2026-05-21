@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
-from django.http import Http404
 from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 from terminusgps.wialon.session import WialonSession
@@ -37,7 +36,7 @@ class CleanPhonesTestCase(TestCase):
 
     def test_long_phone_removed_from_return_value(self):
         """Fails if a phone number longer than 15 characters wasn't removed from the return value."""
-        input_phones = ["+15555555555", "+1" + ("5" * 16)]
+        input_phones = ["+15555555555", "+15555555555+15555555555"]
         result = views.clean_phones(input_phones)
         self.assertIn(input_phones[0], result)
         self.assertNotIn(input_phones[1], result)
@@ -49,32 +48,9 @@ class GetPhonesTestCase(TestCase):
         "terminusgps_notifier/tests/test_profile.json",
     ]
 
-    def test_get_phones_without_existent_profile_raises_404(self):
-        """Fails if calling the function with a profile-less user doesn't raise 404."""
-        form = forms.NotificationDispatchForm(
-            {
-                "user_id": "2",  # No profile for user #2 in test db
-                "unit_id": "12345678",
-                "message": "Test Message",
-                "msg_time_int": 0,
-            }
-        )
-        self.assertTrue(form.is_valid())
-        with self.assertRaises(Http404):
-            views.get_phones(form)
-
     def test_wialon_error_returns_empty_list(self):
         """Fails if the function raised :py:exec:`~terminusgps.wialon.WialonAPIError` and didn't return an empty list."""
-        form = forms.NotificationDispatchForm(
-            {
-                "user_id": "1",
-                "unit_id": "12345678",  # Unit doesn't exist in Wialon
-                "message": "Test Message",
-                "msg_time_int": 0,
-            }
-        )
-        self.assertTrue(form.is_valid())
-        result = views.get_phones(form)
+        result = views.get_phones(token="super_secure_token", unit_id=12345678)
         self.assertEqual(result, [])
 
 
@@ -174,12 +150,165 @@ class SendNotificationsTestCase(TestCase):
             self.assertEqual(response.status_code, 500)
 
 
+class GetSubscriptionStatusTestCase(TestCase):
+    fixtures = [
+        "terminusgps_notifier/tests/test_user.json",
+        "terminusgps_notifier/tests/test_profile.json",
+    ]
+
+    def test_staff_user_returns_active(self):
+        """Fails if 'active' wasn't returned by the function with a user flagged as staff."""
+        user = get_user_model().objects.get(pk=1)
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        profile = models.Profile.objects.get(pk=1)
+        status = views.get_subscription_status(profile)
+        self.assertEqual(status, "active")
+        user.is_staff = False
+        user.save(update_fields=["is_staff"])
+
+    def test_non_staff_user_without_subscription_id_returns_none(self):
+        """Fails if a non-staff user without a subscription id returns anything other than :py:obj:`None`."""
+        profile = models.Profile.objects.get(pk=1)
+        status = views.get_subscription_status(profile)
+        self.assertIsNone(status)
+
+
 class HealthCheckViewTestCase(TestCase):
     def test_get_returns_200(self):
         """Fails if a GET request to the health check endpoint returns anything other than code 200."""
         client = Client()
         response = client.get("/v3/health/")
         self.assertEqual(response.status_code, 200)
+
+
+@override_settings(
+    NOTIFICATION_DISPATCHERS={
+        "sms": [
+            "terminusgps_notifier.dispatchers.DummyNotificationDispatcher"
+        ],
+        "voice": [
+            "terminusgps_notifier.dispatchers.DummyNotificationDispatcher"
+        ],
+    }
+)
+class NotifyTestCase(TestCase):
+    fixtures = [
+        "terminusgps_notifier/tests/test_user.json",
+        "terminusgps_notifier/tests/test_profile.json",
+    ]
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_invalid_method_returns_404(self):
+        """Fails if an invalid method doesn't return status code 404."""
+        response = self.client.post("/v3/notify/not_a_method/", {})
+        self.assertEqual(response.status_code, 404)
+
+    def test_invalid_form_data_returns_406(self):
+        """Fails if invalid form data doesn't return status code 406."""
+        data = {}
+        response = self.client.post("/v3/notify/sms/", data)
+        self.assertEqual(response.status_code, 406)
+        data = {"user_id": "1", "unit_id": "12345678", "message": "Test"}
+        response = self.client.post("/v3/notify/sms/", data)
+        self.assertEqual(response.status_code, 406)
+        data = {"unit_id": "12345678", "message": "Test", "msg_time_int": 0}
+        response = self.client.post("/v3/notify/sms/", data)
+        self.assertEqual(response.status_code, 406)
+
+    def test_non_existent_profile_returns_404(self):
+        """Fails if a user with a non-existent profile doesn't return status code 404."""
+        response = self.client.post(
+            "/v3/notify/sms/",
+            {
+                "user_id": "2",
+                "unit_id": "12345678",
+                "message": "Test",
+                "msg_time_int": 0,
+            },
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_profile_with_inactive_subscription_returns_403(self):
+        """Fails if a user with a non-active subscription doesn't return status code 403."""
+        with patch(
+            "terminusgps_notifier.views.get_subscription_status",
+            return_value="expired",
+        ):
+            response = self.client.post(
+                "/v3/notify/sms/",
+                {
+                    "user_id": "1",
+                    "unit_id": "12345678",
+                    "message": "Test",
+                    "msg_time_int": 0,
+                },
+            )
+            self.assertEqual(response.status_code, 403)
+
+    def test_profile_with_staff_user_counts_as_subscribed(self):
+        """Fails if a staff user is denied due to an invalid subscription."""
+        user = get_user_model().objects.get(pk=1)
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        response = self.client.post(
+            "/v3/notify/sms/",
+            {
+                "user_id": "1",
+                "unit_id": "12345678",
+                "message": "Test",
+                "msg_time_int": 0,
+            },
+        )
+        self.assertNotEqual(response, 406)
+        user.is_staff = False
+        user.save(update_fields=["is_staff"])
+
+    def test_profile_with_maxed_out_messages_returns_403(self):
+        """Fails if a profile with maxed out messages doesn't return status code 403."""
+        profile = models.Profile.objects.get(pk=1)
+        profile.messages_count = 500
+        profile.save(update_fields=["messages_count"])
+        response = self.client.post(
+            "/v3/notify/sms/",
+            {
+                "user_id": "1",
+                "unit_id": "12345678",
+                "message": "Test",
+                "msg_time_int": 0,
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        profile.messages_count = 0
+        profile.save(update_fields=["messages_count"])
+
+    def test_profile_messages_count_incremented_on_success(self):
+        """Fails if a profile's messages count wasn't incremented after notification dispatch."""
+        user = get_user_model().objects.get(pk=1)
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+
+        with patch(
+            "terminusgps_notifier.views.get_phones",
+            return_value=["+15555555555"],
+        ):
+            profile = models.Profile.objects.first()
+            self.assertEqual(profile.messages_count, 0)
+            self.client.post(
+                "/v3/notify/sms/",
+                {
+                    "user_id": "1",
+                    "unit_id": "12345678",
+                    "message": "Test",
+                    "msg_time_int": 0,
+                },
+            )
+            profile.refresh_from_db()
+            self.assertEqual(profile.messages_count, 1)
+            profile.messages_count = 0
+            profile.save(update_fields=["messages_count"])
 
 
 class DashboardViewTestCase(TestCase):

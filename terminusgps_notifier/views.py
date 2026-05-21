@@ -6,7 +6,7 @@ import warnings
 import stripe
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView, LogoutView, redirect_to_login
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponse
@@ -163,6 +163,22 @@ class TerminusGPSNotifierLoginView(LoginView):
 class TerminusGPSNotifierLogoutView(LogoutView):
     next_page = reverse_lazy("terminusgps_notifier:home")
     template_name = "terminusgps_notifier/logged_out.html"
+
+
+@require_http_methods(["GET", "POST"])
+@htmx_template("terminusgps_notifier/register.html")
+def register(request: HtmxHttpRequest) -> HttpResponse:
+    if request.method == "POST":
+        form = forms.UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save(commit=True)
+            return redirect_to_login(
+                next=reverse("terminusgps_notifier:dashboard"),
+                login_url=reverse("terminusgps_notifier:login"),
+            )
+    else:
+        form = forms.UserCreationForm({})
+    return TemplateResponse(request, request.template_name, {"form": form})
 
 
 @require_GET

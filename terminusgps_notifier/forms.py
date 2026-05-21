@@ -1,6 +1,7 @@
 import datetime
 
 from django import forms
+from django.contrib.auth.forms import BaseUserCreationForm
 from django.db import models
 from django.forms import widgets
 from django.utils.translation import gettext_lazy as _
@@ -79,6 +80,10 @@ class WialonSensorType(models.TextChoices):
 
     TRAILER = "trailer", _("Trailer assignment")
     TAG = "tag", _("Passenger sensor")
+
+
+class UserCreationForm(BaseUserCreationForm):
+    pass
 
 
 class CreateNotificationStepFourForm(forms.Form):

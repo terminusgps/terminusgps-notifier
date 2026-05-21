@@ -94,6 +94,7 @@
             <h3 class="font-semibold">Wialon Resources</h3>
             <p class="text-sm">Click a resource to view details.</p>
         </div>
+        {% if profile.token %}
         <div class="flex flex-col gap-4 overflow-x-auto max-h-64" id="resource-list" hx-target="this" hx-trigger="load once" hx-swap="innerHTML" hx-get="{% url 'terminusgps_notifier:list resources' %}">
             <div class="px-2 py-4 rounded bg-stone-300 animate-pulse"></div>
             <div class="px-2 py-4 rounded bg-stone-300 animate-pulse"></div>
@@ -101,6 +102,18 @@
             <div class="px-2 py-4 rounded bg-stone-300 animate-pulse"></div>
             <div class="px-2 py-4 rounded bg-stone-300 animate-pulse"></div>
         </div>
+        {% else %}
+        <div class="flex flex-col gap-4 overflow-x-auto max-h-64" id="resource-list">
+            <div class="bg-red-50 text-red-700 border border-current p-4 rounded">
+                <div class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                    </svg>
+                    <p>You need to connect your Wialon account to view resources.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endpartialdef main %}

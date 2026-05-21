@@ -45,8 +45,8 @@ def clean_phones(phones: list[str]) -> list[str]:
         try:
             validate_e164_phone_number(phone)
             cleaned.append(phone)
-        except ValidationError:
-            logger.warning(f"Improperly formatted phone number: {phone}")
+        except ValidationError as error:
+            logger.warning(error.message)
             continue
     return cleaned
 

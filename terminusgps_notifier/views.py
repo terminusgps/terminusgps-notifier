@@ -265,7 +265,24 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
             reverse("terminusgps_notifier:dashboard")
         ),
     }
-    return TemplateResponse(request, request.template_name, context=context)
+    return TemplateResponse(request, request.template_name, context)
+
+
+@require_GET
+@persistent_wialon_session
+@htmx_template("terminusgps_notifier/detail_notifications.html")
+def detail_notifications(
+    request: HtmxHttpRequest, resource_id: str, notification_id: str
+) -> HttpResponse:
+    try:
+        session = get_wialon_session(request.session["wialon_sid"])
+        params = {"itemId": resource_id, "col": [notification_id]}
+        response = session.wialon_api.resource_get_notification_data(**params)
+    except WialonAPIError as error:
+        messages.error(request, error)
+        response = [{}]
+    context = {"object": response[0]}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @require_GET
@@ -281,12 +298,11 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
         params["spec"]["propType"] = "property"
         params["spec"]["sortType"] = "sys_name"
         response = session.wialon_api.core_search_items(**params)
-        resource_list = response["items"]
     except WialonAPIError as error:
         messages.error(request, error)
-        resource_list = None
-    context = {"resource_list": resource_list}
-    return TemplateResponse(request, request.template_name, context=context)
+        response = {"items": []}
+    context = {"object_list": response["items"]}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @require_GET
@@ -306,7 +322,7 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
         messages.error(request, error)
         response = {"items": []}
     context = {"object_list": response["items"]}
-    return TemplateResponse(request, request.template_name, context=context)
+    return TemplateResponse(request, request.template_name, context)
 
 
 @require_GET
@@ -321,9 +337,9 @@ def list_notifications(
         response = session.wialon_api.resource_get_notification_data(**params)
     except WialonAPIError as error:
         messages.error(request, error)
-        response = None
-    context = {"response": response}
-    return TemplateResponse(request, request.template_name, context=context)
+        response = {"items": []}
+    context = {"object_list": response["items"]}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @require_GET
@@ -338,8 +354,8 @@ def detail_resources(
         response = session.wialon_api.core_search_item(**params)
     except WialonAPIError as error:
         messages.error(request, error)
-        response = None
-    context = {"response": response}
+        response = {"item": {}}
+    context = {"object": response["item"]}
     return TemplateResponse(request, request.template_name, context=context)
 
 
@@ -425,7 +441,7 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
         request,
         request.template_name,
         {
-            "resource_list": response["items"],
+            "object_list": response["items"],
             "selected": request.GET.get("resource"),
         },
     )

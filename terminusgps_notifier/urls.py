@@ -26,6 +26,11 @@ urlpatterns = [
         name="detail resources",
     ),
     path(
+        "notifications/<str:resource_id>/<str:notification_id>/details/",
+        views.detail_notifications,
+        name="detail notifications",
+    ),
+    path(
         "subscriptions/create/",
         views.create_subscription,
         name="create subscription",

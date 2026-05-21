@@ -2,7 +2,6 @@ import logging
 from functools import partial
 
 from django.core.cache import cache
-from django.http.response import sync_to_async
 from terminusgps.wialon import flags
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
@@ -40,7 +39,6 @@ def get_phone_numbers_by_id(
     return list(frozenset(driver_phones + cfield_phones))
 
 
-@sync_to_async
 def get_phone_numbers(
     form: NotificationDispatchForm, session: WialonSession, timeout: int = 300
 ) -> list[str]:

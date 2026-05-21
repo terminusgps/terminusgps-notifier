@@ -1,12 +1,177 @@
+import logging
 from unittest.mock import MagicMock, patch
 
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.http import Http404
+from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 from terminusgps.wialon.session import WialonSession
 
-from terminusgps_notifier import models
+from terminusgps_notifier import forms, models, views
+
+logging.disable(logging.CRITICAL)
+
+
+class CleanPhonesTestCase(TestCase):
+    def test_no_leading_plus_phone_removed_from_return_value(self):
+        """Fails if a phone number without a leading plus wasn't removed from the return value."""
+        input_phones = ["+15555555555", "15555555555"]
+        result = views.clean_phones(input_phones)
+        self.assertIn(input_phones[0], result)
+        self.assertNotIn(input_phones[1], result)
+
+    def test_none_type_phone_removed_from_return_value(self):
+        """Fails if a phone provided as :py:obj:`None` wasn't removed from the return value."""
+        input_phones = ["+15555555555", None]
+        result = views.clean_phones(input_phones)
+        self.assertIn(input_phones[0], result)
+        self.assertNotIn(input_phones[1], result)
+
+    def test_non_digit_phone_removed_from_return_value(self):
+        """Fails if a phone number containing non-digit characters wasn't removed from the return value."""
+        input_phones = ["+15555555555", "+1555555555a"]
+        result = views.clean_phones(input_phones)
+        self.assertIn(input_phones[0], result)
+        self.assertNotIn(input_phones[1], result)
+
+    def test_long_phone_removed_from_return_value(self):
+        """Fails if a phone number longer than 15 characters wasn't removed from the return value."""
+        input_phones = ["+15555555555", "+1" + ("5" * 16)]
+        result = views.clean_phones(input_phones)
+        self.assertIn(input_phones[0], result)
+        self.assertNotIn(input_phones[1], result)
+
+
+class GetPhonesTestCase(TestCase):
+    fixtures = [
+        "terminusgps_notifier/tests/test_user.json",
+        "terminusgps_notifier/tests/test_profile.json",
+    ]
+
+    def test_get_phones_without_existent_profile_raises_404(self):
+        """Fails if calling the function with a profile-less user doesn't raise 404."""
+        form = forms.NotificationDispatchForm(
+            {
+                "user_id": "2",  # No profile for user #2 in test db
+                "unit_id": "12345678",
+                "message": "Test Message",
+                "msg_time_int": 0,
+            }
+        )
+        self.assertTrue(form.is_valid())
+        with self.assertRaises(Http404):
+            views.get_phones(form)
+
+    def test_wialon_error_returns_empty_list(self):
+        """Fails if the function raised :py:exec:`~terminusgps.wialon.WialonAPIError` and didn't return an empty list."""
+        form = forms.NotificationDispatchForm(
+            {
+                "user_id": "1",
+                "unit_id": "12345678",  # Unit doesn't exist in Wialon
+                "message": "Test Message",
+                "msg_time_int": 0,
+            }
+        )
+        self.assertTrue(form.is_valid())
+        result = views.get_phones(form)
+        self.assertEqual(result, [])
+
+
+@override_settings(
+    NOTIFICATION_DISPATCHERS={
+        "sms": [
+            "terminusgps_notifier.dispatchers.DummyNotificationDispatcher"
+        ],
+        "voice": [
+            "terminusgps_notifier.dispatchers.DummyNotificationDispatcher"
+        ],
+    }
+)
+class GetDispatchersTestCase(TestCase):
+    def test_invalid_method_raises_valueerror(self):
+        """Fails if :py:exec:`ValueError` wasn't raised when provided with an invalid method."""
+        form = forms.NotificationDispatchForm(
+            {
+                "user_id": "1",
+                "unit_id": "12345678",
+                "message": "Test Message",
+                "msg_time_int": 0,
+            }
+        )
+        self.assertTrue(form.is_valid())
+        with self.assertRaises(ValueError):
+            views.get_dispatchers(form, method="not_a_method")
+
+    def test_expected_dispatchers_returned(self):
+        """Fails if the dummy dispatcher wasn't in the return value."""
+        form = forms.NotificationDispatchForm(
+            {
+                "user_id": "1",
+                "unit_id": "12345678",
+                "message": "Test Message",
+                "msg_time_int": 0,
+            }
+        )
+        self.assertTrue(form.is_valid())
+        dispatchers = views.get_dispatchers(form, method="sms")
+        self.assertEqual(
+            type(dispatchers[0]).__name__, "DummyNotificationDispatcher"
+        )
+        dispatchers = views.get_dispatchers(form, method="voice")
+        self.assertEqual(
+            type(dispatchers[0]).__name__, "DummyNotificationDispatcher"
+        )
+
+
+@override_settings(
+    NOTIFICATION_DISPATCHERS={
+        "sms": [
+            "terminusgps_notifier.dispatchers.DummyNotificationDispatcher"
+        ],
+        "voice": [
+            "terminusgps_notifier.dispatchers.DummyNotificationDispatcher"
+        ],
+    }
+)
+class SendNotificationsTestCase(TestCase):
+    def test_any_dispatcher_succeeding_returns_200(self):
+        """Fails if a notification dispatcher succeeds and status code 200 wasn't returned."""
+        form = forms.NotificationDispatchForm(
+            {
+                "user_id": "1",
+                "unit_id": "12345678",
+                "message": "Test Message",
+                "msg_time_int": 0,
+            }
+        )
+        self.assertTrue(form.is_valid())
+        method = "sms"
+        phones = ["+15555555555"]
+        dispatchers = views.get_dispatchers(form, method)
+        response = views.send_notifications(method, phones, dispatchers)
+        self.assertEqual(response.status_code, 200)
+
+    def test_all_dispatchers_failing_returns_500(self):
+        """Fails if all notification dispatchers fail and status code 500 wasn't returned."""
+        with patch(
+            "terminusgps_notifier.dispatchers.DummyNotificationDispatcher.send_sms",
+            side_effect=ValueError,
+        ):
+            form = forms.NotificationDispatchForm(
+                {
+                    "user_id": "1",
+                    "unit_id": "12345678",
+                    "message": "Test Message",
+                    "msg_time_int": 0,
+                }
+            )
+            self.assertTrue(form.is_valid())
+            method = "sms"
+            phones = ["+15555555555"]
+            dispatchers = views.get_dispatchers(form, method)
+            response = views.send_notifications(method, phones, dispatchers)
+            self.assertEqual(response.status_code, 500)
 
 
 class HealthCheckViewTestCase(TestCase):
@@ -208,7 +373,7 @@ class CreateNotificationStepFourViewTestCase(TestCase):
         self.assertIn("step_four_data", self.client.session.keys())
 
 
-class CreateNotificationStepFourViewTestCase(TestCase):
+class CreateNotificationReviewViewTestCase(TestCase):
     fixtures = [
         "terminusgps_notifier/tests/test_user.json",
         "terminusgps_notifier/tests/test_profile.json",

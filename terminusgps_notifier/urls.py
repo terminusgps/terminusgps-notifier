@@ -72,9 +72,5 @@ urlpatterns = [
     ),
     path("wialon/login/", views.wialon_login, name="wialon login"),
     path("v3/health/", views.health_check, name="health check"),
-    path(
-        "v3/notify/<str:method>/",
-        views.NotificationDispatchView.as_view(),
-        name="notify",
-    ),
+    path("v3/notify/<str:method>/", views.notify, name="notify"),
 ]

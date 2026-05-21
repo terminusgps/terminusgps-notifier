@@ -1,10 +1,8 @@
 import base64
-import decimal
 import os
 from pathlib import Path
 
 from authorizenet.constants import constants
-from terminusgps.wialon.flags import TokenFlag
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -42,13 +40,7 @@ STATIC_URL = "static/"
 TIME_ZONE = "America/Chicago"
 USE_I18N = True
 USE_TZ = True
-SUBSCRIPTION_PRICE = decimal.Decimal("60.00")
-WIALON_TOKEN_ACCESS_TYPE = (
-    TokenFlag.VIEW_ACCESS
-    | TokenFlag.MANAGE_NONSENSITIVE
-    | TokenFlag.MANAGE_SENSITIVE
-)
-WIALON_RESOURCE_NAME = "Terminus GPS Notifications"
+SUBSCRIPTION_PRICE = "price_1TVx8iGphupvKam1plxSWh2D"
 WSGI_APPLICATION = "src.wsgi.application"
 NOTIFICATION_DISPATCHERS = {
     "sms": ["terminusgps_notifier.dispatchers.AWSNotificationDispatcher"],

@@ -453,7 +453,7 @@ def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
     checkout_session = stripe.v1.checkout.sessions.create(
         params={
             "line_items": [
-                {"price": "price_1TVx8iGphupvKam1plxSWh2D", "quantity": 1}
+                {"price": settings.SUBSCRIPTION_PRICE, "quantity": 1}
             ],
             "mode": "subscription",
             "success_url": request.build_absolute_uri(

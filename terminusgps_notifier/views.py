@@ -392,6 +392,23 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
 
 @require_GET
 @persistent_wialon_session
+@htmx_template("terminusgps_notifier/select_geofences.html")
+def select_geofences(
+    request: HtmxHttpRequest, resource_id: str
+) -> HttpResponse:
+    try:
+        session = WialonSession(sid=request.session["wialon_sid"])
+        params = {"itemId": resource_id}
+        response = session.wialon_api.resource_get_zone_data(**params)
+    except WialonAPIError as error:
+        messages.error(request, error)
+        response = []
+    context = {"object_list": response}
+    return TemplateResponse(request, request.template_name, context)
+
+
+@require_GET
+@persistent_wialon_session
 @htmx_template("terminusgps_notifier/list_notifications.html")
 def list_notifications(
     request: HtmxHttpRequest, resource_id: str
@@ -421,7 +438,7 @@ def detail_resources(
         messages.error(request, error)
         response = {"item": {}}
     context = {"object": response["item"]}
-    return TemplateResponse(request, request.template_name, context=context)
+    return TemplateResponse(request, request.template_name, context)
 
 
 @require_GET
@@ -443,7 +460,7 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
         messages.warning(request, error)
         response = {"items": []}
     context = {"object_list": response["items"]}
-    return TemplateResponse(request, request.template_name, context=context)
+    return TemplateResponse(request, request.template_name, context)
 
 
 @require_GET
@@ -630,4 +647,4 @@ def trigger_parameters_form(request: HtmxHttpRequest) -> HttpResponse:
         raise Http404()
     form_cls = forms.TRIGGER_FORMS_MAP[str(t)]
     context = {"form": form_cls()}
-    return TemplateResponse(request, request.template_name, context=context)
+    return TemplateResponse(request, request.template_name, context)

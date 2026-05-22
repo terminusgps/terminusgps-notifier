@@ -1,5 +1,3 @@
-import datetime
-
 from django import forms
 from django.contrib.auth.forms import BaseUserCreationForm
 from django.db import models
@@ -86,6 +84,35 @@ class UserCreationForm(BaseUserCreationForm):
     pass
 
 
+class NotificationDispatchForm(forms.Form):
+    """
+    A form for dispatching Wialon unit notifications.
+
+    Attributes:
+        Required:
+            - unit_id: An 8-digit Wialon unit id for phone number lookup.
+            - user_id: A user id for Wialon API token retrieval.
+            - message: A 1024-character max message to dispatch.
+            - msg_time_int: Notification trigger time as a UNIX-timestamp.
+
+        Optional:
+            - dry_run: Whether to dispatch the notification as a dry run.
+            - unit_name: Name of the unit that triggered the notification.
+            - location: Location of the notification trigger.
+            - date_format: Date format string.
+
+    """
+
+    user_id = forms.IntegerField()
+    unit_id = forms.IntegerField()
+    message = forms.CharField(max_length=1024)
+    msg_time_int = forms.IntegerField()
+    dry_run = forms.BooleanField(initial=False, required=False)
+    unit_name = forms.CharField(required=False)
+    location = forms.CharField(required=False)
+    date_format = forms.CharField(required=False, initial="%Y-%m-%d %H:%M:%S")
+
+
 class CreateNotificationStepFourForm(forms.Form):
     ta = forms.DateTimeField(
         label=_("Activation Time"),
@@ -162,179 +189,47 @@ class CreateNotificationStepFourForm(forms.Form):
         return 0
 
 
-class NotificationScheduleForm(forms.Form):
-    f1 = forms.DateTimeField(required=False)
-    f2 = forms.DateTimeField(required=False)
-    t1 = forms.DateTimeField(required=False)
-    t2 = forms.DateTimeField(required=False)
-    w = forms.TypedMultipleChoiceField(
-        choices=[
-            (2**0, _("Monday")),
-            (2**1, _("Tuesday")),
-            (2**2, _("Wednesday")),
-            (2**3, _("Thursday")),
-            (2**4, _("Friday")),
-            (2**5, _("Saturday")),
-            (2**6, _("Sunday")),
-        ],
-        coerce=int,
-        required=False,
-    )
-    y = forms.TypedMultipleChoiceField(
-        choices=[
-            (2**0, _("January")),
-            (2**1, _("Febuary")),
-            (2**2, _("March")),
-            (2**3, _("April")),
-            (2**4, _("May")),
-            (2**5, _("June")),
-            (2**6, _("July")),
-            (2**7, _("August")),
-            (2**8, _("September")),
-            (2**9, _("October")),
-            (2**10, _("November")),
-            (2**11, _("December")),
-        ],
-        coerce=int,
-        required=False,
-    )
-    m = forms.TypedMultipleChoiceField(
-        choices=[
-            (2**0, _("1")),
-            (2**1, _("2")),
-            (2**2, _("3")),
-            (2**3, _("4")),
-            (2**4, _("5")),
-            (2**5, _("6")),
-            (2**6, _("7")),
-            (2**7, _("8")),
-            (2**8, _("9")),
-            (2**9, _("10")),
-            (2**10, _("11")),
-            (2**11, _("12")),
-            (2**12, _("13")),
-            (2**13, _("14")),
-            (2**14, _("15")),
-            (2**15, _("16")),
-            (2**16, _("17")),
-            (2**17, _("18")),
-            (2**18, _("19")),
-            (2**19, _("20")),
-            (2**20, _("21")),
-            (2**21, _("22")),
-            (2**22, _("23")),
-            (2**23, _("24")),
-            (2**24, _("25")),
-            (2**25, _("26")),
-            (2**26, _("27")),
-            (2**27, _("28")),
-            (2**28, _("29")),
-            (2**29, _("30")),
-            (2**30, _("31")),
-        ],
-        coerce=int,
-        required=False,
-    )
-
-    def clean_f1(self):
-        if f1 := self.cleaned_data["f1"]:
-            return int(datetime.datetime.timestamp(f1))
-        return 0
-
-    def clean_f2(self):
-        if f2 := self.cleaned_data["f2"]:
-            return int(datetime.datetime.timestamp(f2))
-        return 0
-
-    def clean_t1(self):
-        if t1 := self.cleaned_data["t1"]:
-            return int(datetime.datetime.timestamp(t1))
-        return 0
-
-    def clean_t2(self):
-        if t2 := self.cleaned_data["t2"]:
-            return int(datetime.datetime.timestamp(t2))
-        return 0
-
-    def clean_m(self):
-        if m := self.cleaned_data["m"]:
-            return sum(m)
-        return 0
-
-    def clean_y(self):
-        if y := self.cleaned_data["y"]:
-            return sum(y)
-        return 0
-
-    def clean_w(self):
-        if w := self.cleaned_data["w"]:
-            return sum(w)
-        return 0
-
-
-class NotificationTriggerForm(forms.Form):
-    t = forms.ChoiceField(choices=WialonNotificationTrigger.choices)
-    p = forms.JSONField()
-
-
-class CreateNotificationStepOneForm(forms.Form):
-    resource = forms.ChoiceField(choices=[])
-    units = forms.MultipleChoiceField(choices=[])
-    groups = forms.MultipleChoiceField(choices=[])
-
-    def __init__(self, resources, units, groups, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.fields["resource"].choices = resources
-        self.fields["units"].choices = units
-        self.fields["groups"].choices = groups
-
-
-class NotificationDispatchForm(forms.Form):
-    """
-    A form for dispatching Wialon unit notifications.
-
-    Attributes:
-        Required:
-            - unit_id: An 8-digit Wialon unit id for phone number lookup.
-            - user_id: A user id for Wialon API token retrieval.
-            - message: A 1024-character max message to dispatch.
-            - msg_time_int: Notification trigger time as a UNIX-timestamp.
-
-        Optional:
-            - dry_run: Whether to dispatch the notification as a dry run.
-            - unit_name: Name of the unit that triggered the notification.
-            - location: Location of the notification trigger.
-            - date_format: Date format string.
-
-    """
-
-    user_id = forms.IntegerField()
-    unit_id = forms.IntegerField()
-    message = forms.CharField(max_length=1024)
-    msg_time_int = forms.IntegerField()
-    dry_run = forms.BooleanField(initial=False, required=False)
-    unit_name = forms.CharField(required=False)
-    location = forms.CharField(required=False)
-    date_format = forms.CharField(required=False, initial="%Y-%m-%d %H:%M:%S")
-
-
 class GeofenceTriggerForm(forms.Form):
-    sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
-    sensor_name_mask = forms.CharField(min_length=1)
-    lower_bound = forms.FloatField()
-    upper_bound = forms.FloatField()
+    sensor_type = forms.ChoiceField(
+        choices=WialonSensorType.choices,
+        help_text=_("Select a sensor type."),
+        label=_("Sensor type"),
+    )
+    sensor_name_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based sensor name mask."),
+        label=_("Sensor name mask"),
+        max_length=50,
+        min_length=1,
+        widget=widgets.TextInput(attrs={"placeholder": "*ign*"}),
+    )
+    lower_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's lower bound."),
+        label=_("Lower boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "0.0"}),
+    )
+    upper_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's upper bound."),
+        label=_("Upper boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "1.0"}),
+    )
     prev_msg_diff = forms.TypedChoiceField(
         choices=[
             (0, _("Form boundaries for current value")),
             (1, _("Form boundaries for previous value")),
         ],
         coerce=int,
-    )
-    merge = (
-        forms.TypedChoiceField(
-            choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
-            coerce=int,
+        help_text=_(
+            "Select whether to form boundaries based on the current sensor value or previous sensor value."
         ),
+        label=_("Boundary formation"),
+    )
+    merge = forms.TypedChoiceField(
+        choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
+        coerce=int,
+        help_text=_(
+            "Select whether to calculate sensor values separately or sum up their values."
+        ),
+        label=_("Merge sensor values"),
     )
     reversed = forms.TypedChoiceField(
         choices=[
@@ -342,44 +237,99 @@ class GeofenceTriggerForm(forms.Form):
             (1, _("Trigger outside range")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to trigger when the sensor value is within or outside of the specified boundaries."
+        ),
+        label=_("Reversed boundaries"),
     )
-    geozone_ids = forms.CharField()
+    geozone_ids = forms.CharField(
+        label=_("Geofences"),
+        help_text=_("Select geofences for notification trigger."),
+    )
     type = forms.TypedChoiceField(
         choices=[
             (0, _("Trigger on geofence entry")),
             (1, _("Trigger on geofence exit")),
         ],
         coerce=int,
+        help_text=_("Select whether to trigger on geofence entry or exit."),
+        label=_("Geofence trigger behavior"),
     )
-    min_speed = forms.IntegerField(min_value=0, max_value=255)
-    max_speed = forms.IntegerField(min_value=0, max_value=255)
+    min_speed = forms.IntegerField(
+        help_text=_(
+            "Provide the minimum speed required to trigger the notification in km/h."
+        ),
+        label=_("Minimum speed"),
+        max_value=255,
+        min_value=0,
+    )
+    max_speed = forms.IntegerField(
+        min_value=0,
+        max_value=255,
+        label=_("Maximum speed"),
+        help_text=_(
+            "Provide the maximum speed required to trigger the notification in km/h."
+        ),
+    )
     include_lbs = forms.TypedChoiceField(
         choices=[
             (0, _("Do not process LBS messages")),
             (1, _("Process LBS messages")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to include location-based service messages."
+        ),
+        label=_("Include LBS messages"),
     )
-    lo = forms.ChoiceField(choices=[("AND", _("AND")), ("OR", _("OR"))])
+    lo = forms.ChoiceField(
+        choices=[("", _("Ignore")), ("AND", _("AND")), ("OR", _("OR"))],
+        label=_("Logical operator"),
+        required=False,
+    )
 
 
 class AddressTriggerForm(forms.Form):
-    sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
-    sensor_name_mask = forms.CharField()
-    lower_bound = forms.FloatField(step_size=0.1)
-    upper_bound = forms.FloatField(step_size=0.1)
+    sensor_type = forms.ChoiceField(
+        choices=WialonSensorType.choices,
+        help_text=_("Select a sensor type."),
+        label=_("Sensor type"),
+    )
+    sensor_name_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based sensor name mask."),
+        label=_("Sensor name mask"),
+        max_length=50,
+        min_length=1,
+        widget=widgets.TextInput(attrs={"placeholder": "*ign*"}),
+    )
+    lower_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's lower bound."),
+        label=_("Lower boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "0.0"}),
+    )
+    upper_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's upper bound."),
+        label=_("Upper boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "1.0"}),
+    )
     prev_msg_diff = forms.TypedChoiceField(
         choices=[
             (0, _("Form boundaries for current value")),
             (1, _("Form boundaries for previous value")),
         ],
         coerce=int,
-    )
-    merge = (
-        forms.TypedChoiceField(
-            choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
-            coerce=int,
+        help_text=_(
+            "Select whether to form boundaries based on the current sensor value or previous sensor value."
         ),
+        label=_("Boundary formation"),
+    )
+    merge = forms.TypedChoiceField(
+        choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
+        coerce=int,
+        help_text=_(
+            "Select whether to calculate sensor values separately or sum up their values."
+        ),
+        label=_("Merge sensor values"),
     )
     reversed = forms.TypedChoiceField(
         choices=[
@@ -387,47 +337,121 @@ class AddressTriggerForm(forms.Form):
             (1, _("Trigger outside range")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to trigger when the sensor value is within or outside of the specified boundaries."
+        ),
+        label=_("Reversed boundaries"),
     )
-    radius = forms.IntegerField(min_value=1)
+    radius = forms.IntegerField(
+        help_text=_("Provide a radius in feet. 1ft minimum."),
+        label=_("Radius"),
+        min_value=1,
+        widget=widgets.NumberInput(attrs={"placeholder": "1"}),
+    )
     type = forms.TypedChoiceField(
         choices=[
-            (0, _("Control within radius")),
-            (1, _("Control outside radius")),
+            (0, _("Trigger when within radius")),
+            (1, _("Trigger when outside radius")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to trigger the notification when the triggering unit is within or outside of the address radius."
+        ),
     )
-    min_speed = forms.IntegerField(max_value=255)
-    max_speed = forms.IntegerField(max_value=255)
-    country = forms.CharField(required=False)
-    region = forms.CharField(required=False)
-    city = forms.CharField(required=False)
-    street = forms.CharField(required=False)
-    house = forms.CharField(required=False)
+    min_speed = forms.IntegerField(
+        help_text=_(
+            "Provide the minimum speed required to trigger the notification in km/h."
+        ),
+        label=_("Minimum speed"),
+        max_value=255,
+        min_value=0,
+    )
+    max_speed = forms.IntegerField(
+        min_value=0,
+        max_value=255,
+        label=_("Maximum speed"),
+        help_text=_(
+            "Provide the maximum speed required to trigger the notification in km/h."
+        ),
+    )
+    country = forms.CharField(
+        help_text=_("Optional. Provide a country."),
+        required=False,
+        widget=widgets.TextInput(attrs={"placeholder": "USA"}),
+    )
+    region = forms.CharField(
+        help_text=_("Provide a region/state."),
+        required=False,
+        widget=widgets.TextInput(attrs={"placeholder": "Texas"}),
+    )
+    city = forms.CharField(
+        help_text=_("Provide a city."),
+        required=False,
+        widget=widgets.TextInput(attrs={"placeholder": "Cypress"}),
+    )
+    street = forms.CharField(
+        help_text=_("Provide a street name."),
+        required=False,
+        widget=widgets.TextInput(attrs={"placeholder": "South Dr."}),
+    )
+    house = forms.CharField(
+        help_text=_("Provide a house number."),
+        required=False,
+        widget=widgets.TextInput(attrs={"placeholder": "17610"}),
+    )
     include_lbs = forms.TypedChoiceField(
         choices=[
             (0, _("Do not process LBS messages")),
             (1, _("Process LBS messages")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to include location-based service messages."
+        ),
+        label=_("Include LBS messages"),
     )
 
 
 class SpeedTriggerForm(forms.Form):
-    lower_bound = forms.FloatField(step_size=0.1)
-    max_speed = forms.IntegerField(max_value=255)
-    merge = (
-        forms.TypedChoiceField(
-            choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
-            coerce=int,
+    lower_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's lower bound."),
+        label=_("Lower boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "0.0"}),
+    )
+    max_speed = forms.IntegerField(
+        min_value=0,
+        max_value=255,
+        label=_("Maximum speed"),
+        help_text=_(
+            "Provide the maximum speed required to trigger the notification in km/h."
         ),
     )
-    min_speed = forms.IntegerField(max_value=255)
+    merge = forms.TypedChoiceField(
+        choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
+        coerce=int,
+        help_text=_(
+            "Select whether to calculate sensor values separately or sum up their values."
+        ),
+        label=_("Merge sensor values"),
+    )
+    min_speed = forms.IntegerField(
+        help_text=_(
+            "Provide the minimum speed required to trigger the notification in km/h."
+        ),
+        label=_("Minimum speed"),
+        max_value=255,
+        min_value=0,
+    )
     prev_msg_diff = forms.TypedChoiceField(
         choices=[
             (0, _("Form boundaries for current value")),
             (1, _("Form boundaries for previous value")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to form boundaries based on the current sensor value or previous sensor value."
+        ),
+        label=_("Boundary formation"),
     )
     reversed = forms.TypedChoiceField(
         choices=[
@@ -435,17 +459,39 @@ class SpeedTriggerForm(forms.Form):
             (1, _("Trigger outside range")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to trigger when the sensor value is within or outside of the specified boundaries."
+        ),
+        label=_("Reversed boundaries"),
     )
-    sensor_name_mask = forms.CharField()
-    sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
-    upper_bound = forms.FloatField(step_size=0.1)
+    sensor_name_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based sensor name mask."),
+        label=_("Sensor name mask"),
+        max_length=50,
+        min_length=1,
+        widget=widgets.TextInput(attrs={"placeholder": "*ign*"}),
+    )
+    sensor_type = forms.ChoiceField(
+        choices=WialonSensorType.choices,
+        help_text=_("Select a sensor type."),
+        label=_("Sensor type"),
+    )
+    upper_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's upper bound."),
+        label=_("Upper boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "1.0"}),
+    )
     driver = forms.TypedChoiceField(
+        label=_("Driver assignment"),
         choices=[
             (0, _("Ignore driver assignment")),
-            (1, _("Trigger when no driver assigned")),
+            (1, _("Trigger only when driver unassigned")),
             (2, _("Trigger only when driver assigned")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to trigger only when a driver is assigned or not."
+        ),
     )
 
 
@@ -454,13 +500,20 @@ class AlarmTriggerForm(forms.Form):
 
 
 class DigitalInputTriggerForm(forms.Form):
-    input_index = forms.IntegerField(min_value=1, max_value=32)
+    input_index = forms.IntegerField(
+        min_value=1,
+        max_value=32,
+        help_text=_("Select a digital input index between 1 and 32."),
+    )
     type = forms.TypedChoiceField(
         choices=[
             (0, _("Check for activation")),
             (1, _("Check for deactivation")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to trigger notification on activation or deactivation."
+        ),
     )
 
 
@@ -473,21 +526,52 @@ class ParameterInAMessageTriggerForm(forms.Form):
             (3, _("Parameter lack")),
         ],
         coerce=int,
+        help_text=_("Select a parameter control type."),
     )
-    lower_bound = forms.FloatField(step_size=0.1)
-    param = forms.CharField()
-    text_mask = forms.CharField()
+    lower_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's lower bound."),
+        label=_("Lower boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "0.0"}),
+    )
+    param = forms.CharField(
+        label=_("Parameter name"), help_text=_("Provide the parameter name.")
+    )
+    text_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based text mask."),
+        label=_("Text mask"),
+        widget=widgets.TextInput(attrs={"placeholder": "*"}),
+    )
     type = forms.TypedChoiceField(
-        choices=[(0, _("Within range")), (1, _("Outside range"))], coerce=int
+        choices=[
+            (0, _("Trigger when within range")),
+            (1, _("Trigger when outside range")),
+        ],
+        coerce=int,
+        label=_("Trigger range"),
+        help_text=_(
+            "Select whether to trigger the notification when the sensor value is within range or outside of range."
+        ),
     )
-    upper_bound = forms.FloatField(step_size=0.1)
+    upper_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's upper bound."),
+        label=_("Upper boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "1.0"}),
+    )
 
 
 class SensorValueTriggerForm(forms.Form):
-    lower_bound = forms.FloatField(step_size=0.1)
+    lower_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's lower bound."),
+        label=_("Lower boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "0.0"}),
+    )
     merge = forms.TypedChoiceField(
         choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
         coerce=int,
+        help_text=_(
+            "Select whether to calculate sensor values separately or sum up their values."
+        ),
+        label=_("Merge sensor values"),
     )
     prev_msg_diff = forms.TypedChoiceField(
         choices=[
@@ -495,20 +579,51 @@ class SensorValueTriggerForm(forms.Form):
             (1, _("Form boundaries for previous value")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to form boundaries based on the current sensor value or previous sensor value."
+        ),
+        label=_("Boundary formation"),
     )
-    sensor_name_mask = forms.CharField()
-    sensor_type = forms.ChoiceField(choices=WialonSensorType.choices)
+    sensor_name_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based sensor name mask."),
+        label=_("Sensor name mask"),
+        max_length=50,
+        min_length=1,
+        widget=widgets.TextInput(attrs={"placeholder": "*ign*"}),
+    )
+    sensor_type = forms.ChoiceField(
+        choices=WialonSensorType.choices,
+        help_text=_("Select a sensor type."),
+        label=_("Sensor type"),
+    )
     type = forms.TypedChoiceField(
-        choices=[(0, _("Within range")), (1, _("Outside range"))], coerce=int
+        choices=[
+            (0, _("Trigger when within range")),
+            (1, _("Trigger when outside range")),
+        ],
+        coerce=int,
+        label=_("Trigger range"),
+        help_text=_(
+            "Select whether to trigger the notification when the sensor value is within range or outside of range."
+        ),
     )
-    upper_bound = forms.FloatField(step_size=0.1)
+    upper_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's upper bound."),
+        label=_("Upper boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "1.0"}),
+    )
 
 
 class ConnectionLossTriggerForm(forms.Form):
-    time = forms.IntegerField()
+    time = forms.IntegerField(
+        help_text=_("Provide a time interval in seconds."),
+        label=_("Time interval"),
+    )
     type = forms.TypedChoiceField(
         choices=[(0, _("Coordinates Loss")), (1, _("Connection Loss"))],
         coerce=int,
+        help_text=_("Select a control type."),
+        label=_("Control type"),
     )
     include_lbs = forms.TypedChoiceField(
         choices=[
@@ -516,6 +631,10 @@ class ConnectionLossTriggerForm(forms.Form):
             (1, _("Process LBS messages")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to include location-based service messages."
+        ),
+        label=_("Include LBS messages"),
     )
     check_restore = forms.TypedChoiceField(
         choices=[
@@ -524,6 +643,10 @@ class ConnectionLossTriggerForm(forms.Form):
             (2, _("Connection Restored")),
         ],
         coerce=int,
+        help_text=_(
+            "Select a connection state to trigger the notification on."
+        ),
+        label=_("Connection state"),
     )
     geozones_type = forms.TypedChoiceField(
         choices=[(0, _("Out of Geofence")), (1, _("Within Geofence"))],
@@ -533,21 +656,92 @@ class ConnectionLossTriggerForm(forms.Form):
 
 
 class SMSTriggerForm(forms.Form):
-    mask = forms.CharField()
+    mask = forms.CharField(help_text=_("Provide a wildcard-based mask."))
 
 
 class InterpositionTriggerForm(forms.Form):
-    sensor_name_mask = forms.CharField()
-    sensor_type = forms.CharField()
-    lower_bound = forms.FloatField()
-    upper_bound = forms.FloatField()
-    merge = forms.TypedChoiceField()
-    max_speed = forms.IntegerField()
-    min_speed = forms.IntegerField()
-    reversed = forms.TypedChoiceField()
-    prev_msg_diff = forms.TypedChoiceField()
-    radius = forms.IntegerField()
-    type = forms.TypedChoiceField()
+    sensor_name_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based sensor name mask."),
+        label=_("Sensor name mask"),
+        max_length=50,
+        min_length=1,
+        widget=widgets.TextInput(attrs={"placeholder": "*ign*"}),
+    )
+    sensor_type = forms.ChoiceField(
+        choices=WialonSensorType.choices,
+        help_text=_("Select a sensor type."),
+        label=_("Sensor type"),
+    )
+    lower_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's lower bound."),
+        label=_("Lower boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "0.0"}),
+    )
+    upper_bound = forms.FloatField(
+        help_text=_("Provide the sensor value's upper bound."),
+        label=_("Upper boundary"),
+        widget=widgets.NumberInput(attrs={"placeholder": "1.0"}),
+    )
+    merge = forms.TypedChoiceField(
+        choices=[(0, _("Calculate separately")), (1, _("Sum up values"))],
+        coerce=int,
+        help_text=_(
+            "Select whether to calculate sensor values separately or sum up their values."
+        ),
+        label=_("Merge sensor values"),
+    )
+    max_speed = forms.IntegerField(
+        min_value=0,
+        max_value=255,
+        label=_("Maximum speed"),
+        help_text=_(
+            "Provide the maximum speed required to trigger the notification in km/h."
+        ),
+    )
+    min_speed = forms.IntegerField(
+        help_text=_(
+            "Provide the minimum speed required to trigger the notification in km/h."
+        ),
+        label=_("Minimum speed"),
+        max_value=255,
+        min_value=0,
+    )
+    reversed = forms.TypedChoiceField(
+        choices=[
+            (0, _("Trigger within range")),
+            (1, _("Trigger outside range")),
+        ],
+        coerce=int,
+        help_text=_(
+            "Select whether to trigger when the sensor value is within or outside of the specified boundaries."
+        ),
+        label=_("Reversed boundaries"),
+    )
+    prev_msg_diff = forms.TypedChoiceField(
+        choices=[
+            (0, _("Form boundaries for current value")),
+            (1, _("Form boundaries for previous value")),
+        ],
+        coerce=int,
+        help_text=_(
+            "Select whether to form boundaries based on the current sensor value or previous sensor value."
+        ),
+        label=_("Boundary formation"),
+    )
+    radius = forms.IntegerField(
+        help_text=_("Provide a radius in feet. 1ft minimum."),
+        label=_("Radius"),
+        min_value=1,
+        widget=widgets.NumberInput(attrs={"placeholder": "1"}),
+    )
+    type = forms.TypedChoiceField(
+        choices=[(0, _("On approach")), (1, _("On withdrawl"))],
+        coerce=int,
+        label=_("Control type"),
+        help_text=_(
+            "Select whether to trigger notification on approach or withdrawl."
+        ),
+    )
     unit_guids = forms.CharField()
     include_lbs = forms.TypedChoiceField(
         choices=[
@@ -555,73 +749,245 @@ class InterpositionTriggerForm(forms.Form):
             (1, _("Process LBS messages")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to include location-based service messages."
+        ),
+        label=_("Include LBS messages"),
     )
-    lo = forms.ChoiceField()
+    lo = forms.ChoiceField(
+        choices=[("", _("Ignore")), ("AND", _("AND")), ("OR", _("OR"))],
+        label=_("Logical operator"),
+        required=False,
+    )
 
 
 class ExcessOfMessagesTriggerForm(forms.Form):
-    flags = forms.TypedChoiceField()
-    msgs_limit = forms.IntegerField()
-    time_offset = forms.IntegerField(max_value=86400)
+    flags = forms.TypedChoiceField(
+        choices=[(1, _("Data messages")), (2, _("SMS messages"))],
+        coerce=int,
+        help_text=_("Select a message type."),
+        label=_("Message type"),
+    )
+    msgs_limit = forms.IntegerField(
+        label=_("Message limit"), help_text=_("Provide a message limit.")
+    )
+    time_offset = forms.IntegerField(
+        help_text=_(
+            "Provide a time offset in seconds. Maximum is 86400 (1 day)."
+        ),
+        label=_("Time offset"),
+        max_value=86400,
+    )
 
 
 class RouteProgressTriggerForm(forms.Form):
-    mask = forms.CharField()
-    round_mask = forms.CharField()
-    schedule_mask = forms.CharField()
-    types = forms.CharField()
+    mask = forms.CharField(
+        help_text=_("Provide a wildcard-based route name mask."),
+        label=_("Route name mask"),
+        widget=widgets.TextInput(attrs={"placeholder": "*"}),
+    )
+    round_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based ride name mask."),
+        label=_("Ride name name"),
+        widget=widgets.TextInput(attrs={"placeholder": "*"}),
+    )
+    schedule_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based schedule name mask."),
+        label=_("Schedule name name"),
+        widget=widgets.TextInput(attrs={"placeholder": "*"}),
+    )
+    types = forms.TypedMultipleChoiceField(
+        choices=[
+            (1, _("Ride started")),
+            (2, _("Ride finished")),
+            (4, _("Ride aborted")),
+            (8, _("Arrival at checkpoint")),
+            (16, _("Checkpoint skipped")),
+            (32, _("Departure from checkout")),
+            (64, _("Delay")),
+            (128, _("Outrunning")),
+            (256, _("Return to schedule")),
+        ],
+        coerce=int,
+        label=_("Route control types"),
+        help_text=_("Ctrl+click to select multiple. Cmd+click on Mac."),
+    )
 
 
 class DriverTriggerForm(forms.Form):
-    driver_code_mask = forms.CharField()
+    driver_code_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based driver code mask."),
+        label=_("Driver code mask"),
+        widget=widgets.TextInput(attrs={"placeholder": "*"}),
+    )
     flags = forms.TypedChoiceField(
         choices=[
             (0, _("Trigger on driver assignment")),
             (1, _("Trigger on driver separation")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to trigger notification on driver assignment or separation."
+        ),
+        label=_("Control type"),
     )
 
 
 class TrailerTriggerForm(forms.Form):
-    driver_code_mask = forms.CharField()
+    driver_code_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based trailer code mask."),
+        label=_("Trailer code mask"),
+        widget=widgets.TextInput(attrs={"placeholder": "*"}),
+    )
     flags = forms.TypedChoiceField(
         choices=[
             (0, _("Trigger on trailer assignment")),
             (1, _("Trigger on trailer separation")),
         ],
         coerce=int,
+        help_text=_(
+            "Select whether to trigger notification on trailer assignment or separation."
+        ),
+        label=_("Control type"),
     )
 
 
 class MaintenanceTriggerForm(forms.Form):
-    days = forms.IntegerField()
-    engine_hours = forms.IntegerField()
-    flags = forms.IntegerField()
-    mask = forms.CharField()
-    mileage = forms.IntegerField()
-    val = forms.TypedChoiceField()
+    days = forms.IntegerField(
+        label=_("Days interval"), help_text=_("Provide a days interval.")
+    )
+    engine_hours = forms.IntegerField(
+        label=_("Engine hours interval"),
+        help_text=_("Provide an engine hours interval in hours."),
+    )
+    flags = forms.TypedChoiceField(
+        choices=[
+            (0, _("Control all service intervals")),
+            (1, _("Mileage interval")),
+            (2, _("Engine hours interval")),
+            (4, _("Days interval")),
+        ],
+        coerce=int,
+        label=_("Control type"),
+        help_text=_("Select the interval to trigger the notification on."),
+    )
+    mask = forms.CharField(help_text=_("Provide a wildcard-based mask."))
+    mileage = forms.IntegerField(
+        label=_("Milage interval"),
+        help_text=_("Provide a mileage interval in km."),
+    )
+    val = forms.TypedChoiceField(
+        choices=[
+            (1, _("Service term approaches")),
+            (2, _("Service term expired")),
+        ],
+        coerce=int,
+        help_text=_(
+            "Select whether to trigger the notification when the service term approaches or expired."
+        ),
+        label=_("Service term"),
+    )
 
 
 class FuelFillingTriggerForm(forms.Form):
-    sensor_name_mask = forms.CharField()
-    geozones_type = forms.TypedChoiceField()
+    sensor_name_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based sensor name mask."),
+        label=_("Sensor name mask"),
+        max_length=50,
+        min_length=1,
+        widget=widgets.TextInput(attrs={"placeholder": "*ign*"}),
+    )
+    geozones_type = forms.TypedChoiceField(
+        choices=[
+            (0, _("Ignore geofence(s)")),
+            (1, _("Only trigger when within geofence(s)")),
+        ],
+        coerce=int,
+        label=_("Geofence control"),
+        help_text=_(
+            "Select whether to ignore geofences or only trigger when within geofence(s)."
+        ),
+    )
     geozones_list = forms.CharField()
-    realtime_only = forms.TypedChoiceField()
+    realtime_only = forms.TypedChoiceField(
+        choices=[
+            (0, _("Recalculate historical data")),
+            (1, _("Ignore historical data (real-time only)")),
+        ],
+        coerce=int,
+        help_text=_(
+            "Select whether to recalculate historical data on trigger."
+        ),
+        label=_("Real-time only"),
+    )
 
 
 class FuelDrainingTriggerForm(forms.Form):
-    sensor_name_mask = forms.CharField()
-    geozones_type = forms.TypedChoiceField()
+    sensor_name_mask = forms.CharField(
+        help_text=_("Provide a wildcard-based sensor name mask."),
+        label=_("Sensor name mask"),
+        max_length=50,
+        min_length=1,
+        widget=widgets.TextInput(attrs={"placeholder": "*ign*"}),
+    )
+    geozones_type = forms.TypedChoiceField(
+        choices=[
+            (0, _("Ignore geofence(s)")),
+            (1, _("Only trigger when within geofence(s)")),
+        ],
+        coerce=int,
+        label=_("Geofence control"),
+        help_text=_(
+            "Select whether to ignore geofences or only trigger when within geofence(s)."
+        ),
+    )
     geozones_list = forms.CharField()
-    realtime_only = forms.TypedChoiceField()
+    realtime_only = forms.TypedChoiceField(
+        choices=[
+            (0, _("Recalculate historical data")),
+            (1, _("Ignore historical data (real-time only)")),
+        ],
+        coerce=int,
+        help_text=_(
+            "Select whether to recalculate historical data on trigger."
+        ),
+        label=_("Real-time only"),
+    )
 
 
 class HealthCheckTriggerForm(forms.Form):
-    healthy = forms.TypedChoiceField()
-    unhealthy = forms.TypedChoiceField()
-    needAttention = forms.TypedChoiceField()
-    triggerForEachIncident = forms.TypedChoiceField()
+    healthy = forms.TypedChoiceField(
+        choices=[
+            (0, _("Ignore whether device is healthy")),
+            (1, _("Trigger when device is healthy")),
+        ],
+        coerce=int,
+        label=_("Healthy"),
+    )
+    unhealthy = forms.TypedChoiceField(
+        choices=[
+            (0, _("Ignore whether device is unhealthy")),
+            (1, _("Trigger when device is unhealthy")),
+        ],
+        coerce=int,
+        label=_("Unhealthy"),
+    )
+    needAttention = forms.TypedChoiceField(
+        choices=[
+            (0, _("Ignore whether device needs attention")),
+            (1, _("Trigger when device needs attention")),
+        ],
+        coerce=int,
+        label=_("Needs attention"),
+    )
+    triggerForEachIncident = forms.TypedChoiceField(
+        choices=[
+            (0, _("Ignore each incident")),
+            (1, _("Trigger for each incident")),
+        ],
+        coerce=int,
+        label=_("Trigger for each incident"),
+    )
 
 
 TRIGGER_FORMS_MAP = {

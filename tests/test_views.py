@@ -578,3 +578,31 @@ class CreateNotificationReviewViewTestCase(TestCase):
                 response = self.client.post("/notifications/create/review/")
                 self.assertEqual(response.status_code, 302)
                 self.assertEqual("/resources/1/details/", response.url)
+
+
+class TriggerParametersFormViewTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.client.login(**{"username": "testuser", "password": "trolldad"})
+
+    def test_get_without_query_parameter_returns_404(self):
+        """Fails if making a GET request to the view without the `t` query parameter returns anything other than status code 404."""
+        response = self.client.get("/forms/triggers/parameters/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_invalid_trigger_returns_404(self):
+        """Fails if making a GET request to the view without a valid `t` query parameter returns anything other than status code 404."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "not_a_trigger"}
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_all_valid_trigger_types_return_200(self):
+        """Fails if a GET request to the view with any valid trigger type returns anything other than status code 200."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "geozone"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context_data["form"], forms.GeofenceTriggerForm
+        )

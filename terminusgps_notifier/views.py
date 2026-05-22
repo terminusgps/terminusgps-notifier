@@ -546,7 +546,7 @@ def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
 
     def generate_act(request: HtmxHttpRequest) -> list[dict]:
         url = urllib.parse.urljoin(
-            "https://api.terminusgps.com/",  # TODO: Retrieve host programatically
+            "https://api.terminusgps.com/",
             f"/v3/notify/{request.POST['method']}/",
         )
         return [{"t": "push_messages", "p": {"url": url, "get": 0}}]
@@ -588,13 +588,6 @@ def create_notification_step_four(request: HtmxHttpRequest) -> HttpResponse:
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/create_notification/step_review.html")
 def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
-    def get_resource_update_notification_param_overrides() -> dict:
-        schedule = {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "w": 0, "y": 0}
-        overrides = {"callMode": "create", "id": 0, "sch": {}, "ctrl_sch": {}}
-        overrides["sch"] = schedule.copy()
-        overrides["ctrl_sch"] = schedule.copy()
-        return overrides
-
     def get_resource_update_notification_params(
         request: HtmxHttpRequest,
     ) -> dict:
@@ -602,8 +595,10 @@ def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
         step_two = dict(request.session.get("step_two_data", {}))
         step_three = dict(request.session.get("step_three_data", {}))
         step_four = dict(request.session.get("step_four_data", {}))
-        overrides = get_resource_update_notification_param_overrides()
-        return step_one | step_two | step_three | step_four | overrides
+        sch = {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "y": 0, "w": 0}
+        ctrl_sch = {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "y": 0, "w": 0}
+        schedules = {"sch": sch, "ctrl_sch": ctrl_sch}
+        return step_one | step_two | step_three | step_four | schedules
 
     params = get_resource_update_notification_params(request)
     if request.method == "POST":

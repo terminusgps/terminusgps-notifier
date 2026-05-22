@@ -75,7 +75,7 @@ class GetDispatchersTestCase(TestCase):
                 "msg_time_int": 0,
             }
         )
-        self.assertTrue(form.is_valid())
+        form.is_valid()
         with self.assertRaises(ValueError):
             views.get_dispatchers(form, method="not_a_method")
 
@@ -89,7 +89,7 @@ class GetDispatchersTestCase(TestCase):
                 "msg_time_int": 0,
             }
         )
-        self.assertTrue(form.is_valid())
+        form.is_valid()
         dispatchers = views.get_dispatchers(form, method="sms")
         self.assertEqual(
             type(dispatchers[0]).__name__, "DummyNotificationDispatcher"
@@ -164,8 +164,6 @@ class GetSubscriptionStatusTestCase(TestCase):
         profile = models.Profile.objects.get(pk=1)
         status = views.get_subscription_status(profile)
         self.assertEqual(status, "active")
-        user.is_staff = False
-        user.save(update_fields=["is_staff"])
 
     def test_non_staff_user_without_subscription_id_returns_none(self):
         """Fails if a non-staff user without a subscription id returns anything other than :py:obj:`None`."""
@@ -281,8 +279,6 @@ class NotifyTestCase(TestCase):
             },
         )
         self.assertEqual(response.status_code, 403)
-        profile.messages_count = 0
-        profile.save(update_fields=["messages_count"])
 
     def test_profile_messages_count_incremented_on_success(self):
         """Fails if a profile's messages count wasn't incremented after notification dispatch."""
@@ -307,8 +303,6 @@ class NotifyTestCase(TestCase):
             )
             profile.refresh_from_db()
             self.assertEqual(profile.messages_count, 1)
-            profile.messages_count = 0
-            profile.save(update_fields=["messages_count"])
 
 
 class DashboardViewTestCase(TestCase):

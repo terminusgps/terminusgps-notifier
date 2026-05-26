@@ -21,7 +21,6 @@ from django.views.decorators.http import (
     require_POST,
 )
 from django.views.generic import RedirectView
-from terminusgps.authorizenet.service import AuthorizenetService
 from terminusgps.wialon.session import WialonAPIError
 
 from terminusgps_notifier import constants, forms
@@ -43,17 +42,6 @@ from terminusgps_notifier.wialon import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def get_authorizenet_service() -> AuthorizenetService:
-    """
-    Returns an Authorizenet service object for safely interacting with the Authorizenet API.
-
-    :returns: An Authorizenet service object.
-    :rtype: :py:obj:`~terminusgps.authorizenet.service.AuthorizenetService`
-
-    """
-    return AuthorizenetService()
 
 
 def get_dispatchers(

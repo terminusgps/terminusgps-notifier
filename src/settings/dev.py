@@ -17,7 +17,6 @@ AWS_PINPOINT_PROTECT_ID = os.getenv("AWS_PINPOINT_PROTECT_ID")
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
-STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 CSRF_COOKIE_SECURE = False
 DEBUG = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -40,7 +39,6 @@ STATIC_URL = "static/"
 TIME_ZONE = "America/Chicago"
 USE_I18N = True
 USE_TZ = True
-SUBSCRIPTION_PRICE = "price_1TVx8iGphupvKam1plxSWh2D"
 WSGI_APPLICATION = "src.wsgi.application"
 NOTIFICATION_DISPATCHERS = {
     "sms": ["terminusgps_notifier.dispatchers.AWSNotificationDispatcher"],

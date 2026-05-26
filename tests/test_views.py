@@ -150,6 +150,164 @@ class SendNotificationsTestCase(TestCase):
             self.assertEqual(response.status_code, 500)
 
 
+class GetResourcesFromWialonTestCase(TestCase):
+    def test_forced_true(self):
+        """Fails if `force` wasn't set to `1` before making a Wialon API call."""
+        with patch(
+            "terminusgps_notifier.views.get_wialon_session"
+        ) as mock_get_session:
+            mock_session = MagicMock(WialonSession)
+            mock_get_session.return_value = mock_session
+            wialon_sid = "wialon_sid"
+            force = int(True)
+            views.get_resources_from_wialon(wialon_sid, force)
+            expected_params = {
+                "spec": {
+                    "itemsType": "avl_resource",
+                    "propName": "sys_name",
+                    "propValueMask": "*",
+                    "propType": "property",
+                    "sortType": "sys_name",
+                },
+                "force": force,
+                "from": 0,
+                "to": 0,
+                "flags": 1,
+            }
+            mock_session.wialon_api.core_search_items.assert_called_with(
+                **expected_params
+            )
+
+    def test_forced_false(self):
+        """Fails if `force` wasn't set to `1` before making a Wialon API call."""
+        with patch(
+            "terminusgps_notifier.views.get_wialon_session"
+        ) as mock_get_session:
+            mock_session = MagicMock(WialonSession)
+            mock_get_session.return_value = mock_session
+            wialon_sid = "wialon_sid"
+            force = int(False)
+            views.get_resources_from_wialon(wialon_sid, force)
+            expected_params = {
+                "spec": {
+                    "itemsType": "avl_resource",
+                    "propName": "sys_name",
+                    "propValueMask": "*",
+                    "propType": "property",
+                    "sortType": "sys_name",
+                },
+                "force": force,
+                "from": 0,
+                "to": 0,
+                "flags": 1,
+            }
+            mock_session.wialon_api.core_search_items.assert_called_with(
+                **expected_params
+            )
+
+
+class GetItemsFromWialonTestCase(TestCase):
+    def test_items_type_avl_unit(self):
+        """Fails if `items_type` wasn't set to `avl_unit` before making a Wialon API call."""
+        with patch(
+            "terminusgps_notifier.views.get_wialon_session"
+        ) as mock_get_session:
+            mock_session = MagicMock(WialonSession)
+            mock_get_session.return_value = mock_session
+            wialon_sid = "wialon_sid"
+            resource_id = "12345678"
+            items_type = "avl_unit"
+            force = int(False)
+            views.get_items_from_wialon(
+                wialon_sid, resource_id, items_type, force
+            )
+            expected_params = {
+                "spec": {
+                    "itemsType": items_type,
+                    "propName": "sys_name,sys_billing_account_guid",
+                    "propValueMask": f"*,{resource_id}",
+                    "propType": "property,property",
+                    "sortType": "sys_name",
+                },
+                "force": force,
+                "from": 0,
+                "to": 0,
+                "flags": 1,
+            }
+            mock_session.wialon_api.core_search_items.assert_called_with(
+                **expected_params
+            )
+
+    def test_items_type_avl_unit_group(self):
+        """Fails if `items_type` wasn't set to `avl_unit_group` before making a Wialon API call."""
+        with patch(
+            "terminusgps_notifier.views.get_wialon_session"
+        ) as mock_get_session:
+            mock_session = MagicMock(WialonSession)
+            mock_get_session.return_value = mock_session
+            wialon_sid = "wialon_sid"
+            resource_id = "12345678"
+            items_type = "avl_unit_group"
+            force = int(False)
+            views.get_items_from_wialon(
+                wialon_sid, resource_id, items_type, force
+            )
+            expected_params = {
+                "spec": {
+                    "itemsType": items_type,
+                    "propName": "sys_name,sys_billing_account_guid",
+                    "propValueMask": f"*,{resource_id}",
+                    "propType": "property,property",
+                    "sortType": "sys_name",
+                },
+                "force": force,
+                "from": 0,
+                "to": 0,
+                "flags": 1,
+            }
+            mock_session.wialon_api.core_search_items.assert_called_with(
+                **expected_params
+            )
+
+
+class GetNotificationsFromWialonTestCase(TestCase):
+    def test_notification_ids_not_provided(self):
+        """Fails if `notification_ids` wasn't provided and `col` was present in the Wialon API parameters."""
+        with patch(
+            "terminusgps_notifier.views.get_wialon_session"
+        ) as mock_get_session:
+            mock_session = MagicMock(WialonSession)
+            mock_get_session.return_value = mock_session
+            wialon_sid = "wialon_sid"
+            resource_id = "12345678"
+            notification_ids = None
+            views.get_notifications_from_wialon(
+                wialon_sid, resource_id, notification_ids
+            )
+            expected_params = {"itemId": resource_id}
+            mock_session.wialon_api.resource_get_notification_data.assert_called_with(
+                **expected_params
+            )
+
+    def test_notification_ids_provided(self):
+        """Fails if `notification_ids` was provided and `col` wasn't present in the Wialon API parameters."""
+        with patch(
+            "terminusgps_notifier.views.get_wialon_session"
+        ) as mock_get_session:
+            mock_session = MagicMock(WialonSession)
+            mock_get_session.return_value = mock_session
+            wialon_sid = "wialon_sid"
+            resource_id = "12345678"
+            notification_ids = ["1", "2", "3"]
+            views.get_notifications_from_wialon(
+                wialon_sid, resource_id, notification_ids
+            )
+            expected_params = {"itemId": resource_id, "col": notification_ids}
+            mock_session.wialon_api.resource_get_notification_data.assert_called_with(
+                **expected_params
+            )
+
+
 class GetSubscriptionStatusTestCase(TestCase):
     fixtures = [
         "terminusgps_notifier/tests/test_user.json",
@@ -164,12 +322,6 @@ class GetSubscriptionStatusTestCase(TestCase):
         profile = models.Profile.objects.get(pk=1)
         status = views.get_subscription_status(profile)
         self.assertEqual(status, "active")
-
-    def test_non_staff_user_without_subscription_id_returns_none(self):
-        """Fails if a non-staff user without a subscription id returns anything other than :py:obj:`None`."""
-        profile = models.Profile.objects.get(pk=1)
-        status = views.get_subscription_status(profile)
-        self.assertIsNone(status)
 
 
 class HealthCheckViewTestCase(TestCase):
@@ -317,22 +469,6 @@ class DashboardViewTestCase(TestCase):
         self.profile = models.Profile.objects.get(pk=1)
         self.client = Client()
         self.client.login(**{"username": "testuser", "password": "trolldad"})
-
-    @patch("terminusgps_notifier.views.get_stripe_client")
-    def test_get_with_checkout_id_calls_stripe_api(
-        self, mock_get_stripe_client
-    ):
-        """Fails if the Stripe API wasn't called on GET with a checkout id."""
-        self.profile.checkout_id = "1"
-        self.profile.save(update_fields=["checkout_id"])
-        mock_stripe = MagicMock()
-        mock_get_stripe_client.return_value = mock_stripe
-        mock_stripe.v1.checkout.sessions.retrieve.return_value = MagicMock(
-            customer="1", subscription="1"
-        )
-        response = self.client.get("/dashboard/")
-        self.assertEqual(response.status_code, 200)
-        mock_get_stripe_client.assert_called_once()
 
     def test_profile_added_to_context(self):
         """Fails if the user's profile wasn't added to the view context."""

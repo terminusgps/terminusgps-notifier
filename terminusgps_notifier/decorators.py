@@ -1,8 +1,6 @@
 import functools
 
-import stripe
 import wialon.api
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest, HttpResponse
@@ -20,17 +18,6 @@ __all__ = [
 
 class HtmxHttpRequest(HttpRequest):
     template_name: str
-
-
-def get_subscription_id_from_user(user: AbstractBaseUser) -> str | None:
-    profile = get_object_or_404(Profile, user=user)
-    return profile.subscription_id
-
-
-def get_subscription_from_stripe(subscription_id: str) -> dict:
-    stripe_client = stripe.StripeClient(settings.STRIPE_API_KEY)
-    subscription = stripe_client.v1.subscriptions.retrieve(subscription_id)
-    return subscription.to_dict()
 
 
 def get_wialon_api_token_from_user(user: AbstractBaseUser) -> str | None:
@@ -57,11 +44,7 @@ def active_subscription_required(view_func=None):
     def outer_wrapper(view_func):
         @functools.wraps(view_func)
         def inner_wrapper(request, *args, **kwargs) -> HttpResponse:
-            if user := getattr(request, "user", None):
-                if id := get_subscription_id_from_user(user):
-                    subscription = get_subscription_from_stripe(id)
-                    if subscription.get("status", "expired") == "active":
-                        return view_func(request, *args, **kwargs)
+            # TODO: Check Authorizenet subscription
             msg = "You need to subscribe to do that."
             messages.warning(request, msg)
             return redirect("terminusgps_notifier:dashboard")

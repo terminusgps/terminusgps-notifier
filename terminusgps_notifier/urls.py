@@ -36,11 +36,6 @@ urlpatterns = [
         name="create subscription",
     ),
     path(
-        "billing-portal/<str:customer_id>/",
-        views.billing_portal,
-        name="billing portal",
-    ),
-    path(
         "notifications/create/step-one/",
         views.create_notification_step_one,
         name="create notification step one",

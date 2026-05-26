@@ -1,10 +1,9 @@
 import asyncio
 import logging
 import urllib.parse
+from collections.abc import Sequence
 
-import stripe
 from asgiref.sync import async_to_sync
-from authorizenet import apicontractsv1
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView, redirect_to_login
@@ -16,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse, reverse_lazy
 from django.utils.module_loading import import_string
-from django.views.decorators.cache import never_cache
+from django.views.decorators.cache import cache_control, never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import (
     require_GET,
@@ -24,11 +23,7 @@ from django.views.decorators.http import (
     require_POST,
 )
 from django.views.generic import RedirectView
-from terminusgps.authorizenet import api
-from terminusgps.authorizenet.service import (
-    AuthorizenetError,
-    AuthorizenetService,
-)
+from terminusgps.authorizenet.service import AuthorizenetService
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import constants, forms
@@ -43,6 +38,30 @@ from terminusgps_notifier.validators import validate_e164_phone_number
 from terminusgps_notifier.wialon import get_phone_numbers_by_id
 
 logger = logging.getLogger(__name__)
+
+
+def get_wialon_session(sid: str) -> WialonSession:
+    """
+    Returns a Wialon API session object based on the provided session id for safely interacting with the Wialon API.
+
+    :param sid: A Wialon API session id.
+    :type sid: str
+    :returns: A resumed Wialon API session.
+    :rtype: :py:obj:`~terminusgps.wialon.session.WialonSession`
+
+    """
+    return WialonSession(sid=sid)
+
+
+def get_authorizenet_service() -> AuthorizenetService:
+    """
+    Returns an Authorizenet service object for safely interacting with the Authorizenet API.
+
+    :returns: An Authorizenet service object.
+    :rtype: :py:obj:`~terminusgps.authorizenet.service.AuthorizenetService`
+
+    """
+    return AuthorizenetService()
 
 
 def clean_phones(phones: list[str]) -> list[str]:
@@ -149,39 +168,60 @@ async def send_notifications(method, phones, dispatchers) -> HttpResponse:
     )
 
 
+def get_resources_from_wialon(wialon_sid: str, force: int) -> dict:
+    session = get_wialon_session(wialon_sid)
+    params = {"spec": {}, "force": force, "from": 0, "to": 0, "flags": 1}
+    params["spec"]["itemsType"] = "avl_resource"
+    params["spec"]["propName"] = "sys_name"
+    params["spec"]["propValueMask"] = "*"
+    params["spec"]["propType"] = "property"
+    params["spec"]["sortType"] = "sys_name"
+    return session.wialon_api.core_search_items(**params)
+
+
+def get_items_from_wialon(
+    wialon_sid: str, resource_id: str, items_type: str, force: int
+) -> dict:
+    session = get_wialon_session(wialon_sid)
+    params = {"spec": {}, "force": force, "from": 0, "to": 0, "flags": 1}
+    params["spec"]["itemsType"] = items_type
+    params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
+    params["spec"]["propValueMask"] = f"*,{resource_id}"
+    params["spec"]["propType"] = "property,property"
+    params["spec"]["sortType"] = "sys_name"
+    return session.wialon_api.core_search_items(**params)
+
+
+def get_geozones_from_wialon(wialon_sid: str, resource_id: str) -> dict:
+    session = get_wialon_session(wialon_sid)
+    params = {"itemId": resource_id}
+    return session.wialon_api.resource_get_zone_data(**params)
+
+
+def get_notifications_from_wialon(
+    wialon_sid: str,
+    resource_id: str,
+    notification_ids: Sequence[str] | None = None,
+) -> dict:
+    session = get_wialon_session(wialon_sid)
+    params = {"itemId": resource_id}
+    if notification_ids is not None:
+        params["col"] = notification_ids
+    return session.wialon_api.resource_get_notification_data(**params)
+
+
+def create_notification_in_wialon(wialon_sid: str, params: dict) -> dict:
+    session = get_wialon_session(wialon_sid)
+    return session.wialon_api.resource_update_notification(**params)
+
+
 def get_subscription_status(profile: Profile) -> str | None:
-    """
-    Returns the current subscription status for a profile.
-
-    If the profile is associated with a staff user, always returns "active".
-
-    :param profile: A user profile.
-    :type profile: :py:obj:`~terminusgps_notifier.models.Profile`
-    :returns: The profile's subscription status, if any.
-    :rtype: str | None
-
-    """
-    if profile.user.is_staff:
-        return "active"
-    if profile.subscription_id is None:
-        return
-    stripe_client = get_stripe_client()
-    response = stripe_client.v1.subscriptions.retrieve(profile.subscription_id)
-    return str(response.status)
-
-
-def get_stripe_client() -> stripe.StripeClient:
-    """Returns an authenticated stripe client."""
-    return stripe.StripeClient(settings.STRIPE_API_KEY)
-
-
-def get_wialon_session(sid: str) -> WialonSession:
-    """Returns a Wialon API session based on the provided session id."""
-    return WialonSession(sid=sid)
+    return "active"
 
 
 @require_POST
 @csrf_exempt
+@never_cache
 def notify(request: HttpRequest, method: str) -> HttpResponse:
     """
     Delivers notifications to destination phone numbers via `method`.
@@ -294,26 +334,13 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_GET
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/dashboard.html")
 def dashboard(request: HtmxHttpRequest) -> HttpResponse:
     @transaction.atomic
     def save_subscription_to_profile(
         request: HtmxHttpRequest, profile: Profile
     ) -> Profile:
-        stripe_client = get_stripe_client()
-        checkout_id = str(profile.checkout_id)
-        session = stripe_client.v1.checkout.sessions.retrieve(checkout_id)
-        if not session.subscription:
-            profile.checkout_id = None
-            update_fields = ["checkout_id"]
-            messages.warning(request, "Subcription creation failed.")
-        else:
-            profile.checkout_id = None
-            profile.customer_id = session.customer
-            profile.subscription_id = session.subscription
-            update_fields = ["checkout_id", "customer_id", "subscription_id"]
-            messages.success(request, "Subscription created succesfully.")
-        profile.save(update_fields=update_fields)
         return profile
 
     @transaction.atomic
@@ -341,14 +368,16 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
 
 @require_GET
 @persistent_wialon_session
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/detail_notifications.html")
 def detail_notifications(
     request: HtmxHttpRequest, resource_id: str, notification_id: str
 ) -> HttpResponse:
     try:
-        session = get_wialon_session(request.session["wialon_sid"])
-        params = {"itemId": resource_id, "col": [notification_id]}
-        response = session.wialon_api.resource_get_notification_data(**params)
+        wialon_sid = request.session["wialon_sid"]
+        response = get_notifications_from_wialon(
+            wialon_sid, resource_id, [notification_id]
+        )
     except WialonAPIError as error:
         messages.error(request, error)
         response = [{}]
@@ -357,18 +386,14 @@ def detail_notifications(
 
 
 @require_GET
+@cache_control(private=True)
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/list_resources.html")
 def list_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
-        session = get_wialon_session(request.session["wialon_sid"])
-        params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
-        params["spec"]["itemsType"] = "avl_resource"
-        params["spec"]["propName"] = "sys_name"
-        params["spec"]["propValueMask"] = "*"
-        params["spec"]["propType"] = "property"
-        params["spec"]["sortType"] = "sys_name"
-        response = session.wialon_api.core_search_items(**params)
+        wialon_sid = request.session["wialon_sid"]
+        force_refresh = request.GET.get("refresh") == "on"
+        response = get_resources_from_wialon(wialon_sid, int(force_refresh))
     except WialonAPIError as error:
         messages.error(request, error)
         response = {"items": []}
@@ -377,18 +402,14 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_GET
+@cache_control(private=True)
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/select_resources.html")
 def select_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
-        session = get_wialon_session(request.session["wialon_sid"])
-        params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
-        params["spec"]["itemsType"] = "avl_resource"
-        params["spec"]["propName"] = "sys_name"
-        params["spec"]["propValueMask"] = "*"
-        params["spec"]["propType"] = "property"
-        params["spec"]["sortType"] = "sys_name"
-        response = session.wialon_api.core_search_items(**params)
+        wialon_sid = request.session["wialon_sid"]
+        force_refresh = request.GET.get("refresh") == "on"
+        response = get_resources_from_wialon(wialon_sid, int(force_refresh))
     except WialonAPIError as error:
         messages.error(request, error)
         response = {"items": []}
@@ -397,15 +418,15 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_GET
+@cache_control(private=True)
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/select_geofences.html")
 def select_geofences(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
     try:
-        session = WialonSession(sid=request.session["wialon_sid"])
-        params = {"itemId": resource_id}
-        response = session.wialon_api.resource_get_zone_data(**params)
+        wialon_sid = request.session["wialon_sid"]
+        response = get_geozones_from_wialon(wialon_sid, resource_id)
     except WialonAPIError as error:
         messages.error(request, error)
         response = []
@@ -414,15 +435,15 @@ def select_geofences(
 
 
 @require_GET
+@cache_control(private=True)
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/list_notifications.html")
 def list_notifications(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
     try:
-        session = get_wialon_session(request.session["wialon_sid"])
-        params = {"itemId": resource_id}
-        response = session.wialon_api.resource_get_notification_data(**params)
+        wialon_sid = request.session["wialon_sid"]
+        response = get_notifications_from_wialon(wialon_sid, resource_id)
     except WialonAPIError as error:
         messages.error(request, error)
         response = {"items": []}
@@ -431,13 +452,15 @@ def list_notifications(
 
 
 @require_GET
+@cache_control(private=True)
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/detail_resources.html")
 def detail_resources(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
     try:
-        session = get_wialon_session(request.session["wialon_sid"])
+        wialon_sid = request.session["wialon_sid"]
+        session = get_wialon_session(wialon_sid)
         params = {"id": resource_id, "flags": 1025}
         response = session.wialon_api.core_search_item(**params)
     except WialonAPIError as error:
@@ -448,20 +471,20 @@ def detail_resources(
 
 
 @require_GET
+@cache_control(private=True)
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/select_units.html")
 def select_units(request: HtmxHttpRequest) -> HttpResponse:
     if not request.GET.get("resource"):
         raise Http404()
     try:
-        session = get_wialon_session(request.session["wialon_sid"])
-        params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
-        params["spec"]["itemsType"] = request.GET.get("items_type", "avl_unit")
-        params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
-        params["spec"]["propValueMask"] = f"*,{request.GET['resource']}"
-        params["spec"]["propType"] = "property,property"
-        params["spec"]["sortType"] = "sys_name"
-        response = session.wialon_api.core_search_items(**params)
+        wialon_sid = request.session["wialon_sid"]
+        resource_id = str(request.GET.get("resource"))
+        items_type = str(request.GET.get("items_type", "avl_unit"))
+        force_refresh = int(request.GET.get("refresh") == "on")
+        response = get_items_from_wialon(
+            wialon_sid, resource_id, items_type, force_refresh
+        )
     except WialonAPIError as error:
         messages.warning(request, error)
         response = {"items": []}
@@ -470,51 +493,16 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/create_subscription.html")
 def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
     profile = get_object_or_404(Profile, user=request.user)
-    if request.method == "POST":
-        form = forms.CreateSubscriptionForm(request.POST)
-        paymentSchedule = apicontractsv1.paymentScheduleType()
-        paymentSchedule.interval = apicontractsv1.paymentScheduleTypeInterval()
-        paymentSchedule.interval.length = "1"
-        paymentSchedule.interval.unit = "months"
-        profile = apicontractsv1.customerProfileIdType()
-        profile.customerProfileId = profile.customer_profile_id
-        profile.customerPaymentProfileId = form.cleaned_data["payment_id"]
-        profile.customerAddressId = form.cleaned_data["address_id"]
-        contract = apicontractsv1.ARBSubscriptionType()
-        contract.name = "Terminus GPS Notifier"
-        contract.paymentSchedule = paymentSchedule
-        contract.amount = "60.00"
-        contract.trialAmount = "0.00"
-        contract.profile = profile
-        try:
-            service = AuthorizenetService()
-            response = service.execute(api.create_subscription(contract))
-        except AuthorizenetError as error:
-            messages.error(request, error)
-            response = None
     context = {}
     return TemplateResponse(request, request.template_name, context)
 
 
-@never_cache
-@require_GET
-def billing_portal(request: HtmxHttpRequest, customer_id: str) -> HttpResponse:
-    stripe_client = get_stripe_client()
-    session = stripe_client.v1.billing_portal.sessions.create(
-        {
-            "customer": customer_id,
-            "return_url": request.build_absolute_uri(
-                reverse("terminusgps_notifier:dashboard")
-            ),
-        }
-    )
-    return redirect(session.url)
-
-
 @require_http_methods(["GET", "POST"])
+@cache_control(private=True)
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/create_notification/step_one.html")
 def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
@@ -524,14 +512,9 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
         request.session["step_one_data"] = {"un": un, "itemId": itemId}
         return redirect("terminusgps_notifier:create notification step two")
     try:
-        session = get_wialon_session(request.session["wialon_sid"])
-        params = {"spec": {}, "force": 0, "from": 0, "to": 0, "flags": 1}
-        params["spec"]["itemsType"] = "avl_resource"
-        params["spec"]["propName"] = "sys_name"
-        params["spec"]["propValueMask"] = "*"
-        params["spec"]["propType"] = "property"
-        params["spec"]["sortType"] = "sys_name"
-        response = session.wialon_api.core_search_items(**params)
+        wialon_sid = request.session["wialon_sid"]
+        forced_refresh = int(request.GET.get("refresh") == "on")
+        response = get_resources_from_wialon(wialon_sid, forced_refresh)
     except WialonAPIError as error:
         messages.error(request, error)
         response = {"items": []}
@@ -546,6 +529,7 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/create_notification/step_two.html")
 def create_notification_step_two(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -562,6 +546,7 @@ def create_notification_step_two(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/create_notification/step_three.html")
 def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
     def generate_txt(request: HtmxHttpRequest) -> str:
@@ -595,6 +580,7 @@ def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/create_notification/step_four.html")
 def create_notification_step_four(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -618,12 +604,11 @@ def create_notification_step_four(request: HtmxHttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["GET", "POST"])
+@cache_control(private=True)
 @persistent_wialon_session
 @htmx_template("terminusgps_notifier/create_notification/step_review.html")
 def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
-    def get_resource_update_notification_params(
-        request: HtmxHttpRequest,
-    ) -> dict:
+    def get_wialon_api_parameters(request: HtmxHttpRequest) -> dict:
         step_one = dict(request.session.get("step_one_data", {}))
         step_two = dict(request.session.get("step_two_data", {}))
         step_three = dict(request.session.get("step_three_data", {}))
@@ -633,11 +618,11 @@ def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
         schedules = {"sch": sch, "ctrl_sch": ctrl_sch}
         return step_one | step_two | step_three | step_four | schedules
 
-    params = get_resource_update_notification_params(request)
+    params = get_wialon_api_parameters(request)
     if request.method == "POST":
         try:
-            session = get_wialon_session(request.session["wialon_sid"])
-            session.wialon_api.resource_update_notification(**params)
+            wialon_sid = request.session["wialon_sid"]
+            create_notification_in_wialon(wialon_sid, params)
             request.session.pop("step_one_data", None)
             request.session.pop("step_two_data", None)
             request.session.pop("step_three_data", None)

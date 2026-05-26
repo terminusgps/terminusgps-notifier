@@ -169,9 +169,20 @@ def get_cfield_phone_numbers(
         return []
 
 
-def get_resources(wialon_sid: str, force: int) -> dict:
+def get_resources(wialon_sid: str, force: bool = False) -> dict:
+    """
+    Returns a dictionary of Wialon resources.
+
+    :param wialon_sid: A Wialon API session id.
+    :type wialon_sid: str
+    :param force: Whether to force a Wialon API call or not. Default is :py:obj:`False`.
+    :type force: bool
+    :returns: A `core/search_items` response dictionary.
+    :rtype: dict
+
+    """
     session = get_session(wialon_sid)
-    params = {"spec": {}, "force": force, "from": 0, "to": 0, "flags": 1}
+    params = {"spec": {}, "force": int(force), "from": 0, "to": 0, "flags": 1}
     params["spec"]["itemsType"] = "avl_resource"
     params["spec"]["propName"] = "sys_name"
     params["spec"]["propValueMask"] = "*"
@@ -181,10 +192,35 @@ def get_resources(wialon_sid: str, force: int) -> dict:
 
 
 def get_items(
-    wialon_sid: str, resource_id: str, items_type: str, force: int
+    wialon_sid: str, resource_id: str, items_type: str, force: bool = False
 ) -> dict:
+    """
+    Returns a dictionary of Wialon items.
+
+    Items types:
+
+    +-------------+------------------+
+    | name        | value            |
+    +=============+==================+
+    | Units       | "avl_unit"       |
+    +-------------+------------------+
+    | Unit Groups | "avl_unit_group" |
+    +-------------+------------------+
+
+    :param wialon_sid: A Wialon API session id.
+    :type wialon_sid: str
+    :param resource_id: A Wialon resource id.
+    :type resource_id: str
+    :param items_type: The Wialon items type to retrieve.
+    :type items_type: str
+    :param force: Whether to force a Wialon API call or not. Default is :py:obj:`False`.
+    :type force: bool
+    :returns: A `core/search_items` response dictionary.
+    :rtype: dict
+
+    """
     session = get_session(wialon_sid)
-    params = {"spec": {}, "force": force, "from": 0, "to": 0, "flags": 1}
+    params = {"spec": {}, "force": int(force), "from": 0, "to": 0, "flags": 1}
     params["spec"]["itemsType"] = items_type
     params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
     params["spec"]["propValueMask"] = f"*,{resource_id}"

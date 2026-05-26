@@ -1,13 +1,11 @@
 import asyncio
 import logging
 import urllib.parse
-from collections.abc import Sequence
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView, redirect_to_login
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import F
 from django.http import Http404, HttpRequest, HttpResponse
@@ -24,7 +22,7 @@ from django.views.decorators.http import (
 )
 from django.views.generic import RedirectView
 from terminusgps.authorizenet.service import AuthorizenetService
-from terminusgps.wialon.session import WialonAPIError, WialonSession
+from terminusgps.wialon.session import WialonAPIError
 
 from terminusgps_notifier import constants, forms
 from terminusgps_notifier.decorators import (
@@ -34,23 +32,17 @@ from terminusgps_notifier.decorators import (
 )
 from terminusgps_notifier.dispatchers import NotificationDispatcher
 from terminusgps_notifier.models import Profile
-from terminusgps_notifier.validators import validate_e164_phone_number
-from terminusgps_notifier.wialon import get_phone_numbers_by_id
+from terminusgps_notifier.wialon import (
+    create_notification,
+    get_geozones,
+    get_items,
+    get_notifications,
+    get_phones,
+    get_resources,
+    get_session,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def get_wialon_session(sid: str) -> WialonSession:
-    """
-    Returns a Wialon API session object based on the provided session id for safely interacting with the Wialon API.
-
-    :param sid: A Wialon API session id.
-    :type sid: str
-    :returns: A resumed Wialon API session.
-    :rtype: :py:obj:`~terminusgps.wialon.session.WialonSession`
-
-    """
-    return WialonSession(sid=sid)
 
 
 def get_authorizenet_service() -> AuthorizenetService:
@@ -62,52 +54,6 @@ def get_authorizenet_service() -> AuthorizenetService:
 
     """
     return AuthorizenetService()
-
-
-def clean_phones(phones: list[str]) -> list[str]:
-    """
-    Cleans and returns a list of E.164 format phone numbers.
-
-    :param phones: A list of phone numbers.
-    :type phones: list[str]
-    :returns: A list of properly formatted E.164 phone numbers.
-    :rtype: list[str]
-
-    """
-    cleaned = []
-    for phone in phones:
-        try:
-            validate_e164_phone_number(phone)
-            cleaned.append(phone)
-        except ValidationError as error:
-            logger.warning(error.message)
-            continue
-    return cleaned
-
-
-def get_phones(token: str | None, unit_id: int) -> list[str]:
-    """
-    Calls the Wialon API and returns a list of phone numbers assigned to a unit.
-
-    Returns an empty list if something went wrong during the Wialon API call.
-
-    :param token: A Wialon API token. If not provided, immediately returns an empty list.
-    :type token: str | None
-    :param unit_id: A Wialon unit id.
-    :type unit_id: int
-    :returns: A list of phone numbers assigned to the Wialon unit.
-    :rtype: list[str]
-
-    """
-    if token is None:
-        return []
-    try:
-        with WialonSession(token=token) as session:
-            dirty_phones = get_phone_numbers_by_id(unit_id, session)
-            return clean_phones(dirty_phones)
-    except WialonAPIError as error:
-        logger.error(error)
-        return []
 
 
 def get_dispatchers(
@@ -166,53 +112,6 @@ async def send_notifications(method, phones, dispatchers) -> HttpResponse:
         f"All dispatchers failed for method: '{method}'".encode("utf-8"),
         status=500,
     )
-
-
-def get_resources_from_wialon(wialon_sid: str, force: int) -> dict:
-    session = get_wialon_session(wialon_sid)
-    params = {"spec": {}, "force": force, "from": 0, "to": 0, "flags": 1}
-    params["spec"]["itemsType"] = "avl_resource"
-    params["spec"]["propName"] = "sys_name"
-    params["spec"]["propValueMask"] = "*"
-    params["spec"]["propType"] = "property"
-    params["spec"]["sortType"] = "sys_name"
-    return session.wialon_api.core_search_items(**params)
-
-
-def get_items_from_wialon(
-    wialon_sid: str, resource_id: str, items_type: str, force: int
-) -> dict:
-    session = get_wialon_session(wialon_sid)
-    params = {"spec": {}, "force": force, "from": 0, "to": 0, "flags": 1}
-    params["spec"]["itemsType"] = items_type
-    params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
-    params["spec"]["propValueMask"] = f"*,{resource_id}"
-    params["spec"]["propType"] = "property,property"
-    params["spec"]["sortType"] = "sys_name"
-    return session.wialon_api.core_search_items(**params)
-
-
-def get_geozones_from_wialon(wialon_sid: str, resource_id: str) -> dict:
-    session = get_wialon_session(wialon_sid)
-    params = {"itemId": resource_id}
-    return session.wialon_api.resource_get_zone_data(**params)
-
-
-def get_notifications_from_wialon(
-    wialon_sid: str,
-    resource_id: str,
-    notification_ids: Sequence[str] | None = None,
-) -> dict:
-    session = get_wialon_session(wialon_sid)
-    params = {"itemId": resource_id}
-    if notification_ids is not None:
-        params["col"] = notification_ids
-    return session.wialon_api.resource_get_notification_data(**params)
-
-
-def create_notification_in_wialon(wialon_sid: str, params: dict) -> dict:
-    session = get_wialon_session(wialon_sid)
-    return session.wialon_api.resource_update_notification(**params)
 
 
 def get_subscription_status(profile: Profile) -> str | None:
@@ -353,7 +252,7 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
         return profile
 
     profile, _ = Profile.objects.get_or_create(user=request.user)
-    if profile.checkout_id:
+    if profile.customer_profile_id:
         save_subscription_to_profile(request, profile)
     if request.GET.get("access_token"):
         save_wialon_api_token_to_profile(request, profile)
@@ -375,7 +274,7 @@ def detail_notifications(
 ) -> HttpResponse:
     try:
         wialon_sid = request.session["wialon_sid"]
-        response = get_notifications_from_wialon(
+        response = get_notifications(
             wialon_sid, resource_id, [notification_id]
         )
     except WialonAPIError as error:
@@ -393,7 +292,7 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
         wialon_sid = request.session["wialon_sid"]
         force_refresh = request.GET.get("refresh") == "on"
-        response = get_resources_from_wialon(wialon_sid, int(force_refresh))
+        response = get_resources(wialon_sid, int(force_refresh))
     except WialonAPIError as error:
         messages.error(request, error)
         response = {"items": []}
@@ -409,7 +308,7 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
         wialon_sid = request.session["wialon_sid"]
         force_refresh = request.GET.get("refresh") == "on"
-        response = get_resources_from_wialon(wialon_sid, int(force_refresh))
+        response = get_resources(wialon_sid, int(force_refresh))
     except WialonAPIError as error:
         messages.error(request, error)
         response = {"items": []}
@@ -426,7 +325,7 @@ def select_geofences(
 ) -> HttpResponse:
     try:
         wialon_sid = request.session["wialon_sid"]
-        response = get_geozones_from_wialon(wialon_sid, resource_id)
+        response = get_geozones(wialon_sid, resource_id)
     except WialonAPIError as error:
         messages.error(request, error)
         response = []
@@ -443,7 +342,7 @@ def list_notifications(
 ) -> HttpResponse:
     try:
         wialon_sid = request.session["wialon_sid"]
-        response = get_notifications_from_wialon(wialon_sid, resource_id)
+        response = get_notifications(wialon_sid, resource_id)
     except WialonAPIError as error:
         messages.error(request, error)
         response = {"items": []}
@@ -460,7 +359,7 @@ def detail_resources(
 ) -> HttpResponse:
     try:
         wialon_sid = request.session["wialon_sid"]
-        session = get_wialon_session(wialon_sid)
+        session = get_session(wialon_sid)
         params = {"id": resource_id, "flags": 1025}
         response = session.wialon_api.core_search_item(**params)
     except WialonAPIError as error:
@@ -482,7 +381,7 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
         resource_id = str(request.GET.get("resource"))
         items_type = str(request.GET.get("items_type", "avl_unit"))
         force_refresh = int(request.GET.get("refresh") == "on")
-        response = get_items_from_wialon(
+        response = get_items(
             wialon_sid, resource_id, items_type, force_refresh
         )
     except WialonAPIError as error:
@@ -514,7 +413,7 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
     try:
         wialon_sid = request.session["wialon_sid"]
         forced_refresh = int(request.GET.get("refresh") == "on")
-        response = get_resources_from_wialon(wialon_sid, forced_refresh)
+        response = get_resources(wialon_sid, forced_refresh)
     except WialonAPIError as error:
         messages.error(request, error)
         response = {"items": []}
@@ -622,7 +521,7 @@ def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
         try:
             wialon_sid = request.session["wialon_sid"]
-            create_notification_in_wialon(wialon_sid, params)
+            create_notification(wialon_sid, params)
             request.session.pop("step_one_data", None)
             request.session.pop("step_two_data", None)
             request.session.pop("step_three_data", None)

@@ -14,9 +14,12 @@ class Profile(models.Model):
     messages_limit = models.PositiveIntegerField(default=500)
 
     token = EncryptedField(blank=True, null=True, default=None)
-    checkout_id = models.CharField(blank=True, default=None, null=True)
-    customer_id = models.CharField(blank=True, default=None, null=True)
-    subscription_id = models.CharField(blank=True, default=None, null=True)
+    customer_profile_id = models.PositiveIntegerField(
+        blank=True, null=True, default=None
+    )
+    subscription_id = models.PositiveIntegerField(
+        blank=True, null=True, default=None
+    )
 
     class Meta:
         verbose_name = _("profile")

@@ -1,13 +1,49 @@
 import logging
+from collections.abc import Sequence
 from functools import partial
 
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from terminusgps.wialon import flags
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
-from .forms import NotificationDispatchForm
+from terminusgps_notifier.validators import validate_e164_phone_number
 
 logger = logging.getLogger(__name__)
+
+
+def get_session(sid: str) -> WialonSession:
+    """
+    Returns a Wialon API session object based on the provided session id for safely interacting with the Wialon API.
+
+    :param sid: A Wialon API session id.
+    :type sid: str
+    :returns: A resumed Wialon API session.
+    :rtype: :py:obj:`~terminusgps.wialon.session.WialonSession`
+
+    """
+    return WialonSession(sid=sid)
+
+
+def clean_phones(phones: list[str]) -> list[str]:
+    """
+    Cleans and returns a list of E.164 format phone numbers.
+
+    :param phones: A list of phone numbers.
+    :type phones: list[str]
+    :returns: A list of properly formatted E.164 phone numbers.
+    :rtype: list[str]
+
+    """
+    cleaned = []
+    for phone in phones:
+        try:
+            validate_e164_phone_number(phone)
+            cleaned.append(phone)
+        except ValidationError as error:
+            logger.warning(error.message)
+            continue
+    return cleaned
 
 
 def get_phone_numbers_by_id(
@@ -39,24 +75,29 @@ def get_phone_numbers_by_id(
     return list(frozenset(driver_phones + cfield_phones))
 
 
-def get_phone_numbers(
-    form: NotificationDispatchForm, session: WialonSession, timeout: int = 300
-) -> list[str]:
+def get_phones(token: str | None, unit_id: int) -> list[str]:
     """
-    Returns a list of unit assigned phone numbers by form.
+    Calls the Wialon API and returns a list of phone numbers assigned to a unit.
 
-    :param form: A Wialon notification dispatch form.
-    :type form: ~terminusgps_notifier.forms.WialonNotificationDispatchForm
-    :param session: Active Wialon API session.
-    :type session: ~terminusgps.wialon.session.WialonSession
-    :param timeout: Cache timeout in seconds. Default is ``300`` (5min).
-    :type timeout: int
-    :returns: A list of phone numbers.
+    Returns an empty list if something went wrong during the Wialon API call.
+
+    :param token: A Wialon API token. If not provided, immediately returns an empty list.
+    :type token: str | None
+    :param unit_id: A Wialon unit id.
+    :type unit_id: int
+    :returns: A list of phone numbers assigned to the Wialon unit.
     :rtype: list[str]
 
     """
-    unit_id = form.cleaned_data["unit_id"]
-    return get_phone_numbers_by_id(unit_id, session, timeout)
+    if token is None:
+        return []
+    try:
+        with WialonSession(token=token) as session:
+            dirty_phones = get_phone_numbers_by_id(unit_id, session)
+            return clean_phones(dirty_phones)
+    except WialonAPIError as error:
+        logger.error(error)
+        return []
 
 
 def get_driver_phone_numbers(
@@ -126,3 +167,50 @@ def get_cfield_phone_numbers(
     except WialonAPIError as e:
         logger.warning(e)
         return []
+
+
+def get_resources(wialon_sid: str, force: int) -> dict:
+    session = get_session(wialon_sid)
+    params = {"spec": {}, "force": force, "from": 0, "to": 0, "flags": 1}
+    params["spec"]["itemsType"] = "avl_resource"
+    params["spec"]["propName"] = "sys_name"
+    params["spec"]["propValueMask"] = "*"
+    params["spec"]["propType"] = "property"
+    params["spec"]["sortType"] = "sys_name"
+    return session.wialon_api.core_search_items(**params)
+
+
+def get_items(
+    wialon_sid: str, resource_id: str, items_type: str, force: int
+) -> dict:
+    session = get_session(wialon_sid)
+    params = {"spec": {}, "force": force, "from": 0, "to": 0, "flags": 1}
+    params["spec"]["itemsType"] = items_type
+    params["spec"]["propName"] = "sys_name,sys_billing_account_guid"
+    params["spec"]["propValueMask"] = f"*,{resource_id}"
+    params["spec"]["propType"] = "property,property"
+    params["spec"]["sortType"] = "sys_name"
+    return session.wialon_api.core_search_items(**params)
+
+
+def get_geozones(wialon_sid: str, resource_id: str) -> dict:
+    session = get_session(wialon_sid)
+    params = {"itemId": resource_id}
+    return session.wialon_api.resource_get_zone_data(**params)
+
+
+def get_notifications(
+    wialon_sid: str,
+    resource_id: str,
+    notification_ids: Sequence[str] | None = None,
+) -> dict:
+    session = get_session(wialon_sid)
+    params = {"itemId": resource_id}
+    if notification_ids is not None:
+        params["col"] = notification_ids
+    return session.wialon_api.resource_get_notification_data(**params)
+
+
+def create_notification(wialon_sid: str, params: dict) -> dict:
+    session = get_session(wialon_sid)
+    return session.wialon_api.resource_update_notification(**params)

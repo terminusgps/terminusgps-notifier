@@ -88,6 +88,10 @@ LOGGING = {
 #     }
 # }
 
+TASKS = {
+    "default": {"BACKEND": "django.tasks.backends.immediate.ImmediateBackend"}
+}
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",

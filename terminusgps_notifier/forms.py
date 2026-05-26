@@ -84,6 +84,19 @@ class UserCreationForm(BaseUserCreationForm):
     pass
 
 
+class CreateSubscriptionForm(forms.Form):
+    payment_id = forms.ChoiceField(choices=[])
+    address_id = forms.ChoiceField(choices=[])
+    consent = forms.BooleanField()
+
+    def __init__(
+        self, payment_choices, address_choices, *args, **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.base_fields["payment_id"] = payment_choices
+        self.base_fields["address_id"] = address_choices
+
+
 class NotificationDispatchForm(forms.Form):
     """
     A form for dispatching Wialon unit notifications.

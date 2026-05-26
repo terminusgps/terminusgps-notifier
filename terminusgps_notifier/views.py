@@ -4,6 +4,7 @@ import urllib.parse
 
 import stripe
 from asgiref.sync import async_to_sync
+from authorizenet import apicontractsv1
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView, redirect_to_login
@@ -23,6 +24,11 @@ from django.views.decorators.http import (
     require_POST,
 )
 from django.views.generic import RedirectView
+from terminusgps.authorizenet import api
+from terminusgps.authorizenet.service import (
+    AuthorizenetError,
+    AuthorizenetService,
+)
 from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import constants, forms
@@ -463,24 +469,34 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, context)
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
+@htmx_template("terminusgps_notifier/create_subscription.html")
 def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
-    stripe = get_stripe_client()
     profile = get_object_or_404(Profile, user=request.user)
-    checkout_session = stripe.v1.checkout.sessions.create(
-        params={
-            "line_items": [
-                {"price": settings.SUBSCRIPTION_PRICE, "quantity": 1}
-            ],
-            "mode": "subscription",
-            "success_url": request.build_absolute_uri(
-                reverse("terminusgps_notifier:dashboard")
-            ),
-        }
-    )
-    profile.checkout_id = checkout_session.id
-    profile.save(update_fields=["checkout_id"])
-    return redirect(checkout_session.url)
+    if request.method == "POST":
+        form = forms.CreateSubscriptionForm(request.POST)
+        paymentSchedule = apicontractsv1.paymentScheduleType()
+        paymentSchedule.interval = apicontractsv1.paymentScheduleTypeInterval()
+        paymentSchedule.interval.length = "1"
+        paymentSchedule.interval.unit = "months"
+        profile = apicontractsv1.customerProfileIdType()
+        profile.customerProfileId = profile.customer_profile_id
+        profile.customerPaymentProfileId = form.cleaned_data["payment_id"]
+        profile.customerAddressId = form.cleaned_data["address_id"]
+        contract = apicontractsv1.ARBSubscriptionType()
+        contract.name = "Terminus GPS Notifier"
+        contract.paymentSchedule = paymentSchedule
+        contract.amount = "60.00"
+        contract.trialAmount = "0.00"
+        contract.profile = profile
+        try:
+            service = AuthorizenetService()
+            response = service.execute(api.create_subscription(contract))
+        except AuthorizenetError as error:
+            messages.error(request, error)
+            response = None
+    context = {}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @never_cache

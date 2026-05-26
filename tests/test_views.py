@@ -583,7 +583,6 @@ class CreateNotificationReviewViewTestCase(TestCase):
 class TriggerParametersFormViewTestCase(TestCase):
     def setUp(self):
         self.client = Client()
-        self.client.login(**{"username": "testuser", "password": "trolldad"})
 
     def test_get_without_query_parameter_returns_404(self):
         """Fails if making a GET request to the view without the `t` query parameter returns anything other than status code 404."""
@@ -597,12 +596,227 @@ class TriggerParametersFormViewTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    def test_all_valid_trigger_types_return_200(self):
-        """Fails if a GET request to the view with any valid trigger type returns anything other than status code 200."""
+    def test_geozone_trigger_returns_correct_form(self):
+        """Fails if the form associated with `geozone` wasn't present in the view context."""
         response = self.client.get(
             "/forms/triggers/parameters/", query_params={"t": "geozone"}
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.context_data["form"], forms.GeofenceTriggerForm
+        form = response.context_data["form"]
+        self.assertIn("sensor_type", form.fields)
+        self.assertIn("sensor_name_mask", form.fields)
+        self.assertIn("lower_bound", form.fields)
+        self.assertIn("upper_bound", form.fields)
+        self.assertIn("prev_msg_diff", form.fields)
+        self.assertIn("merge", form.fields)
+        self.assertIn("reversed", form.fields)
+        self.assertIn("geozone_ids", form.fields)
+        self.assertIn("type", form.fields)
+        self.assertIn("min_speed", form.fields)
+        self.assertIn("max_speed", form.fields)
+        self.assertIn("include_lbs", form.fields)
+        self.assertIn("lo", form.fields)
+
+    def test_address_trigger_returns_correct_form(self):
+        """Fails if the form associated with `address` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "address"}
         )
+        form = response.context_data["form"]
+        self.assertIn("sensor_type", form.fields)
+        self.assertIn("sensor_name_mask", form.fields)
+        self.assertIn("lower_bound", form.fields)
+        self.assertIn("upper_bound", form.fields)
+        self.assertIn("prev_msg_diff", form.fields)
+        self.assertIn("merge", form.fields)
+        self.assertIn("reversed", form.fields)
+        self.assertIn("radius", form.fields)
+        self.assertIn("type", form.fields)
+        self.assertIn("min_speed", form.fields)
+        self.assertIn("max_speed", form.fields)
+        self.assertIn("country", form.fields)
+        self.assertIn("region", form.fields)
+        self.assertIn("city", form.fields)
+        self.assertIn("street", form.fields)
+        self.assertIn("house", form.fields)
+        self.assertIn("include_lbs", form.fields)
+
+    def test_speed_trigger_returns_correct_form(self):
+        """Fails if the form associated with `speed` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "speed"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("lower_bound", form.fields)
+        self.assertIn("max_speed", form.fields)
+        self.assertIn("merge", form.fields)
+        self.assertIn("min_speed", form.fields)
+        self.assertIn("prev_msg_diff", form.fields)
+        self.assertIn("reversed", form.fields)
+        self.assertIn("sensor_name_mask", form.fields)
+        self.assertIn("sensor_type", form.fields)
+        self.assertIn("upper_bound", form.fields)
+        self.assertIn("driver", form.fields)
+
+    def test_digital_input_trigger_returns_correct_form(self):
+        """Fails if the form associated with `digital_input` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "digital_input"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("input_index", form.fields)
+        self.assertIn("type", form.fields)
+
+    def test_msg_param_trigger_returns_correct_form(self):
+        """Fails if the form associated with `msg_param` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "msg_param"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("kind", form.fields)
+        self.assertIn("lower_bound", form.fields)
+        self.assertIn("param", form.fields)
+        self.assertIn("text_mask", form.fields)
+        self.assertIn("type", form.fields)
+        self.assertIn("upper_bound", form.fields)
+
+    def test_sensor_value_returns_correct_form(self):
+        """Fails if the form associated with `sensor_value` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "sensor_value"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("lower_bound", form.fields)
+        self.assertIn("merge", form.fields)
+        self.assertIn("prev_msg_diff", form.fields)
+        self.assertIn("sensor_name_mask", form.fields)
+        self.assertIn("sensor_type", form.fields)
+        self.assertIn("type", form.fields)
+        self.assertIn("upper_bound", form.fields)
+
+    def test_outage_returns_correct_form(self):
+        """Fails if the form associated with `outage` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "outage"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("time", form.fields)
+        self.assertIn("type", form.fields)
+        self.assertIn("include_lbs", form.fields)
+        self.assertIn("check_restore", form.fields)
+        self.assertIn("geozones_type", form.fields)
+        self.assertIn("geozones_list", form.fields)
+
+    def test_sms_returns_correct_form(self):
+        """Fails if the form associated with `sms` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "sms"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("mask", form.fields)
+
+    def test_interposition_returns_correct_form(self):
+        """Fails if the form associated with `interposition` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "interposition"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("sensor_name_mask", form.fields)
+        self.assertIn("sensor_type", form.fields)
+        self.assertIn("lower_bound", form.fields)
+        self.assertIn("upper_bound", form.fields)
+        self.assertIn("merge", form.fields)
+        self.assertIn("max_speed", form.fields)
+        self.assertIn("min_speed", form.fields)
+        self.assertIn("reversed", form.fields)
+        self.assertIn("prev_msg_diff", form.fields)
+        self.assertIn("radius", form.fields)
+        self.assertIn("type", form.fields)
+        self.assertIn("unit_guids", form.fields)
+        self.assertIn("include_lbs", form.fields)
+        self.assertIn("lo", form.fields)
+
+    def test_msgs_counter_returns_correct_form(self):
+        """Fails if the form associated with `msgs_counter` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "msgs_counter"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("flags", form.fields)
+        self.assertIn("msgs_limit", form.fields)
+        self.assertIn("time_offset", form.fields)
+
+    def test_route_control_returns_correct_form(self):
+        """Fails if the form associated with `route_control` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "route_control"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("mask", form.fields)
+        self.assertIn("round_mask", form.fields)
+        self.assertIn("schedule_mask", form.fields)
+        self.assertIn("types", form.fields)
+
+    def test_driver_returns_correct_form(self):
+        """Fails if the form associated with `driver` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "driver"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("driver_code_mask", form.fields)
+        self.assertIn("flags", form.fields)
+
+    def test_trailer_returns_correct_form(self):
+        """Fails if the form associated with `trailer` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "trailer"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("driver_code_mask", form.fields)
+        self.assertIn("flags", form.fields)
+
+    def test_service_intervals_returns_correct_form(self):
+        """Fails if the form associated with `service_intervals` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/",
+            query_params={"t": "service_intervals"},
+        )
+        form = response.context_data["form"]
+        self.assertIn("days", form.fields)
+        self.assertIn("engine_hours", form.fields)
+        self.assertIn("flags", form.fields)
+        self.assertIn("mask", form.fields)
+        self.assertIn("mileage", form.fields)
+        self.assertIn("val", form.fields)
+
+    def test_fuel_filling_returns_correct_form(self):
+        """Fails if the form associated with `fuel_filling` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "fuel_filling"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("sensor_name_mask", form.fields)
+        self.assertIn("geozones_type", form.fields)
+        self.assertIn("geozones_list", form.fields)
+        self.assertIn("realtime_only", form.fields)
+
+    def test_fuel_theft_returns_correct_form(self):
+        """Fails if the form associated with `fuel_theft` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "fuel_theft"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("sensor_name_mask", form.fields)
+        self.assertIn("geozones_type", form.fields)
+        self.assertIn("geozones_list", form.fields)
+        self.assertIn("realtime_only", form.fields)
+
+    def test_health_check_returns_correct_form(self):
+        """Fails if the form associated with `health_check` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "health_check"}
+        )
+        form = response.context_data["form"]
+        self.assertIn("healthy", form.fields)
+        self.assertIn("unhealthy", form.fields)
+        self.assertIn("needAttention", form.fields)
+        self.assertIn("triggerForEachIncident", form.fields)

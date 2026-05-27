@@ -502,8 +502,7 @@ def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
         act = generate_act(request)
         request.session["step_three_data"] = {"n": n, "txt": txt, "act": act}
         return redirect("terminusgps_notifier:create notification step four")
-    else:
-        return TemplateResponse(request, request.template_name, {})
+    return TemplateResponse(request, request.template_name, {})
 
 
 @require_http_methods(["GET", "POST"])

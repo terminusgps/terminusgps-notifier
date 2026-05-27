@@ -20,6 +20,13 @@ def get_authorizenet_service() -> AuthorizenetService:
     return AuthorizenetService()
 
 
+def get_subscription_page_token(
+    request: HttpRequest, customer_profile_id: str
+) -> str:
+    settings_list = []
+    return ""
+
+
 def get_customer_profile_page_token(
     request: HttpRequest, customer_profile_id: str
 ) -> str:
@@ -56,15 +63,11 @@ def get_customer_profile_page_token(
         ),
         apicontractsv1.settingType(
             settingName=apicontractsv1.settingNameEnum.hostedProfileBillingAddressOptions,
-            settingValue="true",
+            settingValue="showBillingAddress",
         ),
         apicontractsv1.settingType(
             settingName=apicontractsv1.settingNameEnum.hostedProfileCardCodeRequired,
             settingValue="true",
-        ),
-        apicontractsv1.settingType(
-            settingName=apicontractsv1.settingNameEnum.hostedProfileBillingAddressOptions,
-            settingValue="showBillingAddress",
         ),
         apicontractsv1.settingType(
             settingName=apicontractsv1.settingNameEnum.hostedProfileManageOptions,

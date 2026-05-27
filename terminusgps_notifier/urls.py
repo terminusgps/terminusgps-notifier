@@ -36,6 +36,11 @@ urlpatterns = [
         name="create subscription",
     ),
     path(
+        "subscriptions/<int:subscription_id>/details/",
+        views.detail_subscription,
+        name="detail subscription",
+    ),
+    path(
         "notifications/create/step-one/",
         views.create_notification_step_one,
         name="create notification step one",

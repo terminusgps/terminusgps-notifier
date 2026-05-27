@@ -21,11 +21,15 @@ from django.views.decorators.http import (
     require_POST,
 )
 from django.views.generic import RedirectView
+from terminusgps.authorizenet import api
+from terminusgps.authorizenet.service import AuthorizenetError
 from terminusgps.wialon.session import WialonAPIError
 
 from terminusgps_notifier import constants, forms
 from terminusgps_notifier.authorizenet import (
     create_customer_profile,
+    get_authorizenet_service,
+    get_customer_profile_page_token,
     subscription_is_active,
 )
 from terminusgps_notifier.decorators import (
@@ -253,13 +257,16 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
         save_wialon_api_token_to_profile(request, profile)
     if not profile.profile_id:
         save_authorizenet_data_to_profile(profile)
+    authorizenet_token = get_customer_profile_page_token(
+        request, profile.profile_id
+    )
     context = {
         "profile": profile,
         "wialon_redirect_uri": request.build_absolute_uri(
             reverse("terminusgps_notifier:dashboard")
         ),
         "authorizenet_token": authorizenet_token,
-        "authorizenet_url": "https://test.authorize.net/payment/payment/",
+        "authorizenet_url": "https://test.authorize.net/customer/manage",
     }
     return TemplateResponse(request, request.template_name, context)
 
@@ -396,6 +403,28 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
 def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
     profile = get_object_or_404(Profile, user=request.user)
     context = {}
+    return TemplateResponse(request, request.template_name, context)
+
+
+@require_GET
+@cache_control(private=True)
+@htmx_template("terminusgps_notifier/detail_subscription.html")
+def detail_subscription(
+    request: HtmxHttpRequest, subscription_id: str
+) -> HttpResponse:
+    try:
+        include_transactions = request.GET.get("include_transactions") == "on"
+        service = get_authorizenet_service()
+        response = service.execute(
+            api.get_subscription(
+                subscription_id=int(subscription_id),
+                include_transactions=include_transactions,
+            )
+        )
+    except AuthorizenetError as error:
+        messages.error(request, error)
+        response = None
+    context = {"response": response}
     return TemplateResponse(request, request.template_name, context)
 
 

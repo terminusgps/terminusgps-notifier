@@ -1124,7 +1124,7 @@ wheels = [
 
 [[package]]
 name = "python-terminusgps"
-version = "54.2.0"
+version = "54.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "authorizenet" },
@@ -1132,9 +1132,9 @@ dependencies = [
     { name = "py-aiowialon" },
     { name = "python-wialon" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/00/457d2a0ad65bfa7e4707e73fe5dc1ed7ed7e4cf573efb4abf6e730884dd3/python_terminusgps-54.2.0.tar.gz", hash = "sha256:555709708ff718feea97fb8c3c99faea28fee108654285b043fa2f8890da830f", size = 112031, upload-time = "2026-05-27T18:36:59.042Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/17/4ae1d11046972cc228c94f0fe1f116fe2245c54cff5d3019a5baa907a705/python_terminusgps-54.2.1.tar.gz", hash = "sha256:e3bc2d60ddf2f64c9620287e8e41df3e3753a91dc81fb32ef2a7e83c3f278002", size = 112023, upload-time = "2026-05-27T19:11:25.646Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/c1/97675e852ea2043b7c1e9a3a7c219bb6da8f63104c2e3be91a6cc73f4716/python_terminusgps-54.2.0-py3-none-any.whl", hash = "sha256:3c5f1253f52db77bcd8b1d453372bbde4acbddc2351bbdd8202fae1a9106dc61", size = 35374, upload-time = "2026-05-27T18:36:57.321Z" },
+    { url = "https://files.pythonhosted.org/packages/43/f4/3617076fc139537fcf8a89d1e286553ab76fdaf37c37548b72dd0b0a8e6c/python_terminusgps-54.2.1-py3-none-any.whl", hash = "sha256:09a2309d21a7ed77131f1b58221a4ed4f1437fb20a21a3d315a40453cab39650", size = 35381, upload-time = "2026-05-27T19:11:26.789Z" },
 ]
 
 [[package]]
@@ -1447,7 +1447,7 @@ requires-dist = [
     { name = "django-rq", specifier = ">=4.1.0" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.11" },
     { name = "psycopg2-binary", specifier = ">=2.9.11" },
-    { name = "python-terminusgps", specifier = ">=54.2.0" },
+    { name = "python-terminusgps", specifier = ">=54.2.1" },
     { name = "redis", extras = ["hiredis"], specifier = ">=6.4.0" },
     { name = "twilio", specifier = ">=9.10.3" },
     { name = "types-aioboto3", extras = ["pinpoint-sms-voice-v2"], specifier = ">=15.5.0" },

@@ -73,20 +73,13 @@
                 <h3 class="font-semibold">Subscription</h3>
             </div>
             <p>You are <span class="font-semibold">{{ profile.subscription_id|yesno:'subscribed, not subscribed' }}</span>.</p>
-            {% if not profile.subscription_id %}
-            <a href="{% url 'terminusgps_notifier:create subscription' %}" hx-boost="false">
-            {% else %}
-            <a href="{% url 'terminusgps_notifier:billing portal' profile.customer_id %}" hx-boost="false">
-            {% endif %}
-                <div class="p-2 border rounded bg-stone-300 border-stone-600 transition-colors ease-in-out duration-300 hover:bg-stone-100">
-                    <div class="flex justify-between items-center">
-                        <p class="font-semibold">{% if not profile.subscription_id %}Subscribe{% else %}View Subscription{% endif %}</p>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
-                        </svg>
-                    </div>
-                </div>
-            </a>
+            <form method="post" action="{{ authorizenet_url }}">
+                {% csrf_token %}
+                <input id="id_token" name="token" type="hidden" value="{{ authorizenet_token }}">
+                <button class="w-full cursor-pointer p-2 border rounded bg-stone-300 border-stone-600 transition-colors ease-in-out duration-300 hover:bg-stone-100" type="submit">
+                    <p>Manage Profile</p>
+                </button>
+            </form>
         </div>
     </div>
     <div class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" id="resources">

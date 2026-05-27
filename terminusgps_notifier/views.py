@@ -24,6 +24,7 @@ from django.views.generic import RedirectView
 from terminusgps.wialon.session import WialonAPIError
 
 from terminusgps_notifier import constants, forms
+from terminusgps_notifier.authorizenet import subscription_is_active
 from terminusgps_notifier.decorators import (
     HtmxHttpRequest,
     htmx_template,
@@ -102,10 +103,6 @@ async def send_notifications(method, phones, dispatchers) -> HttpResponse:
     )
 
 
-def get_subscription_status(profile: Profile) -> str | None:
-    return "active"
-
-
 @require_POST
 @csrf_exempt
 @never_cache
@@ -131,8 +128,7 @@ def notify(request: HttpRequest, method: str) -> HttpResponse:
     if not form.is_valid():
         return HttpResponse(status=406)
     profile = get_object_or_404(Profile, user__pk=form.cleaned_data["user_id"])
-    status = get_subscription_status(profile)
-    if status != "active":
+    if not subscription_is_active(profile.subscription_id):
         return HttpResponse("Invalid subscription".encode("utf-8"), status=403)
     if profile.messages_count >= profile.messages_limit:
         return HttpResponse("Messages maxed".encode("utf-8"), status=403)

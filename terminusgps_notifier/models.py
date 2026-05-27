@@ -14,9 +14,6 @@ class Profile(models.Model):
     messages_limit = models.PositiveIntegerField(default=500)
 
     token = EncryptedField(blank=True, null=True, default=None)
-    customer_profile_id = models.PositiveIntegerField(
-        blank=True, null=True, default=None
-    )
     subscription_id = models.PositiveIntegerField(
         blank=True, null=True, default=None
     )

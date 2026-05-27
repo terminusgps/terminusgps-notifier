@@ -164,7 +164,7 @@ def subscription_is_active(id: int | None) -> bool:
     :rtype: bool
 
     """
-    if id is None:
+    if not id:
         return False
     try:
         status = get_subscription_status(id)

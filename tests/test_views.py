@@ -108,22 +108,6 @@ class SendNotificationsTestCase(TestCase):
             self.assertEqual(response.status_code, 500)
 
 
-class GetSubscriptionStatusTestCase(TestCase):
-    fixtures = [
-        "terminusgps_notifier/tests/test_user.json",
-        "terminusgps_notifier/tests/test_profile.json",
-    ]
-
-    def test_staff_user_returns_active(self):
-        """Fails if 'active' wasn't returned by the function with a user flagged as staff."""
-        user = get_user_model().objects.get(pk=1)
-        user.is_staff = True
-        user.save(update_fields=["is_staff"])
-        profile = models.Profile.objects.get(pk=1)
-        status = views.get_subscription_status(profile)
-        self.assertEqual(status, "active")
-
-
 class HealthCheckViewTestCase(TestCase):
     def test_get_returns_200(self):
         """Fails if a GET request to the health check endpoint returns anything other than code 200."""
@@ -184,7 +168,7 @@ class NotifyTestCase(TestCase):
     def test_profile_with_inactive_subscription_returns_403(self):
         """Fails if a user with a non-active subscription doesn't return status code 403."""
         with patch(
-            "terminusgps_notifier.views.get_subscription_status",
+            "terminusgps_notifier.authorizenet.get_subscription_status",
             return_value="expired",
         ):
             response = self.client.post(
@@ -213,8 +197,6 @@ class NotifyTestCase(TestCase):
             },
         )
         self.assertNotEqual(response, 406)
-        user.is_staff = False
-        user.save(update_fields=["is_staff"])
 
     def test_profile_with_maxed_out_messages_returns_403(self):
         """Fails if a profile with maxed out messages doesn't return status code 403."""
@@ -234,27 +216,29 @@ class NotifyTestCase(TestCase):
 
     def test_profile_messages_count_incremented_on_success(self):
         """Fails if a profile's messages count wasn't incremented after notification dispatch."""
-        user = get_user_model().objects.get(pk=1)
-        user.is_staff = True
-        user.save(update_fields=["is_staff"])
-
         with patch(
             "terminusgps_notifier.views.get_phones",
             return_value=["+15555555555"],
         ):
-            profile = models.Profile.objects.first()
-            self.assertEqual(profile.messages_count, 0)
-            self.client.post(
-                "/v3/notify/sms/",
-                {
-                    "user_id": "1",
-                    "unit_id": "12345678",
-                    "message": "Test",
-                    "msg_time_int": 0,
-                },
-            )
-            profile.refresh_from_db()
-            self.assertEqual(profile.messages_count, 1)
+            with patch(
+                "terminusgps_notifier.views.subscription_is_active",
+                return_value=True,
+            ):
+                profile = models.Profile.objects.first()
+                self.assertEqual(profile.messages_count, 0)
+                profile.subscription_id = 1
+                profile.save(update_fields=["subscription_id"])
+                self.client.post(
+                    "/v3/notify/sms/",
+                    {
+                        "user_id": "1",
+                        "unit_id": "12345678",
+                        "message": "Test",
+                        "msg_time_int": 0,
+                    },
+                )
+                profile.refresh_from_db()
+                self.assertEqual(profile.messages_count, 1)
 
 
 class DashboardViewTestCase(TestCase):

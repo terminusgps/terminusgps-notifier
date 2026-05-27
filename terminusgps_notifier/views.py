@@ -221,12 +221,6 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
 @htmx_template("terminusgps_notifier/dashboard.html")
 def dashboard(request: HtmxHttpRequest) -> HttpResponse:
     @transaction.atomic
-    def save_subscription_to_profile(
-        request: HtmxHttpRequest, profile: Profile
-    ) -> Profile:
-        return profile
-
-    @transaction.atomic
     def save_wialon_api_token_to_profile(
         request: HtmxHttpRequest, profile: Profile
     ) -> Profile:
@@ -236,8 +230,6 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
         return profile
 
     profile, _ = Profile.objects.get_or_create(user=request.user)
-    if profile.customer_profile_id:
-        save_subscription_to_profile(request, profile)
     if request.GET.get("access_token"):
         save_wialon_api_token_to_profile(request, profile)
     context = {

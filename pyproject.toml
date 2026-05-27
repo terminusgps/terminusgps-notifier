@@ -1,6 +1,6 @@
 [project]
 name = "terminusgps-notifier"
-description = "Terminus GPS Notification Dispatch Microservice"
+description = "Terminus GPS Notification Dispatcher Service"
 readme = "README.md"
 version = "3.9.0"
 authors = [
@@ -21,7 +21,7 @@ dependencies = [
     "django>=6.0.2",
     "psycopg2-binary>=2.9.11",
     "psycopg[binary,pool]>=3.2.11",
-    "python-terminusgps>=54.1.0",
+    "python-terminusgps>=54.2.0",
     "redis[hiredis]>=6.4.0",
     "twilio>=9.10.3",
     "types-aioboto3[pinpoint-sms-voice-v2]>=15.5.0",

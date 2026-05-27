@@ -1,3 +1,4 @@
+from authorizenet import apicontractsv1
 from django import forms
 from django.contrib.auth.forms import BaseUserCreationForm
 from django.db import models
@@ -84,17 +85,95 @@ class UserCreationForm(BaseUserCreationForm):
     pass
 
 
-class CreateSubscriptionForm(forms.Form):
-    payment_id = forms.ChoiceField(choices=[])
-    address_id = forms.ChoiceField(choices=[])
-    consent = forms.BooleanField()
+class CustomerAddressForm(forms.Form):
+    firstName = forms.CharField(max_length=50)
+    lastName = forms.CharField(max_length=50)
+    company = forms.CharField(max_length=50, required=False)
+    address = forms.CharField(max_length=60)
+    city = forms.CharField(max_length=40)
+    state = forms.CharField(max_length=40)
+    zip = forms.CharField(max_length=20)
+    country = forms.CharField(max_length=60)
+    phoneNumber = forms.CharField(max_length=25, required=False)
 
-    def __init__(
-        self, payment_choices, address_choices, *args, **kwargs
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.base_fields["payment_id"] = payment_choices
-        self.base_fields["address_id"] = address_choices
+    def to_contract(self) -> apicontractsv1.customerAddressType:
+        firstName = self.cleaned_data["firstName"]
+        lastName = self.cleaned_data["lastName"]
+        company = self.cleaned_data.get("company")
+        address = self.cleaned_data["address"]
+        city = self.cleaned_data["city"]
+        state = self.cleaned_data["state"]
+        zip = self.cleaned_data["zip"]
+        country = self.cleaned_data["country"]
+        phoneNumber = self.cleaned_data.get("phoneNumber")
+
+        contract = apicontractsv1.customerAddressType()
+        contract.firstName = firstName
+        contract.lastName = lastName
+        contract.address = address
+        contract.city = city
+        contract.state = state
+        contract.zip = zip
+        contract.country = country
+        if company is not None:
+            contract.company = company
+        if phoneNumber is not None:
+            contract.phoneNumber = phoneNumber
+        return contract
+
+
+class CreditCardForm(forms.Form):
+    cardNumber = forms.CharField(min_length=13, max_length=16)
+    expirationDate = forms.DateField(
+        input_formats=["%m-%Y", "%-m-%Y", "%m-%y", "%-m-%y"]
+    )
+    cardCode = forms.CharField(min_length=3, max_length=4)
+
+    def to_contract(self) -> apicontractsv1.creditCardType:
+        cardNumber = self.cleaned_data["cardNumber"]
+        cardCode = self.cleaned_data["cardCode"]
+        expirationDate = self.cleaned_data["expirationDate"]
+        expirationDate = expirationDate.strftime("%Y-%m")
+
+        contract = apicontractsv1.creditCardType()
+        contract.cardNumber = cardNumber
+        contract.expirationDate = expirationDate
+        contract.cardCode = cardCode
+        return contract
+
+
+class BankAccountForm(forms.Form):
+    accountType = forms.ChoiceField(
+        choices=[
+            ("checking", _("Checking")),
+            ("savings", _("Savings")),
+            ("businessChecking", _("Business checking")),
+        ]
+    )
+    routingNumber = forms.CharField(max_length=9)
+    accountNumber = forms.CharField(max_length=17)
+    nameOnAccount = forms.CharField(max_length=22)
+    echeckType = forms.ChoiceField(
+        choices=[("PPD", _("PPD")), ("WEB", _("WEB")), ("CCD", _("CCD"))]
+    )
+    bankName = forms.CharField(max_length=50)
+
+    def to_contract(self) -> apicontractsv1.bankAccountType:
+        accountType = self.cleaned_data["accountType"]
+        routingNumber = self.cleaned_data["routingNumber"]
+        accountNumber = self.cleaned_data["accountNumber"]
+        nameOnAccount = self.cleaned_data["nameOnAccount"]
+        echeckType = self.cleaned_data["echeckType"]
+        bankName = self.cleaned_data["bankName"]
+
+        contract = apicontractsv1.bankAccountType()
+        contract.accountType = accountType
+        contract.routingNumber = routingNumber
+        contract.accountNumber = accountNumber
+        contract.nameOnAccount = nameOnAccount
+        contract.echeckType = echeckType
+        contract.bankName = bankName
+        return contract
 
 
 class NotificationDispatchForm(forms.Form):

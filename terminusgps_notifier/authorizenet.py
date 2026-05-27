@@ -1,4 +1,6 @@
 from authorizenet import apicontractsv1
+from django.http import HttpRequest
+from django.urls import reverse
 from lxml.objectify import ObjectifiedElement
 from terminusgps.authorizenet import api
 from terminusgps.authorizenet.service import (
@@ -18,31 +20,82 @@ def get_authorizenet_service() -> AuthorizenetService:
     return AuthorizenetService()
 
 
-def get_customer_profile(
-    email: str,
-    include_issuer_info: bool = False,
-    unmask_expiration_date: bool = False,
-) -> ObjectifiedElement:
+def get_customer_profile_page_token(
+    request: HttpRequest, customer_profile_id: str
+) -> str:
+    settings_list = [
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfileSaveButtonText,
+            settingValue="Save",
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfileReturnUrl,
+            settingValue=request.build_absolute_uri(
+                reverse("terminusgps_notifier:dashboard")
+            ),
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfileReturnUrlText,
+            settingValue="Go Back",
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfilePageBorderVisible,
+            settingValue="true",
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfileHeadingBgColor,
+            settingValue="#ffc7b6",
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfilePaymentOptions,
+            settingValue="showAll",
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfileValidationMode,
+            settingValue="testMode",
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfileBillingAddressOptions,
+            settingValue="true",
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfileCardCodeRequired,
+            settingValue="true",
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfileBillingAddressOptions,
+            settingValue="showBillingAddress",
+        ),
+        apicontractsv1.settingType(
+            settingName=apicontractsv1.settingNameEnum.hostedProfileManageOptions,
+            settingValue="showAll",
+        ),
+    ]
+
+    settings = apicontractsv1.ArrayOfSetting()
+    for setting in settings_list:
+        settings.setting.append(setting)
+    service = get_authorizenet_service()
+    response = service.execute(
+        api.get_accept_customer_profile_page(
+            customer_profile_id=int(customer_profile_id), settings=settings
+        )
+    )
+    return str(response.token)
+
+
+def get_customer_profile(email: str) -> ObjectifiedElement:
     """
     Returns a customer profile from Authorizenet by email address.
 
     :param email: An email address.
     :type email: str
-    :param include_issuer_info: Whether to include issuer info in the response. Default is :py:obj:`False`.
-    :type include_issuer_info: bool
-    :param unmask_expiration_date: Whether to unmask expiration dates in customer payment methods. Default is :py:obj:`False`.
     :returns: A customer profile.
     :rtype: :py:obj:`~lxml.objectify.ObjectifiedElement`
 
     """
     service = get_authorizenet_service()
-    return service.execute(
-        api.get_customer_profile(
-            email=email,
-            include_issuer_info=include_issuer_info,
-            unmask_expiration_date=unmask_expiration_date,
-        )
-    )
+    return service.execute(api.get_customer_profile(email=email))
 
 
 def create_customer_profile(

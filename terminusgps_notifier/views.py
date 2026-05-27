@@ -24,7 +24,10 @@ from django.views.generic import RedirectView
 from terminusgps.wialon.session import WialonAPIError
 
 from terminusgps_notifier import constants, forms
-from terminusgps_notifier.authorizenet import subscription_is_active
+from terminusgps_notifier.authorizenet import (
+    create_customer_profile,
+    subscription_is_active,
+)
 from terminusgps_notifier.decorators import (
     HtmxHttpRequest,
     htmx_template,
@@ -221,6 +224,22 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
 @htmx_template("terminusgps_notifier/dashboard.html")
 def dashboard(request: HtmxHttpRequest) -> HttpResponse:
     @transaction.atomic
+    def save_authorizenet_data_to_profile(profile: Profile) -> Profile:
+        email = profile.user.email
+        merchant_id = f"{profile.user.first_name} {profile.user.last_name}"
+        description = f"{profile.user.first_name} {profile.user.last_name}'s Customer Profile"
+        response = create_customer_profile(
+            email=email, merchant_id=merchant_id, description=description
+        )
+
+        profile.profile_id = str(response.profile.customerProfileId)
+        profile.merchant_id = str(response.profile.merchantCustomerId)
+        profile.description = str(response.profile.description)
+        update_fields = ["profile_id", "merchant_id", "description"]
+        profile.save(update_fields=update_fields)
+        return profile
+
+    @transaction.atomic
     def save_wialon_api_token_to_profile(
         request: HtmxHttpRequest, profile: Profile
     ) -> Profile:
@@ -232,11 +251,15 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
     profile, _ = Profile.objects.get_or_create(user=request.user)
     if request.GET.get("access_token"):
         save_wialon_api_token_to_profile(request, profile)
+    if not profile.profile_id:
+        save_authorizenet_data_to_profile(profile)
     context = {
         "profile": profile,
         "wialon_redirect_uri": request.build_absolute_uri(
             reverse("terminusgps_notifier:dashboard")
         ),
+        "authorizenet_token": authorizenet_token,
+        "authorizenet_url": "https://test.authorize.net/payment/payment/",
     }
     return TemplateResponse(request, request.template_name, context)
 

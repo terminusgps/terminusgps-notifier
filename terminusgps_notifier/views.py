@@ -179,7 +179,7 @@ def register(request: HtmxHttpRequest) -> HttpResponse:
 
 @require_GET
 def health_check(request: HttpRequest) -> HttpResponse:
-    return HttpResponse("I'm alive\n".encode("utf-8"), status=200)
+    return HttpResponse("I'm alive".encode("utf-8"), status=200)
 
 
 @require_GET

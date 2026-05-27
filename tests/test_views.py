@@ -516,10 +516,11 @@ class TriggerParametersFormViewTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    def test_geozone_trigger_returns_correct_form(self):
-        """Fails if the form associated with `geozone` wasn't present in the view context."""
+    def test_geozone_trigger_parameters(self):
+        """Fails if any required `geozone` trigger parameters were missing from the form."""
+        query_params = {"t": "geozone"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "geozone"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("sensor_type", form.fields)
@@ -536,10 +537,11 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("include_lbs", form.fields)
         self.assertIn("lo", form.fields)
 
-    def test_address_trigger_returns_correct_form(self):
-        """Fails if the form associated with `address` wasn't present in the view context."""
+    def test_address_trigger_parameters(self):
+        """Fails if any required `address` trigger parameters were missing from the form."""
+        query_params = {"t": "address"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "address"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("sensor_type", form.fields)
@@ -560,10 +562,11 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("house", form.fields)
         self.assertIn("include_lbs", form.fields)
 
-    def test_speed_trigger_returns_correct_form(self):
-        """Fails if the form associated with `speed` wasn't present in the view context."""
+    def test_speed_trigger_parameters(self):
+        """Fails if any required `speed` trigger parameters were missing from the form."""
+        query_params = {"t": "speed"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "speed"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("lower_bound", form.fields)
@@ -577,19 +580,21 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("upper_bound", form.fields)
         self.assertIn("driver", form.fields)
 
-    def test_digital_input_trigger_returns_correct_form(self):
-        """Fails if the form associated with `digital_input` wasn't present in the view context."""
+    def test_digital_input_parameters(self):
+        """Fails if any required `digital_input` trigger parameters were missing from the form."""
+        query_params = {"t": "digital_input"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "digital_input"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("input_index", form.fields)
         self.assertIn("type", form.fields)
 
-    def test_msg_param_trigger_returns_correct_form(self):
-        """Fails if the form associated with `msg_param` wasn't present in the view context."""
+    def test_msg_param_parameters(self):
+        """Fails if any required `msg_param` trigger parameters were missing from the form."""
+        query_params = {"t": "msg_param"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "msg_param"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("kind", form.fields)
@@ -599,10 +604,11 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("type", form.fields)
         self.assertIn("upper_bound", form.fields)
 
-    def test_sensor_value_returns_correct_form(self):
-        """Fails if the form associated with `sensor_value` wasn't present in the view context."""
+    def test_sensor_value_parameters(self):
+        """Fails if any required `sensor_value` trigger parameters were missing from the form."""
+        query_params = {"t": "sensor_value"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "sensor_value"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("lower_bound", form.fields)
@@ -613,10 +619,11 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("type", form.fields)
         self.assertIn("upper_bound", form.fields)
 
-    def test_outage_returns_correct_form(self):
-        """Fails if the form associated with `outage` wasn't present in the view context."""
+    def test_outage_parameters(self):
+        """Fails if any required `outage` trigger parameters were missing from the form."""
+        query_params = {"t": "outage"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "outage"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("time", form.fields)
@@ -626,18 +633,20 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("geozones_type", form.fields)
         self.assertIn("geozones_list", form.fields)
 
-    def test_sms_returns_correct_form(self):
-        """Fails if the form associated with `sms` wasn't present in the view context."""
+    def test_sms_parameters(self):
+        """Fails if any required `sms` trigger parameters were missing from the form."""
+        query_params = {"t": "sms"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "sms"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("mask", form.fields)
 
-    def test_interposition_returns_correct_form(self):
-        """Fails if the form associated with `interposition` wasn't present in the view context."""
+    def test_interposition_parameters(self):
+        """Fails if any required `interposition` trigger parameters were missing from the form."""
+        query_params = {"t": "interposition"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "interposition"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("sensor_name_mask", form.fields)
@@ -655,20 +664,22 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("include_lbs", form.fields)
         self.assertIn("lo", form.fields)
 
-    def test_msgs_counter_returns_correct_form(self):
-        """Fails if the form associated with `msgs_counter` wasn't present in the view context."""
+    def test_msgs_counter_parameters(self):
+        """Fails if any required `msgs_counter` trigger parameters were missing from the form."""
+        query_params = {"t": "msgs_counter"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "msgs_counter"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("flags", form.fields)
         self.assertIn("msgs_limit", form.fields)
         self.assertIn("time_offset", form.fields)
 
-    def test_route_control_returns_correct_form(self):
-        """Fails if the form associated with `route_control` wasn't present in the view context."""
+    def test_route_control_parameters(self):
+        """Fails if any required `route_control` trigger parameters were missing from the form."""
+        query_params = {"t": "route_control"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "route_control"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("mask", form.fields)
@@ -676,29 +687,31 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("schedule_mask", form.fields)
         self.assertIn("types", form.fields)
 
-    def test_driver_returns_correct_form(self):
-        """Fails if the form associated with `driver` wasn't present in the view context."""
+    def test_driver_parameters(self):
+        """Fails if any required `driver` trigger parameters were missing from the form."""
+        query_params = {"t": "driver"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "driver"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("driver_code_mask", form.fields)
         self.assertIn("flags", form.fields)
 
-    def test_trailer_returns_correct_form(self):
-        """Fails if the form associated with `trailer` wasn't present in the view context."""
+    def test_trailer_parameters(self):
+        """Fails if any required `trailer` trigger parameters were missing from the form."""
+        query_params = {"t": "trailer"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "trailer"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("driver_code_mask", form.fields)
         self.assertIn("flags", form.fields)
 
-    def test_service_intervals_returns_correct_form(self):
-        """Fails if the form associated with `service_intervals` wasn't present in the view context."""
+    def test_service_intervals_parameters(self):
+        """Fails if any required `service_intervals` trigger parameters were missing from the form."""
+        query_params = {"t": "service_intervals"}
         response = self.client.get(
-            "/forms/triggers/parameters/",
-            query_params={"t": "service_intervals"},
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("days", form.fields)
@@ -708,10 +721,11 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("mileage", form.fields)
         self.assertIn("val", form.fields)
 
-    def test_fuel_filling_returns_correct_form(self):
-        """Fails if the form associated with `fuel_filling` wasn't present in the view context."""
+    def test_fuel_filling_parameters(self):
+        """Fails if any required `fuel_filling` trigger parameters were missing from the form."""
+        query_params = {"t": "fuel_filling"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "fuel_filling"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("sensor_name_mask", form.fields)
@@ -719,10 +733,11 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("geozones_list", form.fields)
         self.assertIn("realtime_only", form.fields)
 
-    def test_fuel_theft_returns_correct_form(self):
-        """Fails if the form associated with `fuel_theft` wasn't present in the view context."""
+    def test_fuel_theft_parameters(self):
+        """Fails if any required `fuel_theft` trigger parameters were missing from the form."""
+        query_params = {"t": "fuel_theft"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "fuel_theft"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("sensor_name_mask", form.fields)
@@ -730,10 +745,11 @@ class TriggerParametersFormViewTestCase(TestCase):
         self.assertIn("geozones_list", form.fields)
         self.assertIn("realtime_only", form.fields)
 
-    def test_health_check_returns_correct_form(self):
-        """Fails if the form associated with `health_check` wasn't present in the view context."""
+    def test_health_check_parameters(self):
+        """Fails if any required `health_check` trigger parameters were missing from the form."""
+        query_params = {"t": "health_check"}
         response = self.client.get(
-            "/forms/triggers/parameters/", query_params={"t": "health_check"}
+            "/forms/triggers/parameters/", query_params=query_params
         )
         form = response.context_data["form"]
         self.assertIn("healthy", form.fields)

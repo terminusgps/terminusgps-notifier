@@ -21,9 +21,24 @@
     <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:register' %}">
         {% csrf_token %}
         <div class="group flex flex-col gap-4 w-min-0">
+            <div class="*:peer *:p-2 *:border *:rounded *:w-full">{{ form.first_name }}</div>
+            <label class="font-semibold order-first" for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+            <p id="{{ form.first_name.id_for_label }}_helptext">{{ form.first_name.help_text }}</p>
+        </div>
+        <div class="group flex flex-col gap-4 w-min-0">
+            <div class="*:peer *:p-2 *:border *:rounded *:w-full">{{ form.last_name }}</div>
+            <label class="font-semibold order-first" for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+            <p id="{{ form.last_name.id_for_label }}_helptext">{{ form.last_name.help_text }}</p>
+        </div>
+        <div class="group flex flex-col gap-4 w-min-0">
             <div class="*:peer *:p-2 *:border *:rounded *:w-full">{{ form.username }}</div>
             <label class="font-semibold order-first" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
             <p id="{{ form.username.id_for_label }}_helptext">{{ form.username.help_text }}</p>
+        </div>
+        <div class="group flex flex-col gap-4 w-min-0">
+            <div class="*:peer *:p-2 *:border *:rounded *:w-full">{{ form.email }}</div>
+            <label class="font-semibold order-first" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+            <p id="{{ form.email.id_for_label }}_helptext">{{ form.email.help_text }}</p>
         </div>
         <div class="group flex flex-col gap-4 w-min-0">
             <div class="*:peer *:p-2 *:border *:rounded *:w-full">{{ form.password1 }}</div>

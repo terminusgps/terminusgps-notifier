@@ -1,8 +1,11 @@
 import asyncio
+import datetime
+import decimal
 import logging
 import urllib.parse
 
 from asgiref.sync import async_to_sync
+from authorizenet import apicontractsv1
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView, redirect_to_login
@@ -29,7 +32,9 @@ from terminusgps_notifier import constants, forms
 from terminusgps_notifier.authorizenet import (
     create_customer_profile,
     get_authorizenet_service,
-    get_customer_profile_page_token,
+    get_customer_profile_by_id,
+    get_hosted_payment_page_url,
+    get_hosted_profile_page_url,
     subscription_is_active,
 )
 from terminusgps_notifier.decorators import (
@@ -110,6 +115,10 @@ async def send_notifications(method, phones, dispatchers) -> HttpResponse:
     )
 
 
+def profile_has_available_messages(profile: Profile) -> bool:
+    return profile.messages_count < profile.messages_limit
+
+
 @require_POST
 @csrf_exempt
 @never_cache
@@ -137,7 +146,7 @@ def notify(request: HttpRequest, method: str) -> HttpResponse:
     profile = get_object_or_404(Profile, user__pk=form.cleaned_data["user_id"])
     if not subscription_is_active(profile.subscription_id):
         return HttpResponse("Invalid subscription".encode("utf-8"), status=403)
-    if profile.messages_count >= profile.messages_limit:
+    if not profile_has_available_messages(profile):
         return HttpResponse("Messages maxed".encode("utf-8"), status=403)
     phones = get_phones(profile.token, form.cleaned_data["unit_id"])
     if not phones:
@@ -167,7 +176,11 @@ def register(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
         form = forms.UserCreationForm(request.POST)
         if form.is_valid():
-            form.save(commit=True)
+            user = form.save(commit=True)
+            user.email = form.cleaned_data["email"]
+            user.first_name = form.cleaned_data["first_name"]
+            user.last_name = form.cleaned_data["last_name"]
+            user.save(update_fields=["first_name", "last_name", "email"])
             return redirect_to_login(
                 next=reverse("terminusgps_notifier:dashboard"),
                 login_url=reverse("terminusgps_notifier:login"),
@@ -223,52 +236,60 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
     )(request)
 
 
-@require_GET
-@cache_control(private=True)
-@htmx_template("terminusgps_notifier/dashboard.html")
-def dashboard(request: HtmxHttpRequest) -> HttpResponse:
-    @transaction.atomic
-    def save_authorizenet_data_to_profile(profile: Profile) -> Profile:
-        email = profile.user.email
-        merchant_id = f"{profile.user.first_name} {profile.user.last_name}"
-        description = f"{profile.user.first_name} {profile.user.last_name}'s Customer Profile"
-        response = create_customer_profile(
-            email=email, merchant_id=merchant_id, description=description
-        )
-
+@require_POST
+@transaction.atomic
+def refresh_profile_from_authorizenet(
+    request: HtmxHttpRequest, customer_profile_id: str
+) -> HttpResponse:
+    try:
+        profile = get_object_or_404(Profile, profile_id=customer_profile_id)
+        response = get_customer_profile_by_id(customer_profile_id)
+        profile.user.email = str(response.profile.email)
+        profile.user.save(update_fields=["email"])
         profile.profile_id = str(response.profile.customerProfileId)
         profile.merchant_id = str(response.profile.merchantCustomerId)
         profile.description = str(response.profile.description)
         update_fields = ["profile_id", "merchant_id", "description"]
         profile.save(update_fields=update_fields)
-        return profile
+        return HttpResponse(status=200)
+    except AuthorizenetError as error:
+        messages.error(request, error)
+        return HttpResponse(status=500)
 
-    @transaction.atomic
-    def save_wialon_api_token_to_profile(
-        request: HtmxHttpRequest, profile: Profile
-    ) -> Profile:
-        profile.token = str(request.GET.get("access_token"))
-        profile.save(update_fields=["token"])
-        messages.success(request, "Wialon account connected successfully.")
-        return profile
 
+@require_GET
+@cache_control(private=True)
+@htmx_template("terminusgps_notifier/dashboard.html")
+def dashboard(request: HtmxHttpRequest) -> HttpResponse:
+    update_fields = []
     profile, _ = Profile.objects.get_or_create(user=request.user)
-    if request.GET.get("access_token"):
-        save_wialon_api_token_to_profile(request, profile)
+    if access_token := request.GET.get("access_token"):
+        profile.token = str(access_token)
+        update_fields.append("token")
+        messages.success(request, "Wialon account connected successfully!")
     if not profile.profile_id:
-        save_authorizenet_data_to_profile(profile)
-    authorizenet_token = get_customer_profile_page_token(
-        request, profile.profile_id
+        anet_response = create_customer_profile(
+            email=profile.user.email,
+            merchant_id=f"{profile.user.first_name} {profile.user.last_name}",
+            description=f"{profile.user.first_name} {profile.user.last_name}'s Customer Profile",
+        )
+        profile.profile_id = str(anet_response.profile.customerProfileId)
+        profile.merchant_id = str(anet_response.profile.merchantCustomerId)
+        profile.description = str(anet_response.profile.description)
+        update_fields.extend(("profile_id", "merchant_id", "description"))
+    if update_fields:
+        profile.save(update_fields=update_fields)
+    return TemplateResponse(
+        request,
+        request.template_name,
+        {
+            "profile": profile,
+            "subscribed": subscription_is_active(profile.subscription_id),
+            "wialon_redirect_uri": request.build_absolute_uri(
+                reverse("terminusgps_notifier:dashboard")
+            ),
+        },
     )
-    context = {
-        "profile": profile,
-        "wialon_redirect_uri": request.build_absolute_uri(
-            reverse("terminusgps_notifier:dashboard")
-        ),
-        "authorizenet_token": authorizenet_token,
-        "authorizenet_url": "https://test.authorize.net/customer/manage",
-    }
-    return TemplateResponse(request, request.template_name, context)
 
 
 @require_GET
@@ -288,6 +309,78 @@ def detail_notifications(
         response = [{}]
     context = {"object": response[0]}
     return TemplateResponse(request, request.template_name, context)
+
+
+@require_http_methods(["GET", "POST"])
+@never_cache
+@htmx_template("terminusgps_notifier/hosted_payment.html")
+def authorizenet_hosted_payment_page(
+    request: HtmxHttpRequest, customer_profile_id: str
+) -> HttpResponse:
+    try:
+        page_settings = apicontractsv1.ArrayOfSetting()
+        for setting in constants.HOSTED_PAYMENT_PAGE_SETTINGS:
+            page_settings.setting.append(setting)
+        interval = apicontractsv1.paymentScheduleTypeInterval()
+        interval.length = 1
+        interval.unit = "months"
+        schedule = apicontractsv1.paymentScheduleType()
+        schedule.interval = interval
+        schedule.startDate = datetime.date.today()
+        schedule.totalOccurrences = 9999
+        schedule.trialOccurrences = 0
+        subscription = apicontractsv1.ARBSubscriptionType()
+        subscription.amount = decimal.Decimal("60.00")
+        subscription.trialAmount = decimal.Decimal("0.00")
+        subscription.schedule = schedule
+        profile = apicontractsv1.customerProfilePaymentType()
+        profile.customerProfileId = customer_profile_id
+        trans_request = apicontractsv1.transactionRequestType()
+        trans_request.transactionType = "authCaptureTransaction"
+        trans_request.amount = decimal.Decimal("60.00")
+        trans_request.profile = profile
+        trans_request.subscription = subscription
+        service = get_authorizenet_service()
+        response = service.execute(
+            api.get_accept_payment_page(trans_request, page_settings)
+        )
+        token = str(response.token)
+    except AuthorizenetError as error:
+        messages.error(request, error)
+        token = None
+    return TemplateResponse(
+        request,
+        request.template_name,
+        {"token": token, "url": get_hosted_payment_page_url()},
+    )
+
+
+@require_http_methods(["GET", "POST"])
+@never_cache
+@htmx_template("terminusgps_notifier/hosted_profile.html")
+def authorizenet_hosted_profile_page(
+    request: HtmxHttpRequest, customer_profile_id: str
+) -> HttpResponse:
+    try:
+        page_settings = apicontractsv1.ArrayOfSetting()
+        for setting in constants.HOSTED_PROFILE_PAGE_SETTINGS:
+            page_settings.setting.append(setting)
+        service = get_authorizenet_service()
+        response = service.execute(
+            api.get_accept_customer_profile_page(
+                customer_profile_id=int(customer_profile_id),
+                settings=page_settings,
+            )
+        )
+        token = str(response.token)
+    except AuthorizenetError as error:
+        messages.error(request, error)
+        token = None
+    return TemplateResponse(
+        request,
+        request.template_name,
+        {"token": token, "url": get_hosted_profile_page_url()},
+    )
 
 
 @require_GET

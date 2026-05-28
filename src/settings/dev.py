@@ -79,12 +79,6 @@ LOGGING = {
     },
 }
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
 
 TASKS = {
     "default": {"BACKEND": "django.tasks.backends.immediate.ImmediateBackend"}

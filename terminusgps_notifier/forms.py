@@ -82,7 +82,12 @@ class WialonSensorType(models.TextChoices):
 
 
 class UserCreationForm(BaseUserCreationForm):
-    pass
+    first_name = forms.CharField(label=_("First name"), max_length=64)
+    last_name = forms.CharField(label=_("Last name"), max_length=64)
+    email = forms.EmailField(
+        label=_("Email address"),
+        help_text=_("Required. Provide a valid email address."),
+    )
 
 
 class CustomerAddressForm(forms.Form):

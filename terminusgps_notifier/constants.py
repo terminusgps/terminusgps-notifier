@@ -1,4 +1,91 @@
+from authorizenet import apicontractsv1
 from django.utils.translation import gettext_lazy as _
+
+HOSTED_PROFILE_PAGE_SETTINGS = [
+    apicontractsv1.settingType(
+        settingName=apicontractsv1.settingNameEnum.hostedProfileSaveButtonText,
+        settingValue="Save",
+    ),
+    apicontractsv1.settingType(
+        settingName=apicontractsv1.settingNameEnum.hostedProfileReturnUrl,
+        settingValue="https://localhost:8000/dashboard/",
+    ),
+    apicontractsv1.settingType(
+        settingName=apicontractsv1.settingNameEnum.hostedProfileReturnUrlText,
+        settingValue="Go Back",
+    ),
+    apicontractsv1.settingType(
+        settingName=apicontractsv1.settingNameEnum.hostedProfilePageBorderVisible,
+        settingValue="true",
+    ),
+    apicontractsv1.settingType(
+        settingName=apicontractsv1.settingNameEnum.hostedProfileHeadingBgColor,
+        settingValue="#ffc7b6",
+    ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedProfilePaymentOptions,
+    #     settingValue="showAll",
+    # ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedProfileValidationMode,
+    #     settingValue="liveMode",
+    # ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedProfileBillingAddressRequired,
+    #     settingValue="false",
+    # ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedProfileCardCodeRequired,
+    #     settingValue="true",
+    # ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedProfileBillingAddressOptions,
+    #     settingValue="showBillingAddress",
+    # ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedProfileManageOptions,
+    #     settingValue="showAll",
+    # ),
+]
+
+HOSTED_PAYMENT_PAGE_SETTINGS = [
+    apicontractsv1.settingType(
+        settingName=apicontractsv1.settingNameEnum.hostedPaymentReturnOptions,
+        settingValue='{"showReceipt": true, "url": "https://api.terminusgps.com/dashboard/", "urlText": "Continue", "cancelUrl": "https://api.terminusgps.com/dashboard/", "cancelUrlText": "Cancel"}',
+    ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedPaymentButtonOptions,
+    #     settingValue='{"text": "Pay"}',
+    # ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedPaymentStyleOptions,
+    #     settingValue='{"bgColor": "red"}',
+    # ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedPaymentPaymentOptions,
+    #     settingValue='{"cardCodeRequired": true, "showCreditCard": true, "showBankAccount": true, "customerProfileId": false}',
+    # ),
+    apicontractsv1.settingType(
+        settingName=apicontractsv1.settingNameEnum.hostedPaymentSecurityOptions,
+        settingValue='{"captcha": true}',
+    ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedPaymentShippingAddressOptions,
+    #     settingValue='{"show": true, "required": true}',
+    # ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedPaymentBillingAddressOptions,
+    #     settingValue='{"show": true, "required": false}',
+    # ),
+    # apicontractsv1.settingType(
+    #     settingName=apicontractsv1.settingNameEnum.hostedPaymentCustomerOptions,
+    #     settingValue='{"showEmail": false, "requiredEmail": false, "addPaymentProfile": true}',
+    # ),
+    apicontractsv1.settingType(
+        settingName=apicontractsv1.settingNameEnum.hostedPaymentOrderOptions,
+        settingValue='{"show": true, "merchantName": "Terminus GPS"}',
+    ),
+]
 
 TIMEZONES = [
     (-43200, _("International Date Line West")),

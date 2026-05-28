@@ -36,8 +36,7 @@ class GetHostedPaymentPageUrlTestCase(TestCase):
 class SubscriptionIsActiveTestCase(TestCase):
     def test_no_id_provided_returns_false(self):
         """Fails if :py:obj:`False` wasn't returned with no id provided."""
-        test_id = None
-        result = authorizenet.subscription_is_active(test_id)
+        result = authorizenet.subscription_is_active(id=None)
         self.assertFalse(result)
 
     def test_active_subscription_returns_true(self):
@@ -46,7 +45,7 @@ class SubscriptionIsActiveTestCase(TestCase):
             "terminusgps_notifier.authorizenet.get_subscription_status",
             return_value="active",
         ):
-            result = authorizenet.subscription_is_active(1)
+            result = authorizenet.subscription_is_active(id=1)
             self.assertTrue(result)
 
     def test_canceled_subscription_returns_true(self):
@@ -55,7 +54,7 @@ class SubscriptionIsActiveTestCase(TestCase):
             "terminusgps_notifier.authorizenet.get_subscription_status",
             return_value="canceled",
         ):
-            result = authorizenet.subscription_is_active(1)
+            result = authorizenet.subscription_is_active(id=1)
             self.assertTrue(result)
 
     def test_terminated_subscription_returns_false(self):
@@ -64,7 +63,7 @@ class SubscriptionIsActiveTestCase(TestCase):
             "terminusgps_notifier.authorizenet.get_subscription_status",
             return_value="terminated",
         ):
-            result = authorizenet.subscription_is_active(1)
+            result = authorizenet.subscription_is_active(id=1)
             self.assertFalse(result)
 
     def test_suspended_subscription_returns_false(self):
@@ -73,7 +72,7 @@ class SubscriptionIsActiveTestCase(TestCase):
             "terminusgps_notifier.authorizenet.get_subscription_status",
             return_value="suspended",
         ):
-            result = authorizenet.subscription_is_active(1)
+            result = authorizenet.subscription_is_active(id=1)
             self.assertFalse(result)
 
     def test_expired_subscription_returns_false(self):
@@ -82,5 +81,5 @@ class SubscriptionIsActiveTestCase(TestCase):
             "terminusgps_notifier.authorizenet.get_subscription_status",
             return_value="expired",
         ):
-            result = authorizenet.subscription_is_active(1)
+            result = authorizenet.subscription_is_active(id=1)
             self.assertFalse(result)

@@ -62,7 +62,7 @@ class GetResourcesFromWialonTestCase(TestCase):
             mock_session = MagicMock(WialonSession)
             mock_get_session.return_value = mock_session
             wialon_sid = "wialon_sid"
-            force = int(True)
+            force = True
             wialon.get_resources(wialon_sid, force)
             expected_params = {
                 "spec": {
@@ -89,7 +89,7 @@ class GetResourcesFromWialonTestCase(TestCase):
             mock_session = MagicMock(WialonSession)
             mock_get_session.return_value = mock_session
             wialon_sid = "wialon_sid"
-            force = int(False)
+            force = False
             wialon.get_resources(wialon_sid, force)
             expected_params = {
                 "spec": {
@@ -120,7 +120,7 @@ class GetItemsFromWialonTestCase(TestCase):
             wialon_sid = "wialon_sid"
             resource_id = "12345678"
             items_type = "avl_unit"
-            force = int(False)
+            force = False
             wialon.get_items(wialon_sid, resource_id, items_type, force)
             expected_params = {
                 "spec": {
@@ -149,7 +149,7 @@ class GetItemsFromWialonTestCase(TestCase):
             wialon_sid = "wialon_sid"
             resource_id = "12345678"
             items_type = "avl_unit_group"
-            force = int(False)
+            force = False
             wialon.get_items(wialon_sid, resource_id, items_type, force)
             expected_params = {
                 "spec": {

@@ -12,7 +12,7 @@ AUTHORIZENET_SERVICE = "terminusgps.authorizenet.service.AuthorizenetService"
 ALLOWED_HOSTS = [
     ".terminusgps.com",
     ".elb.amazonaws.com",
-    ".stripe.com",
+    ".authorizenet.com",
     gethostbyname(gethostname()),
 ]
 ASGI_APPLICATION = "src.asgi.application"
@@ -112,9 +112,9 @@ DATABASES = {
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379",
-        "TIMEOUT": 60 * 5,
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
     }
 }
 
@@ -127,8 +127,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "django.forms",
+    "django_rq",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
+
+RQ_QUEUES = {
+    "default": {"USE_REDIS_CACHE": "default"},
+    "high": {"USE_REDIS_CACHE": "default"},
+    "low": {"USE_REDIS_CACHE": "default"},
+}
+
 
 TEMPLATES = [
     {

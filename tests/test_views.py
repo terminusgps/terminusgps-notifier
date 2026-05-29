@@ -516,6 +516,13 @@ class TriggerParametersFormViewTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
+    def test_form_added_to_context(self):
+        """Fails if `form` wasn't present in the view context."""
+        response = self.client.get(
+            "/forms/triggers/parameters/", query_params={"t": "alarm"}
+        )
+        self.assertIn("form", response.context_data)
+
     def test_geozone_trigger_parameters(self):
         """Fails if any required `geozone` trigger parameters were missing from the form."""
         query_params = {"t": "geozone"}

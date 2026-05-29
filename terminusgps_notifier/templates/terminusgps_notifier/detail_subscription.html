@@ -31,6 +31,8 @@
             {% csrf_token %}
             <button type="submit">Cancel Subscription</button>
         </form>
+        {% else %}
+        <p>You may re-subscribe after your canceled subscription expires.</p>
         {% endif %}
     </div>
 </div>

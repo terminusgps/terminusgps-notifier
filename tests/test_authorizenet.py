@@ -19,20 +19,6 @@ class GetHostedProfilePageUrlTestCase(TestCase):
         self.assertEqual(url, "https://accept.authorize.net/customer/manage")
 
 
-class GetHostedPaymentPageUrlTestCase(TestCase):
-    @override_settings(DEBUG=True)
-    def test_debug_true(self):
-        """Fails if the wrong url was returned with debug mode on."""
-        url = authorizenet.get_hosted_payment_page_url()
-        self.assertEqual(url, "https://test.authorize.net/payment/payment")
-
-    @override_settings(DEBUG=False)
-    def test_debug_false(self):
-        """Fails if the wrong url was returned with debug mode off."""
-        url = authorizenet.get_hosted_payment_page_url()
-        self.assertEqual(url, "https://accept.authorize.net/payment/payment")
-
-
 class SubscriptionIsActiveTestCase(TestCase):
     def test_no_id_provided_returns_false(self):
         """Fails if :py:obj:`False` wasn't returned with no id provided."""

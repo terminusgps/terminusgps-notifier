@@ -34,7 +34,6 @@ from terminusgps_notifier.authorizenet import (
     create_customer_profile,
     get_authorizenet_service,
     get_customer_profile_by_id,
-    get_hosted_payment_page_url,
     get_hosted_profile_page_url,
     subscription_is_active,
 )
@@ -395,34 +394,6 @@ def detail_notifications(
         response = [{}]
     context = {"object": response[0]}
     return TemplateResponse(request, request.template_name, context)
-
-
-@require_http_methods(["GET", "POST"])
-@never_cache
-@htmx_template("terminusgps_notifier/hosted_payment.html")
-def authorizenet_hosted_payment_page(request: HtmxHttpRequest) -> HttpResponse:
-    profile = get_object_or_404(Profile, user=request.user)
-    settings = copy.copy(constants.HOSTED_PAYMENT_PAGE_SETTINGS)
-    customer_profile = apicontractsv1.customerProfilePaymentType()
-    customer_profile.customerProfileId = profile.profile_id
-    transaction = apicontractsv1.transactionRequestType()
-    transaction.transactionType = "authCaptureTransaction"
-    transaction.amount = decimal.Decimal("60.00")
-    transaction.profile = customer_profile
-    anet_request = api.get_accept_payment_page(transaction, settings)
-    anet_service = get_authorizenet_service()
-
-    try:
-        anet_response = anet_service.execute(anet_request)
-        token = str(anet_response.token)
-    except AuthorizenetError as error:
-        logger.error(error)
-        token = None
-    return TemplateResponse(
-        request,
-        request.template_name,
-        {"token": token, "url": get_hosted_payment_page_url()},
-    )
 
 
 @require_http_methods(["GET", "POST"])

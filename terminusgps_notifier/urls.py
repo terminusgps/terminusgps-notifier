@@ -80,11 +80,6 @@ urlpatterns = [
         views.authorizenet_hosted_profile_page,
         name="hosted profile",
     ),
-    path(
-        "authorizenet/hosted-payment/",
-        views.authorizenet_hosted_payment_page,
-        name="hosted payment",
-    ),
     path("wialon/login/", views.wialon_login, name="wialon login"),
     path("v3/health/", views.health_check, name="health check"),
     path("v3/notify/<str:method>/", views.notify, name="notify"),

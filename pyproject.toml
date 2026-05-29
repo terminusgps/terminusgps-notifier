@@ -2,7 +2,7 @@
 name = "terminusgps-notifier"
 description = "Terminus GPS Notification Dispatcher Service"
 readme = "README.md"
-version = "4.0.0"
+version = "3.10.0"
 authors = [
     { name = "Blake Nall", email = "blake@terminusgps.com" },
 ]

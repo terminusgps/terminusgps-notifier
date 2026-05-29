@@ -1,7 +1,13 @@
 from authorizenet import apicontractsv1
 from django.utils.translation import gettext_lazy as _
 
-HOSTED_PROFILE_PAGE_SETTINGS = [
+__all__ = [
+    "HOSTED_PAYMENT_PAGE_SETTINGS",
+    "HOSTED_PROFILE_PAGE_SETTINGS",
+    "TIMEZONES",
+]
+
+HOSTED_PROFILE_PAGE_SETTINGS_LIST = [
     apicontractsv1.settingType(
         settingName=apicontractsv1.settingNameEnum.hostedProfileSaveButtonText,
         settingValue="Save",
@@ -48,7 +54,7 @@ HOSTED_PROFILE_PAGE_SETTINGS = [
     # ),
 ]
 
-HOSTED_PAYMENT_PAGE_SETTINGS = [
+HOSTED_PAYMENT_PAGE_SETTINGS_LIST = [
     apicontractsv1.settingType(
         settingName=apicontractsv1.settingNameEnum.hostedPaymentReturnOptions,
         settingValue='{"showReceipt": true, "url": "https://api.terminusgps.com/dashboard/", "urlText": "Continue", "cancelUrl": "https://api.terminusgps.com/dashboard/", "cancelUrlText": "Cancel"}',
@@ -86,6 +92,15 @@ HOSTED_PAYMENT_PAGE_SETTINGS = [
         settingValue='{"show": true, "merchantName": "Terminus GPS"}',
     ),
 ]
+
+HOSTED_PROFILE_PAGE_SETTINGS = apicontractsv1.ArrayOfSetting()
+for setting in HOSTED_PROFILE_PAGE_SETTINGS_LIST:
+    HOSTED_PROFILE_PAGE_SETTINGS.setting.append(setting)
+
+HOSTED_PAYMENT_PAGE_SETTINGS = apicontractsv1.ArrayOfSetting()
+for setting in HOSTED_PAYMENT_PAGE_SETTINGS_LIST:
+    HOSTED_PAYMENT_PAGE_SETTINGS.setting.append(setting)
+
 
 TIMEZONES = [
     (-43200, _("International Date Line West")),

@@ -18,19 +18,9 @@
     <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create subscription' %}">
+    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:cancel subscription' %}" hx-confirm="Are you sure you want to cancel your subscription?">
         {% csrf_token %}
-        <div class="group flex flex-col gap-4 w-min-0">
-            <div class="*:peer *:p-2 *:border *:rounded *:w-full">{{ form.payment_id }}</div>
-            <label class="font-semibold order-first" for="{{ form.payment_id.id_for_label }}">{{ form.payment_id.label }}</label>
-            <p id="{{ form.payment_id.id_for_label }}_helptext">{{ form.payment_id.help_text }}</p>
-        </div>
-        <div class="group flex flex-col gap-4 w-min-0">
-            <div class="*:peer *:p-2 *:border *:rounded *:w-full">{{ form.address_id }}</div>
-            <label class="font-semibold order-first" for="{{ form.address_id.id_for_label }}">{{ form.address_id.label }}</label>
-            <p id="{{ form.address_id.id_for_label }}_helptext">{{ form.address_id.help_text }}</p>
-        </div>
-        <button type="submit">Subscribe</button>
+        <button type="submit">Cancel Subscription</button>
     </form>
 </div>
 {% endpartialdef main %}

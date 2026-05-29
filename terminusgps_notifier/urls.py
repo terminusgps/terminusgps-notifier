@@ -31,16 +31,6 @@ urlpatterns = [
         name="detail notifications",
     ),
     path(
-        "subscriptions/create/",
-        views.create_subscription,
-        name="create subscription",
-    ),
-    path(
-        "subscriptions/<int:subscription_id>/details/",
-        views.detail_subscription,
-        name="detail subscription",
-    ),
-    path(
         "notifications/create/step-one/",
         views.create_notification_step_one,
         name="create notification step one",
@@ -71,12 +61,27 @@ urlpatterns = [
         name="trigger parameters form",
     ),
     path(
-        "hosted-profile/<str:customer_profile_id>/",
+        "authorizenet/subscriptions/create/",
+        views.create_subscription,
+        name="create subscription",
+    ),
+    path(
+        "authorizenet/subscriptions/details/",
+        views.detail_subscription,
+        name="detail subscription",
+    ),
+    path(
+        "authorizenet/subscriptions/cancel/",
+        views.cancel_subscription,
+        name="cancel subscription",
+    ),
+    path(
+        "authorizenet/hosted-profile/",
         views.authorizenet_hosted_profile_page,
         name="hosted profile",
     ),
     path(
-        "hosted-payment/<str:customer_profile_id>/",
+        "authorizenet/hosted-payment/",
         views.authorizenet_hosted_payment_page,
         name="hosted payment",
     ),

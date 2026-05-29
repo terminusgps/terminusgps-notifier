@@ -23,7 +23,7 @@
     <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-    <div id="stats" class="@container grid grid-cols-2 gap-0 shadow-sm" hx-get="{% url 'terminusgps_notifier:dashboard' %}" hx-target="#id_messages_count" hx-select="#id_messages_count" hx-trigger="every 3s" hx-swap="outerHTML">
+    <div id="stats" class="@container grid grid-cols-2 gap-0 shadow-sm" hx-get="{% url 'terminusgps_notifier:dashboard' %}" hx-target="#id_messages_count" hx-select="#id_messages_count" hx-trigger="every 5s" hx-swap="outerHTML">
         <div id="id_messages_count" name="messages_count" class="p-4 col-span-2 flex flex-col gap-4 border rounded-t border-gray-300 bg-stone-50">
             <div class="flex items-center gap-2 text-terminus-red-800">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
@@ -69,20 +69,18 @@
             </div>
             <p>You are <span class="font-semibold">{{ subscribed|yesno:'subscribed, not subscribed' }}</span>.</p>
             <div class="flex flex-col gap-2 items-center @md:flex-row @md:justify-between">
-                <form class="w-full" hx-get="{% url 'terminusgps_notifier:hosted profile' profile.profile_id %}" hx-target="this" hx-trigger="load once" hx-swap="outerHTML">
+                <form class="w-full" hx-get="{% url 'terminusgps_notifier:hosted profile' %}" hx-target="this" hx-trigger="load once" hx-swap="outerHTML">
                     <button class="w-full cursor-not-allowed p-2 border rounded bg-stone-300 border-stone-600" type="button">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 animate-spin">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                         </svg>
                     </button>
                 </form>
-                <form class="w-full" hx-get="{% url 'terminusgps_notifier:hosted payment' profile.profile_id %}" hx-target="this" hx-trigger="load once" hx-swap="outerHTML">
-                    <button class="w-full cursor-not-allowed p-2 border rounded bg-stone-300 border-stone-600" type="button">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 animate-spin">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                        </svg>
-                    </button>
-                </form>
+                {% if subscribed %}
+                <a href="{% url 'terminusgps_notifier:detail subscription' %}">Manage Subscription</a>
+                {% else %}
+                <a href="{% url 'terminusgps_notifier:create subscription' %}">Manage Subscription</a>
+                {% endif %}
             </div>
         </div>
     </div>

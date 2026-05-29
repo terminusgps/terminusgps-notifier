@@ -1,5 +1,5 @@
 import asyncio
-import datetime
+import copy
 import decimal
 import logging
 import urllib.parse
@@ -15,6 +15,7 @@ from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import cache_control, never_cache
 from django.views.decorators.csrf import csrf_exempt
@@ -115,10 +116,6 @@ async def send_notifications(method, phones, dispatchers) -> HttpResponse:
     )
 
 
-def profile_has_available_messages(profile: Profile) -> bool:
-    return profile.messages_count < profile.messages_limit
-
-
 @require_POST
 @csrf_exempt
 @never_cache
@@ -146,7 +143,7 @@ def notify(request: HttpRequest, method: str) -> HttpResponse:
     profile = get_object_or_404(Profile, user__pk=form.cleaned_data["user_id"])
     if not subscription_is_active(profile.subscription_id):
         return HttpResponse("Invalid subscription".encode("utf-8"), status=403)
-    if not profile_has_available_messages(profile):
+    if profile.messages_count > profile.messages_limit:
         return HttpResponse("Messages maxed".encode("utf-8"), status=403)
     phones = get_phones(profile.token, form.cleaned_data["unit_id"])
     if not phones:
@@ -238,23 +235,111 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
 
 @require_POST
 @transaction.atomic
-def refresh_profile_from_authorizenet(
+def refresh_authorizenet_customer_profile(
     request: HtmxHttpRequest, customer_profile_id: str
 ) -> HttpResponse:
     try:
         profile = get_object_or_404(Profile, profile_id=customer_profile_id)
-        response = get_customer_profile_by_id(customer_profile_id)
-        profile.user.email = str(response.profile.email)
+        anet_response = get_customer_profile_by_id(customer_profile_id)
+        profile.user.email = str(anet_response.profile.email)
         profile.user.save(update_fields=["email"])
-        profile.profile_id = str(response.profile.customerProfileId)
-        profile.merchant_id = str(response.profile.merchantCustomerId)
-        profile.description = str(response.profile.description)
+        profile.profile_id = str(anet_response.profile.customerProfileId)
+        profile.merchant_id = str(anet_response.profile.merchantCustomerId)
+        profile.description = str(anet_response.profile.description)
         update_fields = ["profile_id", "merchant_id", "description"]
         profile.save(update_fields=update_fields)
         return HttpResponse(status=200)
     except AuthorizenetError as error:
+        logger.error(error)
         messages.error(request, error)
         return HttpResponse(status=500)
+
+
+@require_http_methods(["GET", "POST"])
+@htmx_template("terminusgps_notifier/cancel_subscription.html")
+def cancel_subscription(request: HtmxHttpRequest) -> HttpResponse:
+    profile = get_object_or_404(Profile, user=request.user)
+    if not profile.subscription_id:
+        messages.warning(request, "No subscription to cancel.")
+        return redirect("terminusgps_notifier:dashboard")
+    if request.method == "POST":
+        anet_request = api.cancel_subscription(profile.subscription_id)
+        anet_service = get_authorizenet_service()
+        try:
+            anet_service.execute(anet_request)
+            messages.success(request, "Subscription successfully canceled.")
+            return redirect("terminusgps_notifier:dashboard")
+        except AuthorizenetError as error:
+            logger.error(error)
+            messages.error(request, error)
+    return TemplateResponse(request, request.template_name, {})
+
+
+@require_http_methods(["GET", "POST"])
+@htmx_template("terminusgps_notifier/create_subscription.html")
+def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
+    payment_choices = []
+    address_choices = []
+    profile = get_object_or_404(Profile, user=request.user)
+    anet_request = api.get_customer_profile(profile.profile_id)
+    anet_service = get_authorizenet_service()
+
+    try:
+        anet_response = anet_service.execute(anet_request)
+        for aprofile in anet_response.profile.shipToList:
+            value = str(aprofile.customerAddressId)
+            label = str(aprofile.address)
+            address_choices.append((value, label))
+        for pprofile in anet_response.profile.paymentProfiles:
+            value = str(pprofile.customerPaymentProfileId)
+            label = f"{pprofile.payment.creditCard.cardType} {pprofile.payment.creditCard.cardNumber}"
+            payment_choices.append((value, label))
+    except AuthorizenetError as error:
+        logger.error(error)
+        messages.error(request, error)
+
+    if request.method == "GET":
+        form = forms.SubscriptionCreationForm(
+            payment_choices=payment_choices,
+            address_choices=address_choices,
+            data={},
+        )
+    else:
+        form = forms.SubscriptionCreationForm(
+            payment_choices=payment_choices,
+            address_choices=address_choices,
+            data=request.POST,
+        )
+        if form.is_valid():
+            address_id = form.cleaned_data["address_id"]
+            payment_id = form.cleaned_data["payment_id"]
+            interval = apicontractsv1.paymentScheduleTypeInterval()
+            interval.length = 1
+            interval.unit = "months"
+            schedule = apicontractsv1.paymentScheduleType()
+            schedule.interval = interval
+            schedule.startDate = timezone.now()
+            schedule.totalOccurrences = 9999
+            schedule.trialOccurrences = 0
+            customer_profile = apicontractsv1.customerProfileIdType()
+            customer_profile.customerProfileId = profile.profile_id
+            customer_profile.customerAddressId = address_id
+            customer_profile.customerPaymentProfileId = payment_id
+            contract = apicontractsv1.ARBSubscriptionType()
+            contract.paymentSchedule = schedule
+            contract.profile = customer_profile
+            contract.amount = decimal.Decimal("60.00")
+            contract.trialAmount = decimal.Decimal("0.00")
+            anet_request = api.create_subscription(contract)
+            try:
+                anet_response = anet_service.execute(anet_request)
+                profile.subscription_id = anet_response.subscriptionId
+                profile.save(update_fields=["subscription_id"])
+                return redirect("terminusgps_notifier:dashboard")
+            except AuthorizenetError as error:
+                logger.error(error)
+                messages.error(request, error)
+    return TemplateResponse(request, request.template_name, {"form": form})
 
 
 @require_GET
@@ -305,6 +390,7 @@ def detail_notifications(
             wialon_sid, resource_id, [notification_id]
         )
     except WialonAPIError as error:
+        logger.error(error)
         messages.error(request, error)
         response = [{}]
     context = {"object": response[0]}
@@ -314,39 +400,23 @@ def detail_notifications(
 @require_http_methods(["GET", "POST"])
 @never_cache
 @htmx_template("terminusgps_notifier/hosted_payment.html")
-def authorizenet_hosted_payment_page(
-    request: HtmxHttpRequest, customer_profile_id: str
-) -> HttpResponse:
+def authorizenet_hosted_payment_page(request: HtmxHttpRequest) -> HttpResponse:
+    profile = get_object_or_404(Profile, user=request.user)
+    settings = copy.copy(constants.HOSTED_PAYMENT_PAGE_SETTINGS)
+    customer_profile = apicontractsv1.customerProfilePaymentType()
+    customer_profile.customerProfileId = profile.profile_id
+    transaction = apicontractsv1.transactionRequestType()
+    transaction.transactionType = "authCaptureTransaction"
+    transaction.amount = decimal.Decimal("60.00")
+    transaction.profile = customer_profile
+    anet_request = api.get_accept_payment_page(transaction, settings)
+    anet_service = get_authorizenet_service()
+
     try:
-        page_settings = apicontractsv1.ArrayOfSetting()
-        for setting in constants.HOSTED_PAYMENT_PAGE_SETTINGS:
-            page_settings.setting.append(setting)
-        interval = apicontractsv1.paymentScheduleTypeInterval()
-        interval.length = 1
-        interval.unit = "months"
-        schedule = apicontractsv1.paymentScheduleType()
-        schedule.interval = interval
-        schedule.startDate = datetime.date.today()
-        schedule.totalOccurrences = 9999
-        schedule.trialOccurrences = 0
-        subscription = apicontractsv1.ARBSubscriptionType()
-        subscription.amount = decimal.Decimal("60.00")
-        subscription.trialAmount = decimal.Decimal("0.00")
-        subscription.schedule = schedule
-        profile = apicontractsv1.customerProfilePaymentType()
-        profile.customerProfileId = customer_profile_id
-        trans_request = apicontractsv1.transactionRequestType()
-        trans_request.transactionType = "authCaptureTransaction"
-        trans_request.amount = decimal.Decimal("60.00")
-        trans_request.profile = profile
-        trans_request.subscription = subscription
-        service = get_authorizenet_service()
-        response = service.execute(
-            api.get_accept_payment_page(trans_request, page_settings)
-        )
-        token = str(response.token)
+        anet_response = anet_service.execute(anet_request)
+        token = str(anet_response.token)
     except AuthorizenetError as error:
-        messages.error(request, error)
+        logger.error(error)
         token = None
     return TemplateResponse(
         request,
@@ -358,23 +428,18 @@ def authorizenet_hosted_payment_page(
 @require_http_methods(["GET", "POST"])
 @never_cache
 @htmx_template("terminusgps_notifier/hosted_profile.html")
-def authorizenet_hosted_profile_page(
-    request: HtmxHttpRequest, customer_profile_id: str
-) -> HttpResponse:
+def authorizenet_hosted_profile_page(request: HtmxHttpRequest) -> HttpResponse:
+    profile = get_object_or_404(Profile, user=request.user)
+    profile_id = int(profile.profile_id)
+    settings = copy.copy(constants.HOSTED_PROFILE_PAGE_SETTINGS)
+    anet_request = api.get_accept_customer_profile_page(profile_id, settings)
+    anet_service = get_authorizenet_service()
+
     try:
-        page_settings = apicontractsv1.ArrayOfSetting()
-        for setting in constants.HOSTED_PROFILE_PAGE_SETTINGS:
-            page_settings.setting.append(setting)
-        service = get_authorizenet_service()
-        response = service.execute(
-            api.get_accept_customer_profile_page(
-                customer_profile_id=int(customer_profile_id),
-                settings=page_settings,
-            )
-        )
-        token = str(response.token)
+        anet_response = anet_service.execute(anet_request)
+        token = str(anet_response.token)
     except AuthorizenetError as error:
-        messages.error(request, error)
+        logger.error(error)
         token = None
     return TemplateResponse(
         request,
@@ -391,8 +456,9 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
         wialon_sid = request.session["wialon_sid"]
         force_refresh = request.GET.get("refresh") == "on"
-        response = get_resources(wialon_sid, int(force_refresh))
+        response = get_resources(wialon_sid, force_refresh)
     except WialonAPIError as error:
+        logger.error(error)
         messages.error(request, error)
         response = {"items": []}
     context = {"object_list": response["items"]}
@@ -407,8 +473,9 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
         wialon_sid = request.session["wialon_sid"]
         force_refresh = request.GET.get("refresh") == "on"
-        response = get_resources(wialon_sid, int(force_refresh))
+        response = get_resources(wialon_sid, force_refresh)
     except WialonAPIError as error:
+        logger.error(error)
         messages.error(request, error)
         response = {"items": []}
     context = {"object_list": response["items"]}
@@ -426,6 +493,7 @@ def select_geofences(
         wialon_sid = request.session["wialon_sid"]
         response = get_geozones(wialon_sid, resource_id)
     except WialonAPIError as error:
+        logger.error(error)
         messages.error(request, error)
         response = []
     context = {"object_list": response}
@@ -443,6 +511,7 @@ def list_notifications(
         wialon_sid = request.session["wialon_sid"]
         response = get_notifications(wialon_sid, resource_id)
     except WialonAPIError as error:
+        logger.error(error)
         messages.error(request, error)
         response = {"items": []}
     context = {"object_list": response["items"]}
@@ -462,6 +531,7 @@ def detail_resources(
         params = {"id": resource_id, "flags": 1025}
         response = session.wialon_api.core_search_item(**params)
     except WialonAPIError as error:
+        logger.error(error)
         messages.error(request, error)
         response = {"item": {}}
     context = {"object": response["item"]}
@@ -479,45 +549,35 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
         wialon_sid = request.session["wialon_sid"]
         resource_id = str(request.GET.get("resource"))
         items_type = str(request.GET.get("items_type", "avl_unit"))
-        force_refresh = int(request.GET.get("refresh") == "on")
+        force_refresh = request.GET.get("refresh") == "on"
         response = get_items(
             wialon_sid, resource_id, items_type, force_refresh
         )
     except WialonAPIError as error:
+        logger.error(error)
         messages.warning(request, error)
         response = {"items": []}
     context = {"object_list": response["items"]}
     return TemplateResponse(request, request.template_name, context)
 
 
-@require_http_methods(["GET", "POST"])
-@cache_control(private=True)
-@htmx_template("terminusgps_notifier/create_subscription.html")
-def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
-    profile = get_object_or_404(Profile, user=request.user)
-    context = {}
-    return TemplateResponse(request, request.template_name, context)
-
-
 @require_GET
-@cache_control(private=True)
 @htmx_template("terminusgps_notifier/detail_subscription.html")
-def detail_subscription(
-    request: HtmxHttpRequest, subscription_id: str
-) -> HttpResponse:
+def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
+    profile = get_object_or_404(Profile, user=request.user)
+    subscription_id = int(profile.subscription_id)
+    include_transactions = request.GET.get("include_transactions") == "on"
+    anet_request = api.get_subscription(subscription_id, include_transactions)
+    anet_service = get_authorizenet_service()
+
     try:
-        include_transactions = request.GET.get("include_transactions") == "on"
-        service = get_authorizenet_service()
-        response = service.execute(
-            api.get_subscription(
-                subscription_id=int(subscription_id),
-                include_transactions=include_transactions,
-            )
-        )
+        anet_response = anet_service.execute(anet_request)
+        subscription = anet_response.subscription
     except AuthorizenetError as error:
+        logger.error(error)
         messages.error(request, error)
-        response = None
-    context = {"response": response}
+        subscription = None
+    context = {"object": subscription}
     return TemplateResponse(request, request.template_name, context)
 
 
@@ -533,9 +593,10 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
         return redirect("terminusgps_notifier:create notification step two")
     try:
         wialon_sid = request.session["wialon_sid"]
-        forced_refresh = int(request.GET.get("refresh") == "on")
+        forced_refresh = request.GET.get("refresh") == "on"
         response = get_resources(wialon_sid, forced_refresh)
     except WialonAPIError as error:
+        logger.error(error)
         messages.error(request, error)
         response = {"items": []}
     return TemplateResponse(
@@ -628,10 +689,10 @@ def create_notification_step_four(request: HtmxHttpRequest) -> HttpResponse:
 @htmx_template("terminusgps_notifier/create_notification/step_review.html")
 def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
     def get_wialon_api_parameters(request: HtmxHttpRequest) -> dict:
-        step_one = dict(request.session.get("step_one_data", {}))
-        step_two = dict(request.session.get("step_two_data", {}))
-        step_three = dict(request.session.get("step_three_data", {}))
-        step_four = dict(request.session.get("step_four_data", {}))
+        step_one = request.session.get("step_one_data", {})
+        step_two = request.session.get("step_two_data", {})
+        step_three = request.session.get("step_three_data", {})
+        step_four = request.session.get("step_four_data", {})
         sch = {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "y": 0, "w": 0}
         ctrl_sch = {"f1": 0, "f2": 0, "t1": 0, "t2": 0, "m": 0, "y": 0, "w": 0}
         schedules = {"sch": sch, "ctrl_sch": ctrl_sch}
@@ -652,6 +713,7 @@ def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
                 resource_id=params["itemId"],
             )
         except WialonAPIError as error:
+            logger.error(error)
             messages.error(request, error)
     context = {"params": params}
     return TemplateResponse(request, request.template_name, context)

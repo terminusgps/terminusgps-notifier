@@ -8,6 +8,7 @@ from asgiref.sync import async_to_sync
 from authorizenet import apicontractsv1
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView, redirect_to_login
 from django.db import transaction
 from django.db.models import F
@@ -254,6 +255,7 @@ def refresh_authorizenet_customer_profile(
         return HttpResponse(status=500)
 
 
+@login_required
 @require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/cancel_subscription.html")
 def cancel_subscription(request: HtmxHttpRequest) -> HttpResponse:
@@ -274,6 +276,7 @@ def cancel_subscription(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, {})
 
 
+@login_required
 @require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/create_subscription.html")
 def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
@@ -341,6 +344,7 @@ def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, {"form": form})
 
 
+@login_required
 @require_GET
 @cache_control(private=True)
 @htmx_template("terminusgps_notifier/dashboard.html")
@@ -376,6 +380,7 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
     )
 
 
+@login_required
 @require_GET
 @persistent_wialon_session
 @cache_control(private=True)
@@ -396,8 +401,9 @@ def detail_notifications(
     return TemplateResponse(request, request.template_name, context)
 
 
-@require_http_methods(["GET", "POST"])
+@login_required
 @never_cache
+@require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/hosted_profile.html")
 def authorizenet_hosted_profile_page(request: HtmxHttpRequest) -> HttpResponse:
     profile = get_object_or_404(Profile, user=request.user)
@@ -419,9 +425,10 @@ def authorizenet_hosted_profile_page(request: HtmxHttpRequest) -> HttpResponse:
     )
 
 
+@login_required
 @require_GET
-@cache_control(private=True)
 @persistent_wialon_session
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/list_resources.html")
 def list_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
@@ -436,9 +443,10 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, context)
 
 
+@login_required
 @require_GET
-@cache_control(private=True)
 @persistent_wialon_session
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/select_resources.html")
 def select_resources(request: HtmxHttpRequest) -> HttpResponse:
     try:
@@ -453,9 +461,10 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, context)
 
 
+@login_required
 @require_GET
-@cache_control(private=True)
 @persistent_wialon_session
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/select_geofences.html")
 def select_geofences(
     request: HtmxHttpRequest, resource_id: str
@@ -471,9 +480,10 @@ def select_geofences(
     return TemplateResponse(request, request.template_name, context)
 
 
+@login_required
 @require_GET
-@cache_control(private=True)
 @persistent_wialon_session
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/list_notifications.html")
 def list_notifications(
     request: HtmxHttpRequest, resource_id: str
@@ -489,9 +499,10 @@ def list_notifications(
     return TemplateResponse(request, request.template_name, context)
 
 
+@login_required
 @require_GET
-@cache_control(private=True)
 @persistent_wialon_session
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/detail_resources.html")
 def detail_resources(
     request: HtmxHttpRequest, resource_id: str
@@ -509,9 +520,10 @@ def detail_resources(
     return TemplateResponse(request, request.template_name, context)
 
 
+@login_required
 @require_GET
-@cache_control(private=True)
 @persistent_wialon_session
+@cache_control(private=True)
 @htmx_template("terminusgps_notifier/select_units.html")
 def select_units(request: HtmxHttpRequest) -> HttpResponse:
     if not request.GET.get("resource"):
@@ -532,6 +544,7 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, context)
 
 
+@login_required
 @require_GET
 @htmx_template("terminusgps_notifier/detail_subscription.html")
 def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
@@ -552,9 +565,10 @@ def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, context)
 
 
+@login_required
+@persistent_wialon_session
 @require_http_methods(["GET", "POST"])
 @cache_control(private=True)
-@persistent_wialon_session
 @htmx_template("terminusgps_notifier/create_notification/step_one.html")
 def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -580,6 +594,7 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
     )
 
 
+@login_required
 @require_http_methods(["GET", "POST"])
 @cache_control(private=True)
 @htmx_template("terminusgps_notifier/create_notification/step_two.html")
@@ -597,6 +612,7 @@ def create_notification_step_two(request: HtmxHttpRequest) -> HttpResponse:
         return TemplateResponse(request, request.template_name, context)
 
 
+@login_required
 @require_http_methods(["GET", "POST"])
 @cache_control(private=True)
 @htmx_template("terminusgps_notifier/create_notification/step_three.html")
@@ -630,6 +646,7 @@ def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, {})
 
 
+@login_required
 @require_http_methods(["GET", "POST"])
 @cache_control(private=True)
 @htmx_template("terminusgps_notifier/create_notification/step_four.html")
@@ -654,9 +671,10 @@ def create_notification_step_four(request: HtmxHttpRequest) -> HttpResponse:
     return TemplateResponse(request, request.template_name, context)
 
 
+@login_required
+@persistent_wialon_session
 @require_http_methods(["GET", "POST"])
 @cache_control(private=True)
-@persistent_wialon_session
 @htmx_template("terminusgps_notifier/create_notification/step_review.html")
 def create_notification_step_review(request: HtmxHttpRequest) -> HttpResponse:
     def get_wialon_api_parameters(request: HtmxHttpRequest) -> dict:

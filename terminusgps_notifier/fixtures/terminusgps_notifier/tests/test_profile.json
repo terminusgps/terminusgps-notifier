@@ -7,10 +7,10 @@
       "token": null,
       "messages_count": 0,
       "messages_limit": 500,
-      "profile_id": "",
-      "merchant_id": "",
+      "profile_id": "1",
+      "merchant_id": "1",
       "description": "",
-      "subscription_id": ""
+      "subscription_id": "1"
     }
   }
 ]

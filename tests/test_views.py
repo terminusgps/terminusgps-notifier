@@ -5,6 +5,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
 from django.utils import timezone
+from terminusgps.authorizenet.service import AuthorizenetService
 from terminusgps.wialon.session import WialonSession
 
 from terminusgps_notifier import forms, models, views
@@ -200,19 +201,23 @@ class NotifyTestCase(TestCase):
 
     def test_profile_with_maxed_out_messages_returns_403(self):
         """Fails if a profile with maxed out messages doesn't return status code 403."""
-        profile = models.Profile.objects.get(pk=1)
-        profile.messages_count = 500
-        profile.save(update_fields=["messages_count"])
-        response = self.client.post(
-            "/v3/notify/sms/",
-            {
-                "user_id": "1",
-                "unit_id": "12345678",
-                "message": "Test",
-                "msg_time_int": 0,
-            },
-        )
-        self.assertEqual(response.status_code, 403)
+        with patch(
+            "terminusgps_notifier.authorizenet.get_authorizenet_service",
+            return_value=MagicMock(AuthorizenetService),
+        ):
+            profile = models.Profile.objects.get(pk=1)
+            profile.messages_count = 500
+            profile.save(update_fields=["messages_count"])
+            response = self.client.post(
+                "/v3/notify/sms/",
+                {
+                    "user_id": "1",
+                    "unit_id": "12345678",
+                    "message": "Test",
+                    "msg_time_int": 0,
+                },
+            )
+            self.assertEqual(response.status_code, 403)
 
     def test_profile_messages_count_incremented_on_success(self):
         """Fails if a profile's messages count wasn't incremented after notification dispatch."""

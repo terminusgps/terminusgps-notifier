@@ -86,24 +86,36 @@ TASKS = {
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME"),
-        "HOST": os.getenv("DB_HOST"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "PORT": os.getenv("DB_PORT", 5432),
-        "OPTIONS": {"client_encoding": "UTF8"},
-        "CONN_MAX_AGE": None,
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": os.getenv("DB_NAME"),
+#         "HOST": os.getenv("DB_HOST"),
+#         "USER": os.getenv("DB_USER"),
+#         "PASSWORD": os.getenv("DB_PASSWORD"),
+#         "PORT": os.getenv("DB_PORT", 5432),
+#         "OPTIONS": {"client_encoding": "UTF8"},
+#         "CONN_MAX_AGE": None,
+#     }
+# }
+
 CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
-        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-    }
+    "default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}
 }
+
+
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": "redis://127.0.0.1:6379/1",
+#         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+#     }
+# }
 
 INSTALLED_APPS = [
     "django.contrib.admin",

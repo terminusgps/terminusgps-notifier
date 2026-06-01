@@ -24,9 +24,8 @@ class NotificationDispatcher(ABC):
     @sync_to_async
     def render_message(self, template_name: str) -> str:
         msg_time_int = self.form.cleaned_data["msg_time_int"]
-        date = datetime.datetime.fromtimestamp(float(msg_time_int))
         context = self.form.cleaned_data.copy()
-        context.update({"date": date})
+        context["date"] = datetime.datetime.fromtimestamp(float(msg_time_int))
         return render_to_string(template_name, context)
 
     @abstractmethod

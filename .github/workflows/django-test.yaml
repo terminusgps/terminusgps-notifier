@@ -30,4 +30,4 @@ jobs:
         run: uv sync --locked
 
       - name: Run tests
-        run: uv run manage.py test
+        run: uv run manage.py test --parallel --settings=src.settings.dev

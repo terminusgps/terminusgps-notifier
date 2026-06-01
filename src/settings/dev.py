@@ -79,7 +79,6 @@ LOGGING = {
     },
 }
 
-
 TASKS = {
     "default": {"BACKEND": "django.tasks.backends.immediate.ImmediateBackend"}
 }
@@ -91,31 +90,9 @@ DATABASES = {
     }
 }
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": os.getenv("DB_NAME"),
-#         "HOST": os.getenv("DB_HOST"),
-#         "USER": os.getenv("DB_USER"),
-#         "PASSWORD": os.getenv("DB_PASSWORD"),
-#         "PORT": os.getenv("DB_PORT", 5432),
-#         "OPTIONS": {"client_encoding": "UTF8"},
-#         "CONN_MAX_AGE": None,
-#     }
-# }
-
 CACHES = {
     "default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}
 }
-
-
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": "redis://127.0.0.1:6379/1",
-#         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-#     }
-# }
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -126,15 +103,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "django.forms",
-    "django_rq",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
-
-RQ_QUEUES = {
-    "default": {"USE_REDIS_CACHE": "default"},
-    "high": {"USE_REDIS_CACHE": "default"},
-    "low": {"USE_REDIS_CACHE": "default"},
-}
 
 TEMPLATES = [
     {

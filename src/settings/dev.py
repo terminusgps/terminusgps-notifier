@@ -126,15 +126,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "django.forms",
-    "django_rq",
+    #    "django_rq",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
 
-RQ_QUEUES = {
-    "default": {"USE_REDIS_CACHE": "default"},
-    "high": {"USE_REDIS_CACHE": "default"},
-    "low": {"USE_REDIS_CACHE": "default"},
-}
+# RQ_QUEUES = {
+#     "default": {"USE_REDIS_CACHE": "default"},
+#     "high": {"USE_REDIS_CACHE": "default"},
+#     "low": {"USE_REDIS_CACHE": "default"},
+# }
 
 TEMPLATES = [
     {

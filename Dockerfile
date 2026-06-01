@@ -19,6 +19,6 @@ ENV PATH="/usr/local/terminusgps-notifier/.venv/bin:$PATH"
 
 ENTRYPOINT []
 
-CMD ["uv", "run", "uvicorn", "--workers", "4", "--host", "0.0.0.0", "--port", "8000", "src.wsgi:application"]
+CMD ["uv", "run", "gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "src.wsgi"]
 
 EXPOSE 8000

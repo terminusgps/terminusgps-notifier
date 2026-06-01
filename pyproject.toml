@@ -85,6 +85,7 @@ skip-magic-trailing-comma = true
 
 [dependency-groups]
 deploy = [
+    "tblib>=3.2.2",
     "uvicorn>=0.35.0",
 ]
 dev = [

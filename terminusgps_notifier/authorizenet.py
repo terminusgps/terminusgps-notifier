@@ -20,18 +20,11 @@ def get_authorizenet_service() -> AuthorizenetService:
 
 
 def get_hosted_profile_page_url() -> str:
+    """Returns the Authorizenet hosted profile page URL."""
     return (
         "https://accept.authorize.net/customer/manage"
         if not settings.DEBUG
         else "https://test.authorize.net/customer/manage"
-    )
-
-
-def get_hosted_payment_page_url() -> str:
-    return (
-        "https://accept.authorize.net/payment/payment"
-        if not settings.DEBUG
-        else "https://test.authorize.net/payment/payment"
     )
 
 

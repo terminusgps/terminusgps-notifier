@@ -1,0 +1,75 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width,initial-scale=1"/>
+        <link rel="icon" href="{% static 'terminusgps_notifier/favicon.ico' %}">
+        <link rel="stylesheet" href="{% static 'terminusgps_notifier/css/output.css' %}">
+        <script src="{% static 'terminusgps_notifier/js/htmx.min.4.0.0.js' %}" defer></script>
+        <script src="https://cdn.jsdelivr.net/npm/hyperscript.org@0.9.91/dist/_hyperscript.min.js" integrity="sha384-OT9bNmUa5rM34SmxFpRftn2F6GbgM/4xnTmn0z106OE5uvsigkdtUMOpdPKOigyO" crossorigin="anonymous"></script>
+        <title>{% block title %}{% endblock title %} | Terminus GPS Notifier</title>
+    </head>
+    <body class="text-gray-800 dark:text-gray-100" style='background-image: url("{% static 'terminusgps_notifier/img/background-light.png' %}");'>
+        <nav class="flex justify-between bg-stone-100 text-gray-800 drop-shadow dark:bg-gray-800">
+            <a href="{% url 'terminusgps_notifier:home' %}" class="group flex items-center space-x-1">
+                <img src="{% static 'terminusgps_notifier/icon/logo-waypoint.svg' %}" class="size-16 animate-coin-slow group-hover:animate-none">
+                <img src="{% static 'terminusgps_notifier/icon/logo-text.svg' %}" class="size-24">
+            </a>
+            <div class="px-4 flex items-center gap-2">
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'terminusgps_notifier:dashboard' %}">
+                    <div class="py-2 px-4 border rounded bg-stone-200 cursor-pointer flex items-center gap-2 hover:bg-stone-50 ease-in-out duration-300 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                        </svg>
+                        <p class="font-semibold">{{ request.user.username }}</p>
+                    </div>
+                </a>
+                <form method="post" action="{% url 'terminusgps_notifier:logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="py-2 px-4 border rounded bg-stone-200 cursor-pointer flex items-center gap-2 hover:bg-stone-50 ease-in-out duration-300 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                        </svg>
+                        <p class="font-semibold">Logout</p>
+                    </button>
+                </form>
+                {% else %}
+                <a href="{% url 'terminusgps_notifier:login' %}">
+                    <div class="py-2 px-4 border rounded bg-stone-200 cursor-pointer flex items-center gap-2 hover:bg-stone-50 ease-in-out duration-300 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
+                        </svg>
+                        <p class="font-semibold">Login</p>
+                    </div>
+                </a>
+                {% endif %}
+            </div>
+        </nav>
+        <main class="container mx-auto -mt-2 ">
+            <div class="border-lr mx-8 border-gray-600 bg-stone-100 dark:bg-gray-800">
+                <section class="p-8">
+                    {% block content %}{% endblock content %}
+                </section>
+            </div>
+        </main>
+        <footer class="bottom-0 left-0 z-20 w-full p-4 bg-stone-100 border-t border-stone-300 shadow-sm md:flex md:items-center md:justify-between md:p-6">
+            <span class="text-sm sm:text-center">© 2026 <a href="https://terminusgps.com/" class="hover:underline">Terminus GPS</a>. All Rights Reserved.</span>
+            <ul class="flex flex-wrap items-center mt-3 text-sm sm:mt-0">
+                <li>
+                    <a hx-boost="true" href="{% url 'terminusgps_notifier:contact' %}" class="hover:underline me-4 md:me-6">Contact</a>
+                </li>
+                <li>
+                    <a hx-boost="true" href="{% url 'terminusgps_notifier:privacy' %}" class="hover:underline me-4 md:me-6">Privacy</a>
+                </li>
+                <li>
+                    <a hx-boost="true" href="{% url 'terminusgps_notifier:terms' %}" class="hover:underline me-4 md:me-6">Terms</a>
+                </li>
+                <li>
+                    <a hx-boost="false" rel="external" href="{% url 'terminusgps_notifier:source' %}" class="hover:underline me-4 md:me-6">Source</a>
+                </li>
+            </ul>
+        </footer>
+    </body>
+</html>

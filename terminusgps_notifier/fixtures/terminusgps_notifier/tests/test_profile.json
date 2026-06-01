@@ -1,0 +1,16 @@
+[
+  {
+    "model": "terminusgps_notifier.Profile",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "token": null,
+      "messages_count": 0,
+      "messages_limit": 500,
+      "profile_id": "1",
+      "merchant_id": "1",
+      "description": "",
+      "subscription_id": "1"
+    }
+  }
+]

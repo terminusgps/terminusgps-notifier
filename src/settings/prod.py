@@ -8,9 +8,11 @@ from authorizenet.constants import constants
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+AUTHORIZENET_SERVICE = "terminusgps.authorizenet.service.AuthorizenetService"
 ALLOWED_HOSTS = [
     ".terminusgps.com",
     ".elb.amazonaws.com",
+    ".authorizenet.com",
     gethostbyname(gethostname()),
 ]
 ASGI_APPLICATION = "src.asgi.application"
@@ -55,6 +57,23 @@ NOTIFICATION_DISPATCHERS = {
         "terminusgps_notifier.dispatchers.TwilioNotificationDispatcher",
     ],
 }
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": os.getenv("AWS_S3_BUCKET_NAME"),
+            "location": "static/",
+            "region_name": os.getenv("AWS_S3_BUCKET_REGION", "us-east-1"),
+            "verify": os.getenv(
+                "AWS_S3_CERT_PATH",
+                ".venv/lib/python3.12/site-packages/certifi/cacert.pem",
+            ),
+        },
+    },
+}
+
 
 LOGGING = {
     "version": 1,
@@ -109,9 +128,9 @@ DATABASES = {
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379",
-        "TIMEOUT": 60 * 5,
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
     }
 }
 
@@ -124,9 +143,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "django.forms",
-    "terminusgps_payments.apps.TerminusgpsPaymentsConfig",
+    "django_rq",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
+
+RQ_QUEUES = {
+    "default": {"USE_REDIS_CACHE": "default"},
+    "high": {"USE_REDIS_CACHE": "default"},
+    "low": {"USE_REDIS_CACHE": "default"},
+}
+
 
 TEMPLATES = [
     {

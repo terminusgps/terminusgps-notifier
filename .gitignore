@@ -2,6 +2,7 @@
 !.gitignore
 !.dockerignore
 !.github/
+!.python-version
 
 __pycache__/
 *.egg-info/

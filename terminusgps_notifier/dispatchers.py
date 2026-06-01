@@ -1,4 +1,5 @@
 import datetime
+import logging
 from abc import ABC, abstractmethod
 
 import aioboto3
@@ -11,6 +12,8 @@ from twilio.twiml.voice_response import VoiceResponse
 
 from .forms import NotificationDispatchForm
 
+logger = logging.getLogger(__name__)
+
 
 class NotificationDispatcher(ABC):
     def __init__(self, form: NotificationDispatchForm) -> None:
@@ -21,9 +24,8 @@ class NotificationDispatcher(ABC):
     @sync_to_async
     def render_message(self, template_name: str) -> str:
         msg_time_int = self.form.cleaned_data["msg_time_int"]
-        date = datetime.datetime.fromtimestamp(float(msg_time_int))
         context = self.form.cleaned_data.copy()
-        context.update({"date": date})
+        context["date"] = datetime.datetime.fromtimestamp(float(msg_time_int))
         return render_to_string(template_name, context)
 
     @abstractmethod
@@ -49,6 +51,26 @@ class NotificationDispatcher(ABC):
                 return await self.send_voice(to_number, dry_run)
             case _:
                 raise ValueError(f"Invalid method: '{method}'")
+
+
+class DummyNotificationDispatcher(NotificationDispatcher):
+    async def send_voice(
+        self, to_number: str, dry_run: bool = False, **kwargs
+    ) -> str | None:
+        message = await self.render_message(
+            "terminusgps_notifier/message_voice.txt"
+        )
+        logger.info(f"Sending '{message}' to '{to_number}' via voice...")
+        logger.info(f"Sent '{message}' to '{to_number}'.")
+
+    async def send_sms(
+        self, to_number: str, dry_run: bool = False, **kwargs
+    ) -> str | None:
+        message = await self.render_message(
+            "terminusgps_notifier/message_sms.txt"
+        )
+        logger.info(f"Sending '{message}' to '{to_number}' via voice...")
+        logger.info(f"Sent '{message}' to '{to_number}'.")
 
 
 class AWSNotificationDispatcher(NotificationDispatcher):

@@ -131,7 +131,7 @@ def notify(request: HttpRequest, method: str) -> HttpResponse:
         * 406 - If the provided form data was invalid.
         * 500 - If something went wrong dispatching notifications.
         * 204 - If the Wialon unit didn't have any phone numbers assigned.
-        * 200 - If phone numbers were phone and all notifications were queued successfully.
+        * 200 - If phone numbers were found and all notifications were queued successfully.
 
     """
     if method not in settings.NOTIFICATION_DISPATCHERS:

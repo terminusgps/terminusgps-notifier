@@ -17,7 +17,7 @@ HOSTED_PROFILE_PAGE_SETTINGS_LIST = [
     ),
     apicontractsv1.settingType(
         settingName=apicontractsv1.settingNameEnum.hostedProfileReturnUrl,
-        settingValue="https://localhost:8000/dashboard/",
+        settingValue="https://api.terminusgps.com/dashboard/",
     ),
     apicontractsv1.settingType(
         settingName=apicontractsv1.settingNameEnum.hostedProfileReturnUrlText,

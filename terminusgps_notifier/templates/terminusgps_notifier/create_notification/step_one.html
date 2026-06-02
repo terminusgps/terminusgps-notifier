@@ -16,28 +16,28 @@
 </ul>
 {% endif %}
 <div class="flex flex-col gap-8">
-    <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+    <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification step one' %}">
+    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800" method="post" action="{% url 'terminusgps_notifier:create notification step one' %}">
         {% csrf_token %}
-        <div id="id_resource_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4">
-            <select class="p-2 border rounded bg-stone-50" id="id_resource" name="resource" hx-get="{% url 'terminusgps_notifier:select units' %}" hx-target="#id_units" hx-trigger="revealed, change" hx-include="this,[name='items_type']" hx-indicator="#id_units_indicator">
+        <div id="id_resource_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
+            <select class="p-2 border rounded bg-stone-50 dark:bg-gray-800" id="id_resource" name="resource" hx-get="{% url 'terminusgps_notifier:select units' %}" hx-target="#id_units" hx-trigger="revealed, change" hx-include="this,[name='items_type']" hx-indicator="#id_units_indicator">
                 {% for resource in object_list %}
                 <option value="{{ resource.id }}"{% if resource.id|stringformat:'i' == selected %} selected{% endif %}>{{ resource.nm }}</option>
                 {% endfor %}
             </select>
             <label class="order-first font-semibold" for="id_resource">Resource: </label>
         </div>
-        <div id="id_items_type_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4">
-            <select class="p-2 border rounded bg-stone-50" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:select units' %}" hx-target="#id_units" hx-trigger="change" hx-indicator="#id_units_indicator" hx-include="this,[name='resource']">
+        <div id="id_items_type_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
+            <select class="p-2 border rounded bg-stone-50 dark:bg-gray-800" id="id_items_type" name="items_type" hx-get="{% url 'terminusgps_notifier:select units' %}" hx-target="#id_units" hx-trigger="change" hx-indicator="#id_units_indicator" hx-include="this,[name='resource']">
                 <option value="avl_unit">Units</option>
                 <option value="avl_unit_group">Unit Groups</option>
             </select>
             <label class="order-first font-semibold" for="id_items_type">Type: </label>
         </div>
-        <div id="id_units_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4">
-            <select class="p-2 border rounded bg-stone-50" id="id_units" name="units" required multiple></select>
+        <div id="id_units_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
+            <select class="p-2 border rounded bg-stone-50 dark:bg-gray-800" id="id_units" name="units" required multiple></select>
             <div class="order-first font-semibold flex items-center gap-2">
                 <label for="id_units">Units: </label>
                 <svg id="id_units_indicator" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 animate-spin htmx-indicator">

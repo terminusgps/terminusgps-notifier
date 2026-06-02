@@ -19,19 +19,19 @@
     <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create subscription' %}">
+    <form class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800" method="post" action="{% url 'terminusgps_notifier:create subscription' %}">
         {% csrf_token %}
         <div class="group flex flex-col gap-4 w-min-0">
-            <div class="*:peer *:p-2 *:border *:rounded *:w-full">{{ form.payment_id }}</div>
+            <div class="*:peer *:p-2 *:border *:rounded *:w-full *:dark:bg-gray-500">{{ form.payment_id }}</div>
             <label class="font-semibold order-first" for="{{ form.payment_id.id_for_label }}">{{ form.payment_id.label }}</label>
             <p id="{{ form.payment_id.id_for_label }}_helptext">{{ form.payment_id.help_text }}</p>
         </div>
         <div class="group flex flex-col gap-4 w-min-0">
-            <div class="*:peer *:p-2 *:border *:rounded *:w-full">{{ form.address_id }}</div>
+            <div class="*:peer *:p-2 *:border *:rounded *:w-full *:dark:bg-gray-500">{{ form.address_id }}</div>
             <label class="font-semibold order-first" for="{{ form.address_id.id_for_label }}">{{ form.address_id.label }}</label>
             <p id="{{ form.address_id.id_for_label }}_helptext">{{ form.address_id.help_text }}</p>
         </div>
-        <button type="submit">Subscribe</button>
+        <button type="submit" class="px-4 py-2 border border-current cursor-pointer rounded text-gray-100 bg-terminus-red-800 hover:bg-terminus-red-400 ease-in-out duration-300 transition-colors">Subscribe</button>
     </form>
 </div>
 {% endpartialdef main %}

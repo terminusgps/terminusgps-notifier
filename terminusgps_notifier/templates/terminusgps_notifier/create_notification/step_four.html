@@ -16,85 +16,85 @@
 </ul>
 {% endif %}
 <div class="flex flex-col gap-8">
-    <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+    <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification step four' %}">
+    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800" method="post" action="{% url 'terminusgps_notifier:create notification step four' %}">
         {% csrf_token %}
-        <div id="{{ form.tz.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.tz }}</div>
+        <div id="{{ form.tz.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.tz }}</div>
             <label class="order-first font-semibold" for="{{ form.tz.id_for_label }}">{{ form.tz.label }}</label>
             <div class="text-sm" id="{{ form.tz.id_for_label }}_helptext">
                 <p>Select a timezone for your notification.</p>
             </div>
         </div>
-        <div id="{{ form.ta.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.ta }}</div>
+        <div id="{{ form.ta.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.ta }}</div>
             <label class="order-first font-semibold" for="{{ form.ta.id_for_label }}">{{ form.ta.label }}</label>
             <div class="text-sm" id="{{ form.ta.id_for_label }}_helptext">
                 <p>Provide a date and time to activate your notification.</p>
                 <p>Leave this blank to activate immediately.</p>
             </div>
         </div>
-        <div id="{{ form.td.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.td }}</div>
+        <div id="{{ form.td.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.td }}</div>
             <label class="order-first font-semibold" for="{{ form.td.id_for_label }}">{{ form.td.label }}</label>
             <div class="text-sm" id="{{ form.td.id_for_label }}_helptext">
                 <p>Provide a date and time to deactivate your notification.</p>
                 <p>Leave this blank to never deactivate.</p>
             </div>
         </div>
-        <div id="{{ form.fl.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.fl }}</div>
+        <div id="{{ form.fl.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.fl }}</div>
             <label class="order-first font-semibold" for="{{ form.fl.id_for_label }}">{{ form.fl.label }}</label>
             <div class="text-sm" id="{{ form.fl.id_for_label }}_helptext">
                 <p>TODO: Write helptext</p>
             </div>
         </div>
-        <div id="{{ form.la.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.la }}</div>
+        <div id="{{ form.la.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.la }}</div>
             <label class="order-first font-semibold" for="{{ form.la.id_for_label }}">{{ form.la.label }}</label>
             <div class="text-sm" id="{{ form.la.id_for_label }}_helptext">
                 <p>TODO: Write helptext</p>
             </div>
         </div>
-        <div id="{{ form.ma.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.ma }}</div>
+        <div id="{{ form.ma.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.ma }}</div>
             <label class="order-first font-semibold" for="{{ form.ma.id_for_label }}">{{ form.ma.label }}</label>
             <div class="text-sm" id="{{ form.ma.id_for_label }}_helptext">
                 <p>TODO: Write helptext</p>
             </div>
         </div>
-        <div id="{{ form.cdt.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.cdt }}</div>
+        <div id="{{ form.cdt.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.cdt }}</div>
             <label class="order-first font-semibold" for="{{ form.cdt.id_for_label }}">{{ form.cdt.label }}</label>
             <div class="text-sm" id="{{ form.cdt.id_for_label }}_helptext">
                 <p>TODO: Write helptext</p>
             </div>
         </div>
-        <div id="{{ form.cp.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.cp }}</div>
+        <div id="{{ form.cp.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.cp }}</div>
             <label class="order-first font-semibold" for="{{ form.cp.id_for_label }}">{{ form.cp.label }}</label>
             <div class="text-sm" id="{{ form.cp.id_for_label }}_helptext">
                 <p>TODO: Write helptext</p>
             </div>
         </div>
-        <div id="{{ form.mast.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.mast }}</div>
+        <div id="{{ form.mast.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.mast }}</div>
             <label class="order-first font-semibold" for="{{ form.mast.id_for_label }}">{{ form.mast.label }}</label>
             <div class="text-sm" id="{{ form.mast.id_for_label }}_helptext">
                 <p>TODO: Write helptext</p>
             </div>
         </div>
-        <div id="{{ form.mpst.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.mpst }}</div>
+        <div id="{{ form.mpst.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.mpst }}</div>
             <label class="order-first font-semibold" for="{{ form.mpst.id_for_label }}">{{ form.mpst.label }}</label>
             <div class="text-sm" id="{{ form.mpst.id_for_label }}_helptext">
                 <p>TODO: Write helptext</p>
             </div>
         </div>
-        <div id="{{ form.mmtd.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4">
-            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full">{{ form.mmtd }}</div>
+        <div id="{{ form.mmtd.id_for_label }}_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded min-w-0 @md:p-4 dark:bg-gray-600">
+            <div class="*:peer *:p-2 *:border *:rounded *:bg-stone-50 *:w-full *:dark:bg-gray-800">{{ form.mmtd }}</div>
             <label class="order-first font-semibold" for="{{ form.mmtd.id_for_label }}">{{ form.mmtd.label }}</label>
             <div class="text-sm" id="{{ form.mmtd.id_for_label }}_helptext">
                 <p>TODO: Write helptext</p>

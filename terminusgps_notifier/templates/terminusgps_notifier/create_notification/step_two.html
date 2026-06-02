@@ -16,13 +16,13 @@
 </ul>
 {% endif %}
 <div class="flex flex-col gap-8">
-    <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+    <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification step two' %}">
+    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800" method="post" action="{% url 'terminusgps_notifier:create notification step two' %}">
         {% csrf_token %}
-        <div id="id_t_container" class="p-2 flex flex-col gap-2 bg-stone-200 rounded @md:p-4">
-            <select class="p-2 border rounded bg-stone-50" id="id_t" name="t" hx-get="{% url 'terminusgps_notifier:trigger parameters form' %}" hx-include="this" hx-trigger="load once, change" hx-target="#id_p_container" aria-described-by="#id_t_helptext">
+        <div id="id_t_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
+            <select class="p-2 border rounded bg-stone-50 dark:bg-gray-800" id="id_t" name="t" hx-get="{% url 'terminusgps_notifier:trigger parameters form' %}" hx-include="this" hx-trigger="load once, change" hx-target="#id_p_container" aria-described-by="#id_t_helptext">
                 {% for value, label in triggers %}
                 <option value="{{ value }}">{{ label }}</option>
                 {% endfor %}
@@ -30,7 +30,7 @@
             <label class="order-first font-semibold" for="id_t">Trigger: </label>
             <div id="id_t_helptext">Select a notification trigger.</div>
         </div>
-        <div id="id_p_container" class="p-2 flex flex-col gap-8 bg-stone-200 rounded @md:p-4"></div>
+        <div id="id_p_container" class="p-2 flex flex-col gap-8 bg-stone-200 rounded @md:p-4 dark:bg-gray-600"></div>
         <button class="px-4 py-2 border border-current cursor-pointer rounded text-gray-100 bg-terminus-red-800 hover:bg-terminus-red-400 ease-in-out duration-300 transition-colors" type="submit">Next</button>
     </form>
 </div>

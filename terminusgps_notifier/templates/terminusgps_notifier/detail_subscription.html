@@ -29,7 +29,7 @@
         {% if object.status != 'canceled' %}
         <form method="post" action="{% url 'terminusgps_notifier:cancel subscription' %}">
             {% csrf_token %}
-            <button type="submit">Cancel Subscription</button>
+            <button class="w-full px-4 py-2 border border-current cursor-pointer rounded text-gray-100 bg-terminus-red-800 hover:bg-terminus-red-400 ease-in-out duration-300 transition-colors" type="submit">Cancel Subscription</button>
         </form>
         {% else %}
         <p>You may re-subscribe after your canceled subscription expires.</p>

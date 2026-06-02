@@ -16,27 +16,27 @@
 </ul>
 {% endif %}
 <div class="flex flex-col gap-8">
-    <div id="greeting" class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8">
+    <div id="greeting" class="p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800">
         <h3 class="font-semibold">Terminus GPS Notifier</h3>
     </div>
-    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8" method="post" action="{% url 'terminusgps_notifier:create notification step three' %}">
+    <form class="@container p-8 border bg-stone-50 border-stone-300 shadow-sm rounded flex flex-col gap-8 dark:bg-gray-700 dark:border-gray-800" method="post" action="{% url 'terminusgps_notifier:create notification step three' %}">
         {% csrf_token %}
-        <div id="id_name_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4">
-            <input class="p-2 border rounded bg-stone-50" type="text" id="id_name" name="name" placeholder="New Notification" minlength="4" maxlength="50" autofocus required>
+        <div id="id_name_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
+            <input class="p-2 border rounded bg-stone-50 dark:bg-gray-800" type="text" id="id_name" name="name" placeholder="New Notification" minlength="4" maxlength="50" autofocus required>
             <label class="order-first font-semibold" for="id_name">Name: </label>
             <div class="text-sm" id="id_name_helptext">
                 <p>Provide a memorable name for your notification.</p>
             </div>
         </div>
-        <div id="id_message_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4">
-            <input class="p-2 border rounded bg-stone-50" type="text" id="id_message" name="message" placeholder="At %MSG_TIME%, your vehicle %UNIT% had its ignition switched on." required>
+        <div id="id_message_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
+            <input class="p-2 border rounded bg-stone-50 dark:bg-gray-800" type="text" id="id_message" name="message" placeholder="At %MSG_TIME%, your vehicle %UNIT% had its ignition switched on." required>
             <label class="order-first font-semibold" for="id_message">Message: </label>
             <div class="text-sm" id="id_message_helptext">
                 <p>Provide a message to text/read aloud on notification trigger.</p>
             </div>
         </div>
-        <div id="id_method_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4">
-            <select class="p-2 border rounded bg-stone-50" id="id_method" name="method" required>
+        <div id="id_method_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
+            <select class="p-2 border rounded bg-stone-50 dark:bg-gray-800" id="id_method" name="method" required>
                 <option value="sms" selected>SMS</option>
                 <option value="voice">Voice</option>
             </select>

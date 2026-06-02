@@ -1027,11 +1027,3 @@ TRIGGER_FORMS_MAP = {
     WialonNotificationTrigger.FUEL_DRAIN: FuelDrainingTriggerForm,
     WialonNotificationTrigger.HEALTH: HealthCheckTriggerForm,
 }
-
-
-def get_trigger_form_fields() -> list[str]:
-    fields = []
-    for form_cls in TRIGGER_FORMS_MAP.values():
-        form = form_cls()
-        fields.extend(form.fields)
-    return fields

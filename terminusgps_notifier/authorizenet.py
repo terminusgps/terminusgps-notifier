@@ -7,6 +7,8 @@ from terminusgps.authorizenet.service import (
     AuthorizenetService,
 )
 
+from . import constants
+
 
 def get_authorizenet_service() -> AuthorizenetService:
     """
@@ -125,9 +127,9 @@ def subscription_is_active(id: int | None) -> bool:
         return False
     try:
         status = get_subscription_status(id)
-        return status in ("active", "canceled")
     except AuthorizenetError as error:
-        if error.code == "E00035":
+        if error.code == constants.SUBSCRIPTION_NOT_FOUND:
             return False
-        else:
-            raise
+        raise
+    else:
+        return status in ("active", "canceled")

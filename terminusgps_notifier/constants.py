@@ -4,8 +4,11 @@ from django.utils.translation import gettext_lazy as _
 __all__ = [
     "HOSTED_PAYMENT_PAGE_SETTINGS",
     "HOSTED_PROFILE_PAGE_SETTINGS",
+    "SUBSCRIPTION_NOT_FOUND",
     "TIMEZONES",
 ]
+
+SUBSCRIPTION_NOT_FOUND = "E00035"
 
 HOSTED_PROFILE_PAGE_SETTINGS_LIST = [
     apicontractsv1.settingType(

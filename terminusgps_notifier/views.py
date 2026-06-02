@@ -356,15 +356,19 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
         update_fields.append("token")
         messages.success(request, "Wialon account connected successfully!")
     if not profile.profile_id:
-        anet_response = create_customer_profile(
-            email=profile.user.email,
-            merchant_id=f"{profile.user.first_name} {profile.user.last_name}",
-            description=f"{profile.user.first_name} {profile.user.last_name}'s Customer Profile",
-        )
-        profile.profile_id = str(anet_response.profile.customerProfileId)
-        profile.merchant_id = str(anet_response.profile.merchantCustomerId)
-        profile.description = str(anet_response.profile.description)
-        update_fields.extend(("profile_id", "merchant_id", "description"))
+        try:
+            anet_response = create_customer_profile(
+                email=profile.user.email,
+                merchant_id=f"{profile.user.first_name} {profile.user.last_name}",
+                description=f"{profile.user.first_name} {profile.user.last_name}'s Customer Profile",
+            )
+            profile.profile_id = str(anet_response.profile.customerProfileId)
+            profile.merchant_id = str(anet_response.profile.merchantCustomerId)
+            profile.description = str(anet_response.profile.description)
+            update_fields.extend(("profile_id", "merchant_id", "description"))
+        except AuthorizenetError as error:
+            logger.error(error)
+            messages.error(request, error)
     if update_fields:
         profile.save(update_fields=update_fields)
     return TemplateResponse(

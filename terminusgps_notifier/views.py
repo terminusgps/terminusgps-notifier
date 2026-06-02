@@ -142,10 +142,13 @@ def notify(request: HttpRequest, method: str) -> HttpResponse:
     if not form.is_valid():
         return HttpResponse(status=406)
     profile = get_object_or_404(Profile, user__pk=form.cleaned_data["user_id"])
-    if not subscription_is_active(profile.subscription_id):
-        return HttpResponse("Invalid subscription".encode("utf-8"), status=403)
-    if profile.messages_count > profile.messages_limit:
-        return HttpResponse("Messages maxed".encode("utf-8"), status=403)
+    if not profile.user.is_staff:
+        if not subscription_is_active(profile.subscription_id):
+            return HttpResponse(
+                "Invalid subscription".encode("utf-8"), status=403
+            )
+        if profile.messages_count > profile.messages_limit:
+            return HttpResponse("Messages maxed".encode("utf-8"), status=403)
     phones = get_phones(profile.token, form.cleaned_data["unit_id"])
     if not phones:
         return HttpResponse("No phones found".encode("utf-8"), status=204)

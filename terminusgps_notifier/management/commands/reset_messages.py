@@ -4,7 +4,7 @@ from terminusgps_notifier.models import Profile
 
 
 class Command(BaseCommand):
-    help = "Resets a profile's messages count to 0."
+    help = "Resets profile(s) messages count to 0."
 
     def add_arguments(self, parser):
         parser.add_argument("profile_ids", nargs="+", type=int)

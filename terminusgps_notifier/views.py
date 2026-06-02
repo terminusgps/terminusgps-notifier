@@ -10,7 +10,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView, redirect_to_login
-from django.db import transaction
 from django.db.models import F
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -34,7 +33,6 @@ from terminusgps_notifier import constants, forms
 from terminusgps_notifier.authorizenet import (
     create_customer_profile,
     get_authorizenet_service,
-    get_customer_profile_by_id,
     get_hosted_profile_page_url,
     subscription_is_active,
 )
@@ -235,29 +233,6 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
         url="https://github.com/terminusgps/terminusgps-notifier",
         permanent=True,
     )(request)
-
-
-@require_POST
-@transaction.atomic
-def refresh_authorizenet_customer_profile(
-    request: HtmxHttpRequest, customer_profile_id: str
-) -> HttpResponse:
-    profile = get_object_or_404(Profile, profile_id=customer_profile_id)
-    try:
-        anet_response = get_customer_profile_by_id(customer_profile_id)
-    except AuthorizenetError as error:
-        logger.error(error)
-        messages.error(request, error)
-        return HttpResponse(status=500)
-    else:
-        profile.user.email = str(anet_response.profile.email)
-        profile.user.save(update_fields=["email"])
-        profile.profile_id = str(anet_response.profile.customerProfileId)
-        profile.merchant_id = str(anet_response.profile.merchantCustomerId)
-        profile.description = str(anet_response.profile.description)
-        update_fields = ["profile_id", "merchant_id", "description"]
-        profile.save(update_fields=update_fields)
-        return HttpResponse(status=200)
 
 
 @login_required

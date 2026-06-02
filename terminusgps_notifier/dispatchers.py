@@ -44,13 +44,12 @@ class NotificationDispatcher(ABC):
         self, to_number: str, method: str
     ) -> str | None:
         dry_run = self.form.cleaned_data.get("dry_run", False)
-        match method:
-            case "sms":
-                return await self.send_sms(to_number, dry_run)
-            case "voice":
-                return await self.send_voice(to_number, dry_run)
-            case _:
-                raise ValueError(f"Invalid method: '{method}'")
+        if method == "sms":
+            return await self.send_sms(to_number, dry_run)
+        elif method == "voice":
+            return await self.send_voice(to_number, dry_run)
+        else:
+            raise ValueError(f"Invalid method: '{method}'")
 
 
 class DummyNotificationDispatcher(NotificationDispatcher):

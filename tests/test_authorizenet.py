@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.test import TestCase, override_settings
+from terminusgps.authorizenet.service import AuthorizenetError
 
 from terminusgps_notifier import authorizenet
 
@@ -66,6 +67,24 @@ class SubscriptionIsActiveTestCase(TestCase):
         with patch(
             "terminusgps_notifier.authorizenet.get_subscription_status",
             return_value="expired",
+        ):
+            result = authorizenet.subscription_is_active(id=1)
+            self.assertFalse(result)
+
+    def test_authorizeneterror_reraised(self):
+        """Fails if an Authorizenet error was raised but not reraised."""
+        with patch(
+            "terminusgps_notifier.authorizenet.get_subscription_status",
+            side_effect=AuthorizenetError(message="", code="E00000"),
+        ):
+            with self.assertRaises(AuthorizenetError):
+                authorizenet.subscription_is_active(id=1)
+
+    def test_authorizeneterror_e00035_returns_false(self):
+        """Fails if an Authorizenet error E00035 was raised and the return value was not :py:obj:`False`."""
+        with patch(
+            "terminusgps_notifier.authorizenet.get_subscription_status",
+            side_effect=AuthorizenetError(message="", code="E00035"),
         ):
             result = authorizenet.subscription_is_active(id=1)
             self.assertFalse(result)

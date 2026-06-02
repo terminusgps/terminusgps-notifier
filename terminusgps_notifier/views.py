@@ -374,8 +374,6 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
             profile.merchant_id = str(anet_response.profile.merchantCustomerId)
             profile.description = str(anet_response.profile.description)
             update_fields.extend(("profile_id", "merchant_id", "description"))
-    if update_fields:
-        profile.save(update_fields=update_fields)
 
     try:
         subscribed = subscription_is_active(profile.subscription_id)
@@ -383,6 +381,8 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
         logger.error(error)
         subscribed = False
 
+    if update_fields:
+        profile.save(update_fields=update_fields)
     return TemplateResponse(
         request,
         request.template_name,
@@ -404,17 +404,20 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
 def detail_notifications(
     request: HtmxHttpRequest, resource_id: str, notification_id: str
 ) -> HttpResponse:
+    wialon_sid = request.session["wialon_sid"]
     try:
-        wialon_sid = request.session["wialon_sid"]
         response = get_notifications(
             wialon_sid, resource_id, [notification_id]
         )
     except WialonAPIError as error:
         logger.error(error)
         messages.error(request, error)
-        response = [{}]
-    context = {"object": response[0]}
-    return TemplateResponse(request, request.template_name, context)
+        object = None
+    else:
+        object = response[0]
+    finally:
+        context = {"object": object}
+        return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -427,18 +430,19 @@ def authorizenet_hosted_profile_page(request: HtmxHttpRequest) -> HttpResponse:
     settings = copy.copy(constants.HOSTED_PROFILE_PAGE_SETTINGS)
     anet_request = api.get_accept_customer_profile_page(profile_id, settings)
     anet_service = get_authorizenet_service()
-
     try:
         anet_response = anet_service.execute(anet_request)
-        token = str(anet_response.token)
     except AuthorizenetError as error:
         logger.error(error)
         token = None
-    return TemplateResponse(
-        request,
-        request.template_name,
-        {"token": token, "url": get_hosted_profile_page_url()},
-    )
+    else:
+        token = str(anet_response.token)
+    finally:
+        return TemplateResponse(
+            request,
+            request.template_name,
+            {"token": token, "url": get_hosted_profile_page_url()},
+        )
 
 
 @login_required
@@ -447,16 +451,19 @@ def authorizenet_hosted_profile_page(request: HtmxHttpRequest) -> HttpResponse:
 @cache_control(private=True)
 @htmx_template("terminusgps_notifier/list_resources.html")
 def list_resources(request: HtmxHttpRequest) -> HttpResponse:
+    wialon_sid = request.session["wialon_sid"]
+    force_refresh = request.GET.get("refresh") == "on"
     try:
-        wialon_sid = request.session["wialon_sid"]
-        force_refresh = request.GET.get("refresh") == "on"
         response = get_resources(wialon_sid, force_refresh)
     except WialonAPIError as error:
         logger.error(error)
         messages.error(request, error)
-        response = {"items": []}
-    context = {"object_list": response["items"]}
-    return TemplateResponse(request, request.template_name, context)
+        object_list = []
+    else:
+        object_list = response["items"]
+    finally:
+        context = {"object_list": object_list}
+        return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -465,16 +472,19 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
 @cache_control(private=True)
 @htmx_template("terminusgps_notifier/select_resources.html")
 def select_resources(request: HtmxHttpRequest) -> HttpResponse:
+    wialon_sid = request.session["wialon_sid"]
+    force_refresh = request.GET.get("refresh") == "on"
     try:
-        wialon_sid = request.session["wialon_sid"]
-        force_refresh = request.GET.get("refresh") == "on"
         response = get_resources(wialon_sid, force_refresh)
     except WialonAPIError as error:
         logger.error(error)
         messages.error(request, error)
-        response = {"items": []}
-    context = {"object_list": response["items"]}
-    return TemplateResponse(request, request.template_name, context)
+        object_list = []
+    else:
+        object_list = response["items"]
+    finally:
+        context = {"object_list": object_list}
+        return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -486,14 +496,16 @@ def select_geofences(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
     try:
-        wialon_sid = request.session["wialon_sid"]
-        response = get_geozones(wialon_sid, resource_id)
+        response = get_geozones(request.session["wialon_sid"], resource_id)
     except WialonAPIError as error:
         logger.error(error)
         messages.error(request, error)
-        response = []
-    context = {"object_list": response}
-    return TemplateResponse(request, request.template_name, context)
+        object_list = []
+    else:
+        object_list = response
+    finally:
+        context = {"object_list": object_list}
+        return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -505,14 +517,18 @@ def list_notifications(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
     try:
-        wialon_sid = request.session["wialon_sid"]
-        response = get_notifications(wialon_sid, resource_id)
+        response = get_notifications(
+            request.session["wialon_sid"], resource_id
+        )
     except WialonAPIError as error:
         logger.error(error)
         messages.error(request, error)
-        response = {"items": []}
-    context = {"object_list": response["items"]}
-    return TemplateResponse(request, request.template_name, context)
+        object_list = []
+    else:
+        object_list = response["items"]
+    finally:
+        context = {"object_list": object_list}
+        return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -523,17 +539,18 @@ def list_notifications(
 def detail_resources(
     request: HtmxHttpRequest, resource_id: str
 ) -> HttpResponse:
-    wialon_sid = request.session["wialon_sid"]
     params = {"id": resource_id, "flags": 1025}
     try:
-        session = get_session(wialon_sid)
+        session = get_session(request.session["wialon_sid"])
         response = session.wialon_api.core_search_item(**params)
     except WialonAPIError as error:
         logger.error(error)
         messages.error(request, error)
-        response = {"item": {}}
+        object = None
+    else:
+        object = response["item"]
     finally:
-        context = {"object": response["item"]}
+        context = {"object": object}
         return TemplateResponse(request, request.template_name, context)
 
 
@@ -554,11 +571,13 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
             wialon_sid, resource_id, items_type, force_refresh
         )
     except WialonAPIError as error:
-        response = {"items": []}
         logger.error(error)
         messages.warning(request, error)
+        object_list = []
+    else:
+        object_list = response["items"]
     finally:
-        context = {"object_list": response["items"]}
+        context = {"object_list": object_list}
         return TemplateResponse(request, request.template_name, context)
 
 
@@ -571,7 +590,6 @@ def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
     include_transactions = request.GET.get("include_transactions") == "on"
     anet_request = api.get_subscription(subscription_id, include_transactions)
     anet_service = get_authorizenet_service()
-
     try:
         anet_response = anet_service.execute(anet_request)
     except AuthorizenetError as error:

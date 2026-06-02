@@ -589,7 +589,7 @@ def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
 def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
     if request.method == "POST":
         un = request.POST.getlist("units", [])
-        itemId = int(request.POST["resource"])
+        itemId = request.POST.get("resource")
         request.session["step_one_data"] = {"un": un, "itemId": itemId}
         return redirect("terminusgps_notifier:create notification step two")
 

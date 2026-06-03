@@ -28,13 +28,6 @@
                 <p>Provide a memorable name for your notification.</p>
             </div>
         </div>
-        <div id="id_message_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
-            <input class="p-2 border rounded bg-stone-50 dark:bg-gray-800" type="text" id="id_message" name="message" placeholder="At %MSG_TIME%, your vehicle %UNIT% had its ignition switched on." required>
-            <label class="order-first font-semibold" for="id_message">Message: </label>
-            <div class="text-sm" id="id_message_helptext">
-                <p>Provide a message to text/read aloud on notification trigger.</p>
-            </div>
-        </div>
         <div id="id_method_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
             <select class="p-2 border rounded bg-stone-50 dark:bg-gray-800" id="id_method" name="method" required>
                 <option value="sms" selected>SMS</option>
@@ -43,6 +36,13 @@
             <label class="order-first font-semibold" for="id_method">Method: </label>
             <div class="text-sm" id="id_method_helptext">
                 <p>Select whether to text (sms) or read aloud via text-to-speech (voice) on notification trigger.</p>
+            </div>
+        </div>
+        <div id="id_message_container" class="p-2 flex flex-col gap-4 bg-stone-200 rounded @md:p-4 dark:bg-gray-600">
+            <input class="p-2 border rounded bg-stone-50 dark:bg-gray-800" type="text" id="id_message" name="message" placeholder="At %MSG_TIME%, your vehicle %UNIT% had its ignition switched on." required>
+            <label class="order-first font-semibold" for="id_message">Message: </label>
+            <div class="text-sm" id="id_message_helptext">
+                <p>Provide a message to text/read aloud on notification trigger.</p>
             </div>
         </div>
         <button class="px-4 py-2 border border-current cursor-pointer rounded text-gray-100 bg-terminus-red-800 hover:bg-terminus-red-400 ease-in-out duration-300 transition-colors" type="submit">Next</button>

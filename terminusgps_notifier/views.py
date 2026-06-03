@@ -115,6 +115,27 @@ async def send_notifications(method, phones, dispatchers) -> HttpResponse:
     )
 
 
+def generate_txt(user_id: int | None, message: str) -> str:
+    return urllib.parse.urlencode(
+        {
+            "user_id": user_id,
+            "unit_id": "%UNIT_ID%",
+            "message": message,
+            "msg_time_int": "%MSG_TIME_INT%",
+            "location": "%LOCATION%",
+            "unit_name": "%UNIT%",
+        },
+        safe="%",
+    )
+
+
+def generate_act(method: str) -> list[dict]:
+    url = urllib.parse.urljoin(
+        "https://api.terminusgps.com/", f"/v3/notify/{method}/"
+    )
+    return [{"t": "push_messages", "p": {"url": url, "get": 0}}]
+
+
 @require_POST
 @csrf_exempt
 @never_cache
@@ -636,30 +657,10 @@ def create_notification_step_two(request: HtmxHttpRequest) -> HttpResponse:
 @cache_control(private=True)
 @htmx_template("terminusgps_notifier/create_notification/step_three.html")
 def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
-    def generate_txt(request: HtmxHttpRequest) -> str:
-        return urllib.parse.urlencode(
-            {
-                "user_id": request.user.pk,
-                "unit_id": "%UNIT_ID%",
-                "message": request.POST["message"],
-                "msg_time_int": "%MSG_TIME_INT%",
-                "location": "%LOCATION%",
-                "unit_name": "%UNIT%",
-            },
-            safe="%",
-        )
-
-    def generate_act(request: HtmxHttpRequest) -> list[dict]:
-        url = urllib.parse.urljoin(
-            "https://api.terminusgps.com/",
-            f"/v3/notify/{request.POST['method']}/",
-        )
-        return [{"t": "push_messages", "p": {"url": url, "get": 0}}]
-
     if request.method == "POST":
         n = request.POST["name"]
-        txt = generate_txt(request)
-        act = generate_act(request)
+        txt = generate_txt(request.user.pk, request.POST["message"])
+        act = generate_act(request.POST["method"])
         request.session["step_three_data"] = {"n": n, "txt": txt, "act": act}
         return redirect("terminusgps_notifier:create notification step four")
     return TemplateResponse(request, request.template_name, {})

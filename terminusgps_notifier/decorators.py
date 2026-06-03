@@ -26,17 +26,15 @@ def get_wialon_api_token_from_user(user: AbstractBaseUser) -> str | None:
 
 
 def wialon_session_is_valid(sid: str | None = None) -> bool:
-    if sid is None:
-        return False
     try:
         session = WialonSession(sid=sid)
         session.wialon_api.avl_evts()
-        return True
     except wialon.api.WialonError as error:
         if error._code == 1:
             return False
-        else:
-            raise
+        raise
+    else:
+        return True
 
 
 def active_subscription_required(view_func=None):

@@ -1,10 +1,7 @@
-import datetime
 import logging
 
 from authorizenet import apicontractsv1
-from dateutil.relativedelta import relativedelta
 from django.conf import settings
-from django.utils.dateparse import parse_date
 from lxml.objectify import ObjectifiedElement
 from terminusgps.authorizenet import api
 from terminusgps.authorizenet.service import (
@@ -95,36 +92,9 @@ def create_customer_profile(
     contract.email = email
     contract.merchantCustomerId = merchant_id
     contract.description = description
-    service = get_authorizenet_service()
-    return service.execute(api.create_customer_profile(contract))
-
-
-def get_next_subscription_payment_date(id: int | None) -> datetime.date | None:
-    """
-    Returns the next date the subscription will be collected on.
-
-    Returns :py:obj:`None` if no subscription was found.
-
-    :param id: A subscription id.
-    :type id: int | None
-    :returns: The next payment date for the subscription.
-    :rtype: ~datetime.date | None
-
-    """
-    if not id:
-        return
     anet_service = get_authorizenet_service()
-    anet_request = api.get_subscription(id)
-    try:
-        response = anet_service.execute(anet_request)
-    except AuthorizenetError as error:
-        logger.error(error)
-        return
-    else:
-        start_str = str(response.subscription.paymentSchedule.startDate)
-        start = parse_date(start_str)
-        today = datetime.date.today()
-        return start.replace(month=today.month) + relativedelta(months=1)
+    anet_request = api.create_customer_profile(contract)
+    return anet_service.execute(anet_request)
 
 
 def get_subscription_status(id: int | None) -> str | None:
@@ -145,14 +115,17 @@ def get_subscription_status(id: int | None) -> str | None:
     :rtype: str | None
 
     """
-    service = get_authorizenet_service()
+    if not id:
+        return
+    anet_service = get_authorizenet_service()
+    anet_request = api.get_subscription_status(id)
     try:
-        response = service.execute(api.get_subscription_status(id))
+        anet_response = anet_service.execute(anet_request)
     except AuthorizenetError as error:
         logger.error(error)
         return
     else:
-        return str(response.status)
+        return str(anet_response.status)
 
 
 def subscription_is_active(id: int | None) -> bool:

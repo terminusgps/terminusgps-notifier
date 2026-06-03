@@ -599,15 +599,18 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
         response = get_resources(wialon_sid, forced_refresh)
     except WialonAPIError as error:
         logger.error(error)
-        response = {"items": []}
-    return TemplateResponse(
-        request,
-        request.template_name,
-        {
-            "object_list": response["items"],
-            "selected": request.GET.get("resource"),
-        },
-    )
+        object_list = []
+    else:
+        object_list = response["items"]
+    finally:
+        return TemplateResponse(
+            request,
+            request.template_name,
+            {
+                "object_list": object_list,
+                "selected": request.GET.get("resource"),
+            },
+        )
 
 
 @login_required

@@ -93,3 +93,8 @@ dev = [
     "sphinx-rtd-theme>=3.0.2",
     "sphinx>=8.2.3",
 ]
+docs = [
+    "autoclasstoc>=1.7.0",
+    "sphinx>=9.1.0",
+    "sphinxawesome-theme>=6.0.2",
+]

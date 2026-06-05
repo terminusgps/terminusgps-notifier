@@ -127,11 +127,7 @@ DATABASES = {
 }
 
 CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
-        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-    }
+    "default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}
 }
 
 INSTALLED_APPS = [
@@ -143,15 +139,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "django.forms",
-    "django_rq",
     "terminusgps_notifier.apps.TerminusgpsNotifierConfig",
 ]
-
-RQ_QUEUES = {
-    "default": {"USE_REDIS_CACHE": "default"},
-    "high": {"USE_REDIS_CACHE": "default"},
-    "low": {"USE_REDIS_CACHE": "default"},
-}
 
 
 TEMPLATES = [

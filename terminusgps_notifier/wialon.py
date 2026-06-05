@@ -1,8 +1,6 @@
 import logging
 from collections.abc import Sequence
-from functools import partial
 
-from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from terminusgps.wialon import flags
@@ -93,16 +91,8 @@ def get_phone_numbers_by_id(
     :rtype: list[str]
 
     """
-    driver_phones = cache.get_or_set(
-        f"{unit_id}_get_driver_phone_numbers",
-        partial(get_driver_phone_numbers, unit_id, session),
-        timeout=timeout,
-    )
-    cfield_phones = cache.get_or_set(
-        f"{unit_id}_get_cfield_phone_numbers",
-        partial(get_cfield_phone_numbers, unit_id, session),
-        timeout=timeout,
-    )
+    driver_phones = get_driver_phone_numbers(unit_id, session)
+    cfield_phones = get_cfield_phone_numbers(unit_id, session)
     return list(frozenset(driver_phones + cfield_phones))
 
 

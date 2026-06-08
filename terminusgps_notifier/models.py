@@ -24,3 +24,21 @@ class Profile(models.Model):
 
     def __str__(self) -> str:
         return str(self.user)
+
+
+class DispatchLog(models.Model):
+    user_id = models.IntegerField()
+    unit_id = models.IntegerField()
+    message = models.CharField(max_length=1024)
+    msg_time_int = models.IntegerField()
+    dry_run = models.BooleanField()
+    unit_name = models.CharField(blank=True)
+    location = models.CharField(blank=True)
+    date_format = models.CharField(blank=True, default="%Y-%m-%d %H:%M:%S")
+
+    class Meta:
+        verbose_name = _("dispatch log")
+        verbose_name_plural = _("dispatch logs")
+
+    def __str__(self) -> str:
+        return f"DispatchLog #{self.pk}"

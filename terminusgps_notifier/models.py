@@ -31,10 +31,6 @@ class DispatchLog(models.Model):
     unit_id = models.IntegerField()
     message = models.CharField(max_length=1024)
     msg_time_int = models.IntegerField()
-    dry_run = models.BooleanField()
-    unit_name = models.CharField(blank=True)
-    location = models.CharField(blank=True)
-    date_format = models.CharField(blank=True, default="%Y-%m-%d %H:%M:%S")
 
     class Meta:
         verbose_name = _("dispatch log")

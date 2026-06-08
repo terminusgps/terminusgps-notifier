@@ -183,6 +183,7 @@ def notify(request: HttpRequest, method: str) -> HttpResponse:
             msg_time_int=form.cleaned_data["msg_time_int"],
             phones=phones,
             method=method,
+            pub_date=timezone.now(),
         )
     return response
 

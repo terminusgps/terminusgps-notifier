@@ -8,11 +8,11 @@ authors = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "aioboto3>=15.5.0",
     "django-encrypted-field>=1.1.0",
@@ -22,7 +22,7 @@ dependencies = [
     "django>=6.0.2",
     "psycopg2-binary>=2.9.11",
     "psycopg[binary,pool]>=3.2.11",
-    "python-terminusgps>=54.2.1",
+    "python-terminusgps>=55.0.0",
     "redis[hiredis]>=6.4.0",
     "twilio>=9.10.3",
     "types-aioboto3[pinpoint-sms-voice-v2]>=15.5.0",
@@ -61,7 +61,7 @@ exclude = [
 ]
 line-length = 79
 indent-width = 4
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [

@@ -31,6 +31,10 @@ class DispatchLog(models.Model):
     unit_id = models.IntegerField()
     message = models.CharField(max_length=1024)
     msg_time_int = models.IntegerField()
+    phones = models.JSONField(default=list)
+    method = models.CharField(
+        choices=[("sms", _("SMS")), ("voice", _("Voice"))]
+    )
 
     class Meta:
         verbose_name = _("dispatch log")

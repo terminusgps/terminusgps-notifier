@@ -42,7 +42,7 @@ from terminusgps_notifier.decorators import (
     persistent_wialon_session,
 )
 from terminusgps_notifier.dispatchers import NotificationDispatcher
-from terminusgps_notifier.models import Profile
+from terminusgps_notifier.models import DispatchLog, Profile
 from terminusgps_notifier.wialon import (
     create_notification,
     get_geozones,
@@ -176,6 +176,14 @@ def notify(request: HttpRequest, method: str) -> HttpResponse:
     if response.status_code == 200:
         profile.messages_count = F("messages_count") + len(phones)
         profile.save(update_fields=["messages_count"])
+        DispatchLog.objects.create(
+            user_id=form.cleaned_data["user_id"],
+            unit_id=form.cleaned_data["unit_id"],
+            message=form.cleaned_data["message"],
+            msg_time_int=form.cleaned_data["msg_time_int"],
+            phones=phones,
+            method=method,
+        )
     return response
 
 

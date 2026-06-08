@@ -249,6 +249,32 @@ class NotifyTestCase(TestCase):
                 profile.refresh_from_db()
                 self.assertEqual(profile.messages_count, 1)
 
+    def test_dispatch_log_created(self):
+        """Fails if a dispatch log for the notification wasn't created."""
+        with patch(
+            "terminusgps_notifier.views.get_phones",
+            return_value=["+15555555555"],
+        ):
+            with patch(
+                "terminusgps_notifier.views.subscription_is_active",
+                return_value=True,
+            ):
+                self.client.post(
+                    "/v3/notify/sms/",
+                    {
+                        "user_id": "1",
+                        "unit_id": "12345678",
+                        "message": "Test",
+                        "msg_time_int": 0,
+                    },
+                )
+                log = models.DispatchLog.objects.filter(user_id=1).first()
+                self.assertEqual(log.unit_id, 12345678)
+                self.assertEqual(log.message, "Test")
+                self.assertEqual(log.msg_time_int, 0)
+                self.assertEqual(log.phones, ["+15555555555"])
+                self.assertEqual(log.method, "sms")
+
 
 class DashboardViewTestCase(TestCase):
     fixtures = [

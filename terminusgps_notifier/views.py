@@ -422,9 +422,8 @@ def detail_notifications(
         object = None
     else:
         object = response[0]
-    finally:
-        context = {"object": object}
-        return TemplateResponse(request, request.template_name, context)
+    context = {"object": object}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -444,12 +443,11 @@ def authorizenet_hosted_profile_page(request: HtmxHttpRequest) -> HttpResponse:
         token = None
     else:
         token = str(anet_response.token)
-    finally:
-        return TemplateResponse(
-            request,
-            request.template_name,
-            {"token": token, "url": get_hosted_profile_page_url()},
-        )
+    return TemplateResponse(
+        request,
+        request.template_name,
+        {"token": token, "url": get_hosted_profile_page_url()},
+    )
 
 
 @login_required
@@ -468,9 +466,8 @@ def list_resources(request: HtmxHttpRequest) -> HttpResponse:
         object_list = []
     else:
         object_list = response["items"]
-    finally:
-        context = {"object_list": object_list}
-        return TemplateResponse(request, request.template_name, context)
+    context = {"object_list": object_list}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -489,9 +486,8 @@ def select_resources(request: HtmxHttpRequest) -> HttpResponse:
         object_list = []
     else:
         object_list = response["items"]
-    finally:
-        context = {"object_list": object_list}
-        return TemplateResponse(request, request.template_name, context)
+    context = {"object_list": object_list}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -510,9 +506,8 @@ def select_geofences(
         object_list = []
     else:
         object_list = response
-    finally:
-        context = {"object_list": object_list}
-        return TemplateResponse(request, request.template_name, context)
+    context = {"object_list": object_list}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -533,9 +528,8 @@ def list_notifications(
         object_list = []
     else:
         object_list = response["items"]
-    finally:
-        context = {"object_list": object_list}
-        return TemplateResponse(request, request.template_name, context)
+    context = {"object_list": object_list}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -556,9 +550,8 @@ def detail_resources(
         object = None
     else:
         object = response["item"]
-    finally:
-        context = {"object": object}
-        return TemplateResponse(request, request.template_name, context)
+    context = {"object": object}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -583,9 +576,8 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
         object_list = []
     else:
         object_list = response["items"]
-    finally:
-        context = {"object_list": object_list}
-        return TemplateResponse(request, request.template_name, context)
+    context = {"object_list": object_list}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -605,9 +597,8 @@ def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
         object = None
     else:
         object = anet_response.subscription
-    finally:
-        context = {"object": object}
-        return TemplateResponse(request, request.template_name, context)
+    context = {"object": object}
+    return TemplateResponse(request, request.template_name, context)
 
 
 @login_required
@@ -631,15 +622,11 @@ def create_notification_step_one(request: HtmxHttpRequest) -> HttpResponse:
         object_list = []
     else:
         object_list = response["items"]
-    finally:
-        return TemplateResponse(
-            request,
-            request.template_name,
-            {
-                "object_list": object_list,
-                "selected": request.GET.get("resource"),
-            },
-        )
+    return TemplateResponse(
+        request,
+        request.template_name,
+        {"object_list": object_list, "selected": request.GET.get("resource")},
+    )
 
 
 @login_required

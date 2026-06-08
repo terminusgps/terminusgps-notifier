@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from encrypted_field import EncryptedField
 
@@ -35,6 +36,7 @@ class DispatchLog(models.Model):
     method = models.CharField(
         choices=[("sms", _("SMS")), ("voice", _("Voice"))]
     )
+    pub_date = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = _("dispatch log")

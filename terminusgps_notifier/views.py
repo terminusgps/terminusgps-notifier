@@ -679,8 +679,15 @@ def create_notification_step_three(request: HtmxHttpRequest) -> HttpResponse:
 @cache_control(private=True)
 @htmx_template("terminusgps_notifier/create_notification/step_four.html")
 def create_notification_step_four(request: HtmxHttpRequest) -> HttpResponse:
-    initial = {"ma": 0, "cdt": 0, "mpst": 0, "cp": 3600, "mmtd": 3600}
-    form = forms.CreateNotificationStepFourForm(data={}, initial=initial)
+    initial = {
+        "ma": 0,
+        "cdt": 0,
+        "mpst": 0,
+        "mast": 0,
+        "cp": 3600,
+        "mmtd": 3600,
+    }
+    form = forms.CreateNotificationStepFourForm(initial=initial)
     if request.method == "POST":
         form = forms.CreateNotificationStepFourForm(
             data=request.POST, initial=initial

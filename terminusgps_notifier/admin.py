@@ -11,4 +11,4 @@ class ProfileAdmin(admin.ModelAdmin):
 @admin.register(models.DispatchLog)
 class DispatchLogAdmin(admin.ModelAdmin):
     list_filter = ["method"]
-    list_display = ["unit_id", "user_id", "method", "message"]
+    list_display = ["unit_id", "method", "phones", "message"]

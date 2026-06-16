@@ -104,6 +104,11 @@ LOGGING = {
             "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
             "propagate": False,
         },
+        "django.request": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_REQUEST_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
         "terminusgps_notifier": {
             "handlers": ["console_verbose"],
             "level": os.getenv("NOTIFIER_LOG_LEVEL", "DEBUG"),

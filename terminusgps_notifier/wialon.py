@@ -65,7 +65,7 @@ class WialonSession:
         return self
 
     def __exit__(self, *args, **kwargs) -> None:
-        if not self.id:
+        if self.id:
             self.logout()
 
     def token_login(self, token: str) -> None:

@@ -134,13 +134,13 @@ def get_phones(token: str | None, unit_id: int) -> list[str]:
     """
     if token is None:
         return []
-    try:
-        with WialonSession(token=token) as session:
+    with WialonSession(token=token) as session:
+        try:
             dirty_phones = get_phone_numbers_by_id(unit_id, session)
-            return clean_phones(dirty_phones)
-    except WialonAPIError as error:
-        logger.error(error)
-        return []
+        except WialonAPIError as error:
+            logger.error(error)
+            return []
+        return clean_phones(dirty_phones)
 
 
 def get_driver_phone_numbers(
@@ -159,7 +159,8 @@ def get_driver_phone_numbers(
     """
     try:
         logger.debug(
-            f"Calling the Wialon API to retrieve driver phones for unit #{unit_id}..."
+            "Calling the Wialon API to retrieve driver phones for unit #%s...",
+            unit_id,
         )
         drivers = session.wialon_api.resource_get_unit_drivers(
             **{"unitId": unit_id}
@@ -192,7 +193,8 @@ def get_cfield_phone_numbers(
     """
     try:
         logger.debug(
-            f"Calling the Wialon API to retrieve cfield phones for unit #{unit_id}..."
+            "Calling the Wialon API to retrieve cfield phones for unit #%s...",
+            unit_id,
         )
         search = session.wialon_api.core_search_item(
             **{"id": unit_id, "flags": flags.DataFlag.UNIT_CUSTOM_FIELDS}

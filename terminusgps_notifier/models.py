@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
@@ -5,6 +7,8 @@ from django.utils.translation import gettext_lazy as _
 from encrypted_field import EncryptedField
 
 from terminusgps_notifier.wialon import get_phones
+
+logger = logging.getLogger(__name__)
 
 
 class Profile(models.Model):
@@ -30,6 +34,8 @@ class Profile(models.Model):
 
     def set_wialon_api_token_and_save(self, token: str) -> None:
         """Sets :py:attr:`token` to ``token`` then saves."""
+        logger.debug("Token type: %s", type(token))
+        logger.debug("Token len: %s", len(token))
         self.token = str(token)
         self.save(update_fields=["token"])
 

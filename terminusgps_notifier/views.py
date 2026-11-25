@@ -24,7 +24,6 @@ from django.views.decorators.http import (
 )
 from django.views.decorators.vary import vary_on_headers
 from django.views.generic import RedirectView
-from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import forms
 from terminusgps_notifier.constants import TIMEZONES
@@ -36,6 +35,8 @@ from terminusgps_notifier.decorators import (
 from terminusgps_notifier.dispatchers import get_dispatchers
 from terminusgps_notifier.models import DispatchLog, Profile
 from terminusgps_notifier.wialon import (
+    WialonAPIError,
+    WialonSession,
     create_notification,
     generate_act,
     generate_txt,

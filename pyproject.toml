@@ -91,6 +91,8 @@ deploy = [
 ]
 dev = [
     "ipython>=9.15.0",
+    "pytest-django[django]>=4.14.0",
+    "pytest>=9.2.0",
     "sphinx-rtd-theme>=3.0.2",
     "sphinx>=8.2.3",
 ]

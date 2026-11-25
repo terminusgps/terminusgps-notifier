@@ -105,6 +105,24 @@ class SubscriptionCreationForm(forms.Form):
         self.fields["address_id"].choices = address_choices
 
 
+class CommandExecutionForm(forms.Form):
+    user_id = forms.IntegerField()
+    command = forms.CharField()
+    msg_time_int = forms.IntegerField()
+    link_type = forms.ChoiceField(
+        choices=[
+            ("", _("Auto")),
+            ("tcp", _("TCP")),
+            ("udp", _("UDP")),
+            ("vrt", _("Virtual")),
+            ("gsm", _("SMS")),
+        ],
+        required=False,
+        initial="",
+    )
+    dry_run = forms.BooleanField(initial=False, required=False)
+
+
 class NotificationDispatchForm(forms.Form):
     """
     A form for dispatching Wialon unit notifications.

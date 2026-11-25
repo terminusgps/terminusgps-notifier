@@ -1,5 +1,4 @@
 import asyncio
-import copy
 import logging
 
 from asgiref.sync import async_to_sync
@@ -25,20 +24,10 @@ from django.views.decorators.http import (
 )
 from django.views.decorators.vary import vary_on_headers
 from django.views.generic import RedirectView
-from terminusgps.authorizenet import api
-from terminusgps.authorizenet.service import AuthorizenetError
-from terminusgps.wialon.session import WialonAPIError
+from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 from terminusgps_notifier import forms
-from terminusgps_notifier.authorizenet import (
-    get_authorizenet_service,
-    get_hosted_profile_page_url,
-    get_subscription_contract,
-)
-from terminusgps_notifier.constants import (
-    HOSTED_PROFILE_PAGE_SETTINGS,
-    TIMEZONES,
-)
+from terminusgps_notifier.constants import TIMEZONES
 from terminusgps_notifier.decorators import (
     HtmxHttpRequest,
     htmx_template,
@@ -94,6 +83,48 @@ async def send_notifications(method, phones, dispatchers) -> HttpResponse:
         f"All dispatchers failed for method: '{method}'".encode("utf-8"),
         status=500,
     )
+
+
+@require_POST
+@csrf_exempt
+@never_cache
+def command(request: HttpRequest, unit_id: int) -> HttpResponse:
+    form = forms.CommandExecutionForm(request.POST)
+    if not form.is_valid():
+        logger.error("Invalid form data")
+        return HttpResponse(status=400)
+    if form.cleaned_data.get("dry_run", False):
+        logger.debug(
+            "Successfully sent '%s' to %s",
+            form.cleaned_data["command"],
+            unit_id,
+        )
+        return HttpResponse(status=200)
+    profile = get_object_or_404(Profile, user__pk=form.cleaned_data["user_id"])
+    if not profile.token:
+        logger.error("Failed to retrieve token for %s", profile)
+        return HttpResponse(status=403)
+    with WialonSession(token=profile.token) as session:
+        try:
+            session.wialon_api.unit_exec_cmd(
+                **{
+                    "itemId": unit_id,
+                    "commandName": form.cleaned_data["command"],
+                    "linkType": form.cleaned_data.get("link_type", ""),
+                    "param": "",
+                    "timeout": 300,
+                    "flags": 0,
+                }
+            )
+            logger.debug(
+                "Successfully sent '%s' to %s",
+                form.cleaned_data["command"],
+                unit_id,
+            )
+        except WialonAPIError as error:
+            logger.critical(error)
+            return HttpResponse(status=500)
+        return HttpResponse(status=200)
 
 
 @require_POST
@@ -202,28 +233,28 @@ def wialon_login(request: HttpRequest) -> HttpResponse:
 @require_GET
 @htmx_template("terminusgps_notifier/home.html")
 def home(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, {})
+    return TemplateResponse(request, request.template_name)
 
 
 @cache_page(60 * 5)
 @require_GET
 @htmx_template("terminusgps_notifier/contact.html")
 def contact(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, {})
+    return TemplateResponse(request, request.template_name)
 
 
 @cache_page(60 * 5)
 @require_GET
 @htmx_template("terminusgps_notifier/terms.html")
 def terms(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, {})
+    return TemplateResponse(request, request.template_name)
 
 
 @cache_page(60 * 5)
 @require_GET
 @htmx_template("terminusgps_notifier/privacy.html")
 def privacy(request: HtmxHttpRequest) -> HttpResponse:
-    return TemplateResponse(request, request.template_name, {})
+    return TemplateResponse(request, request.template_name)
 
 
 @require_GET
@@ -238,75 +269,14 @@ def source_code(request: HtmxHttpRequest) -> HttpResponse:
 @require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/cancel_subscription.html")
 def cancel_subscription(request: HtmxHttpRequest) -> HttpResponse:
-    profile = get_object_or_404(Profile, user=request.user)
-    if not profile.has_active_subscription():
-        messages.warning(request, "No subscription to cancel.")
-        return redirect("terminusgps_notifier:dashboard")
-    if request.method == "POST":
-        try:
-            profile.cancel_authorizenet_subscription()
-        except AuthorizenetError as error:
-            logger.error(error)
-            messages.error(request, error)
-        else:
-            messages.success(request, "Subscription successfully canceled.")
-            return redirect("terminusgps_notifier:dashboard")
-    return TemplateResponse(request, request.template_name)
+    return TemplateResponse(request, request.template_name, status=403)
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/create_subscription.html")
 def create_subscription(request: HtmxHttpRequest) -> HttpResponse:
-    payment_choices = []
-    address_choices = []
-    profile = get_object_or_404(Profile, user=request.user)
-    anet_request = api.get_customer_profile(profile.profile_id)
-    anet_service = get_authorizenet_service()
-    try:
-        anet_response = anet_service.execute(anet_request)
-    except AuthorizenetError as error:
-        logger.error(error)
-        messages.error(request, error)
-    else:
-        for aprofile in anet_response.profile.shipToList:
-            value = str(aprofile.customerAddressId)
-            label = str(aprofile.address)
-            address_choices.append((value, label))
-        for pprofile in anet_response.profile.paymentProfiles:
-            value = str(pprofile.customerPaymentProfileId)
-            label = f"{pprofile.payment.creditCard.cardType} {pprofile.payment.creditCard.cardNumber}"
-            payment_choices.append((value, label))
-
-    if request.method == "POST":
-        form = forms.SubscriptionCreationForm(
-            payment_choices=payment_choices,
-            address_choices=address_choices,
-            data=request.POST,
-        )
-        if form.is_valid():
-            contract = get_subscription_contract(
-                profile_id=profile.profile_id,
-                address_id=form.cleaned_data["address_id"],
-                payment_id=form.cleaned_data["payment_id"],
-            )
-            anet_request = api.create_subscription(contract)
-            try:
-                anet_response = anet_service.execute(anet_request)
-            except AuthorizenetError as error:
-                logger.error(error)
-                messages.error(request, error)
-            else:
-                profile.subscription_id = anet_response.subscriptionId
-                profile.save(update_fields=["subscription_id"])
-                return redirect("terminusgps_notifier:dashboard")
-    else:
-        form = forms.SubscriptionCreationForm(
-            payment_choices=payment_choices,
-            address_choices=address_choices,
-            data={},
-        )
-    return TemplateResponse(request, request.template_name, {"form": form})
+    return TemplateResponse(request, request.template_name, status=403)
 
 
 @vary_on_headers("HX-Request")
@@ -320,12 +290,6 @@ def dashboard(request: HtmxHttpRequest) -> HttpResponse:
     if access_token := request.GET.get("access_token"):
         profile.set_wialon_api_token_and_save(access_token)
         messages.success(request, "Wialon account connected successfully!")
-    if not profile.profile_id:
-        try:
-            profile.create_authorizenet_customer_profile_and_save()
-        except AuthorizenetError as error:
-            logger.error(error)
-            messages.error(request, error)
     return TemplateResponse(
         request,
         request.template_name,
@@ -367,23 +331,7 @@ def detail_notifications(
 @require_http_methods(["GET", "POST"])
 @htmx_template("terminusgps_notifier/hosted_profile.html")
 def authorizenet_hosted_profile_page(request: HtmxHttpRequest) -> HttpResponse:
-    profile = get_object_or_404(Profile, user=request.user)
-    profile_id = int(profile.profile_id)
-    settings = copy.copy(HOSTED_PROFILE_PAGE_SETTINGS)
-    anet_request = api.get_accept_customer_profile_page(profile_id, settings)
-    anet_service = get_authorizenet_service()
-    try:
-        anet_response = anet_service.execute(anet_request)
-    except AuthorizenetError as error:
-        logger.error(error)
-        token = None
-    else:
-        token = str(anet_response.token)
-    return TemplateResponse(
-        request,
-        request.template_name,
-        {"token": token, "url": get_hosted_profile_page_url()},
-    )
+    return TemplateResponse(request, request.template_name, {})
 
 
 @login_required
@@ -446,8 +394,9 @@ def select_geofences(
         object_list = [
             (f"{zone['id']}:{zone['ct']}", zone["n"]) for zone in response
         ]
-    context = {"object_list": object_list}
-    return TemplateResponse(request, request.template_name, context)
+    return TemplateResponse(
+        request, request.template_name, {"object_list": object_list}
+    )
 
 
 @login_required
@@ -528,21 +477,7 @@ def select_units(request: HtmxHttpRequest) -> HttpResponse:
 @require_GET
 @htmx_template("terminusgps_notifier/detail_subscription.html")
 def detail_subscription(request: HtmxHttpRequest) -> HttpResponse:
-    profile = get_object_or_404(Profile, user=request.user)
-    subscription_id = int(profile.subscription_id)
-    include_transactions = request.GET.get("include_transactions") == "on"
-    anet_request = api.get_subscription(subscription_id, include_transactions)
-    anet_service = get_authorizenet_service()
-    try:
-        anet_response = anet_service.execute(anet_request)
-    except AuthorizenetError as error:
-        logger.error(error)
-        messages.error(request, error)
-        object = None
-    else:
-        object = anet_response.subscription
-    context = {"object": object}
-    return TemplateResponse(request, request.template_name, context)
+    return TemplateResponse(request, request.template_name, {})
 
 
 @login_required

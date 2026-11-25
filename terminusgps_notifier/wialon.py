@@ -1,13 +1,111 @@
 import logging
+import os
+import typing
 import urllib.parse
 from collections.abc import Sequence
 
+import wialon
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from terminusgps.wialon import flags
-from terminusgps.wialon.session import WialonAPIError, WialonSession
 
 logger = logging.getLogger(__name__)
+
+UNKNOWN = 6
+
+
+class WialonAPIError(Exception):
+    """Raised when a Wialon API call fails."""
+
+    def __init__(self, message, *args, **kwargs) -> None:
+        self.message = message
+        self._code = int(getattr(message, "_code", UNKNOWN))
+        super().__init__(message, *args, **kwargs)
+
+    @property
+    def code(self) -> int:
+        return self._code
+
+
+class Wialon(wialon.api.Wialon):
+    def call(self, action_name, *argc, **kwargs) -> dict[str, typing.Any]:
+        try:
+            result = super().call(action_name, *argc, **kwargs)
+        except wialon.api.WialonError as e:
+            raise WialonAPIError(e)
+        return result
+
+
+class WialonSession:
+    def __init__(
+        self,
+        scheme: str = "https",
+        host: str = "hst-api.wialon.com",
+        port: int = 443,
+        sid: str | None = None,
+        token: str | None = None,
+    ) -> None:
+        self._uid = None
+        self._wialon_api = Wialon(scheme=scheme, host=host, port=port, sid=sid)
+        self._token = token if token else os.getenv("WIALON_TOKEN")
+        self._username = None
+        self._gis_sid = None
+
+    def __str__(self) -> str:
+        return f"Session #{self.id}"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__}(sid={self.id})"
+
+    def __enter__(self) -> "WialonSession":
+        if not self.id:
+            if not self._token:
+                raise WialonAPIError("No token provided")
+            self.token_login(token=self._token)
+        return self
+
+    def __exit__(self, *args, **kwargs) -> None:
+        if not self.id:
+            self.logout()
+
+    def token_login(self, token: str) -> None:
+        response = self.wialon_api.token_login(
+            **{"token": token, "flags": 0x1}
+        )
+        self.wialon_api.sid = response.get("eid")
+        self._username = response.get("au")
+        self._uid = response.get("user", {}).get("id")
+        self._gis_sid = response.get("gis_sid")
+
+    def logout(self) -> None:
+        if sid := self.wialon_api.sid:
+            response = self.wialon_api.core_logout({})
+            if not int(response.get("error")) == 0:
+                raise WialonAPIError(
+                    f"Failed to logout of the Wialon API session #{sid}",
+                    code=int(response.get("error")),
+                )
+            self.wialon_api.sid = None
+
+    @property
+    def wialon_api(self) -> Wialon:
+        return self._wialon_api
+
+    @property
+    def uid(self) -> str | None:
+        return self._uid
+
+    @property
+    def username(self) -> str | None:
+        return self._username
+
+    @property
+    def gis_sid(self) -> str | None:
+        return self._gis_sid
+
+    @property
+    def id(self) -> str | None:
+        return self.wialon_api.sid
 
 
 def generate_txt(user_id: int | None, message: str) -> str:
